@@ -85,13 +85,11 @@ const full_path = path_list[params.mode] + params.path
 ```
 
 The `mode` parameter is a **base-directory selector with eight whitelisted
-mounts** — including the stock home UI, the OTA staging partition, and the
-tmpfs the console gate reads. The `../` escape was just unfiltered
-concatenation; a firmware that filters `..` still leaves every one of these
-prefixes writable from any page. On patched firmware: `fileWrite` with
-`mode: 2, path: "hisenseUI/index.html"` replaces the stock home with **no
-traversal at all** — it's a designed-in capability, presumably for the UI's
-own updater.
+mounts** on the tested 09.01 firmware, including the stock home UI, OTA
+staging and the console-gate tmpfs. The `../` escape was unfiltered
+concatenation. A mode base can make a path addressable without traversal, but
+that does not prove it is writable on other firmware: the 09.60 EU_A report
+observed a separate `fileWrite` permission gate. Do not write to `/OAD`.
 
 ### The full supported API table (authoritative)
 
@@ -129,9 +127,9 @@ switch), `securityEncrypt/Decrypt` (vendor crypto via the native lib).
 
 ### Impact on patched firmware (MTK9603 report)
 
-If the 2026-07 build kept the mode-list design and only filtered `..`:
-`mode 2` reopens the stock-home write, `mode 7` reopens `/OAD`, `mode 0`
-reopens the console-key tmpfs — and the security-code forge (if the
-algorithm is unchanged) reopens devtools. The reporter's probe list gains:
-`fileWrite` with `mode: 2`, and `checkAccessCode` with the forged-code
-structure above.
+The mode list and debug-code behavior above were decoded on 09.01, not
+verified on 09.60. The 09.60 EU_A report found a separate API-level write
+gate, including on in-sandbox paths. The mode list alone does not bypass it.
+Whether the debug-code behavior carries over is also untested; an accepted
+code on the older TV does not establish root on a newer one. See
+[the community playbook](10-patched-firmware-playbook.md).

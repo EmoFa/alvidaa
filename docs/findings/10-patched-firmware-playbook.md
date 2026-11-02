@@ -1,4 +1,4 @@
-# Patched-firmware playbook — MTK9603 / 09.60V generation
+# Firmware comparison and patched-firmware playbook — MTK9603 / 09.60V
 
 > Consolidated lane map for firmware generations where the `../` file-bridge
 > escape is closed. Community-maintained: every probe result lands here by
@@ -10,25 +10,27 @@
 | Generation | SoC | Traversal (`../`) | `fileWrite` | Identity gate | euladpp | Root | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 09.01O.P0813 (50A51HUV, US/CAN) | MTK9602 | open | open | n-a | armed | achieved | @carteakey |
-| 09.60V.Q0612 (2026-06) (?, ?) | MTK9603 | closed | working | absent? | untested | in progress | @possibly_matt |
+| 09.60 (similar; exact build unconfirmed) (?, ?) | ? | untested | untested | untested | untested | in progress | @possibly_matt |
 | 09.60V.Q0612 (2026-07 EU_A) (55A60LEVS, EU_A) | MTK9603 | closed | gated | working | armed | blocked-at-fileWrite | @Affectionate-End-601 |
 | 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | @Wing-Tsit-Chong |
-| 09.60V.Q0612 (2026-07) (?, ?) | MTK9603 | closed | untested | untested | untested | blocked-at-fileWrite | @____dls |
+| 09.60V.Q0612 (build date unconfirmed) (?, ?) | MTK9603 | closed | untested | untested | untested | untested | @____dls |
+| V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | community report (name pending) |
 <!-- INVENTORY:END -->
 
-**Read of the table:** the identity gate is not universal across 09.60 —
-one June build accepts `/var/local` writes while the EU_A July build gates
-every write behind `{"appid","md5","permissions"}`. Region/build variance
-is the open variable; report which unit you have.
+**Read of the table:** the July EU_A reporter observed `fileWrite` rejected
+by an identity/permissions gate. Another owner reported a `/var/local` write
+on similar firmware, but their exact build, method and gate status remain
+unknown. These reports don't yet establish why the results differ.
 
-## The primitives (what works on every generation so far)
+## Observations and candidate primitives
 
 ### 1. MQTT control + remote page loading
-Cert + dynamic credentials unchanged across generations, with one fix on
-09.60: the `client_id` must use an **app-style MAC with colons** (not the
-TV's own MAC — the broker rejects that with rc 5). `launchapp`, `sendkey`,
-`/api/open`-style remote page loading, and ~110 `Hisense_Get*` bridge calls
-all work. See 01/03.
+On one 43A60LEVS running 09.60, a community reporter paired using the modern
+credentials and an **app-style, colon-formatted MAC** for `client_id`; a TV
+MAC had failed for them. They also reported remote page loading. This does
+not establish that the same identity rule or actions work on every model; see
+the attributed report in 01. A separate U6 report paired with a different
+profile but observed no action responses.
 
 ### 2. The file bridge is a mode-indexed prefix list (09.01 decode)
 
@@ -46,11 +48,12 @@ const path_list = [
 const full_path = path_list[params.mode] + params.path
 ```
 
-The `../` escape was unfiltered concatenation. If 09.60 kept the mode list
-and only added `..` filtering, **every base is still writable from any
-page without traversal** — including the stock home UI (mode 2), /OAD
-(mode 7), and the console-gate tmpfs (mode 0). Source:
-`tv.vidaa.jsservice.basic/CHA/services/hiutils/fileOperation.js`.
+On 09.01 the `../` escape was unfiltered concatenation. These bases are from
+that firmware's `tv.vidaa.jsservice.basic/CHA/services/hiutils/fileOperation.js`;
+their presence or accessibility on 09.60 is not established. Even if a newer
+firmware retains the same bases, path selection alone does **not** establish
+write access: the EU_A reporter observed a separate API-level permission
+gate. Do not write to `/OAD` staging.
 
 ### 3. The identity gate (09.60 EU_A only, so far)
 
@@ -59,9 +62,8 @@ injected per app; md5 is `md5(appid)` (forgeable), but all 12 registered
 app contexts carry `permissions:""`, hand-claimed permissions are
 rejected, and URL apps get the literal string `"undefined"`. The gate is
 API-level, not path-dependent. **Open question:** does any context ever
-carry non-empty permissions (the setup wizard pre-acceptance is the
-candidate — it is the one context that must write, but it is not
-sweepable post-acceptance)?
+carry non-empty permissions? The pre-acceptance setup wizard is a candidate
+for investigation, but its permissions and write behavior are unverified.
 
 ### 4. The security-code forge → devtools (09.01 live-tested; check yours)
 
@@ -119,9 +121,9 @@ the TechPowerUp community thread is the only public archive. Long shot.
    first-boot capture is clean).
 2. **Security-code forge → devtools** (test `deviceCode` action + forge on
    09.60; needs `hiSecurity.js` unchanged).
-3. **possibly_matt's path** — replicate the working `/var/local` write
-   (region/build variable), then the standard hook → dropbear chain from
-   06 applies unchanged.
+3. **possibly_matt's report** — establish the exact firmware, write method
+   and applicable boot path before assessing whether any part of the 09.01
+   hook or SSH approach applies. The full root chain remains unconfirmed.
 4. **Chromium N-days** — port a public renderer exploit for 111.x to
    armv7; highest effort, works even if every gate above is patched.
 
@@ -132,9 +134,37 @@ md5-checked; router-side OTA domain blocks are the durable freeze), DNS-
 block the TV from the open web (the file bridge answers unauthenticated
 with CORS `*`), and keep the tested-models matrix row coming by PR.
 
+## U6 comparison: 65U7H community report
+
+A user-supplied report describes an India-region 65U7H, board 65A65GAVT,
+MTK9900 aarch64, updated from `V0000.06.21U.N1023` to
+`V0000.06.29X.P0813`, with `transport_protocol=3160` and Chromium 88 Odin.
+The researcher attribution and public source are pending; these observations
+have not been independently verified by this project:
+
+- PIN pairing was reported using the newer client certificate, a
+  colon-formatted controller identity, and the RemoteNOW profile; actions
+  reportedly stayed silent after token issuance. Launcher installation was
+  not reported as tested.
+- The reporter described `WebSDK_*` file calls rather than the U9
+  `HiUtils_createRequest` shim, a `vidaahub.com` origin restriction, and
+  working path traversal when the file service was healthy. Four mode bases
+  were reported; the complete 09.01 mode list and write permissions have not
+  been confirmed for U6.
+- Binary reads, some denied paths, and `hiSecurity` requests reportedly killed
+  the file handler, with no automatic restart observed. The reported
+  `otaTest.sh` boot block was commented out and root remained in progress.
+- The extracted rootfs was reported to use an unsupported SquashFS
+  compression ID. The corresponding compressor has not been established.
+
+The reporter offered a model-entry and U6 findings PR. Preserve their
+attribution and source when available, and treat the report separately from
+the 09.60 EU_A findings above.
+
 ## Evidence
 
 - 09.01 decode: modules 03/04 (this repo), live-verified.
-- 09.60 EU_A preflight: AE601's `10-owner-tv-preflight.md` (fork).
-- 09.60 pairing port: Wing-Tsit-Chong's write-up (r/Hisense thread).
-- 09.60 June build `/var/local` write: possibly_matt (r/Hisense thread).
+- [09.60 EU_A preflight](https://raw.githubusercontent.com/dsu851/alvidaa/refs/heads/main/docs/findings/10-owner-tv-preflight.md): Affectionate-End-601's fork; setup-wizard permissions remain unverified.
+- [09.60 pairing port](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19rx89p6gsqyq/): Wing-Tsit-Chong's community report.
+- [Similar-firmware `/var/local` write](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19s06fieygsqq/): possibly_matt's community report; method and exact build unconfirmed.
+- 65U7H U6: user-supplied community report; attribution and public source pending. The report describes a different WebSDK bridge, successful pairing with silent actions, and a disabled `otaTest.sh` hook. Independent confirmation is pending.

@@ -64,6 +64,26 @@ What actually matters, in order:
    access token as password; refresh via `platform_service/data/gettoken`
    with `{"refreshtoken": …}`.
 
+### 09.60 pairing report: controller identity
+
+[Wing-Tsit-Chong reported](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19rx89p6gsqyq/)
+pairing a 43A60LEVS (MTK9603, `V0000.09.60V.Q0612`) after their TV MAC was
+rejected. On that set, an app-style MAC **with colons** in `TV_MAC` produced
+the accepted client ID with the modern profile; a distinct locally administered
+identity also worked in their test. They reported silent rc 5 for the rejected
+attempts instead of the popup seen on 09.01. `pair.py` uses `TV_MAC` as the
+client-identity input; keep the exact formatting, and avoid sharing a paired
+identity with another active MQTT client.
+
+This is a community report for one model and firmware, not a requirement
+established for all 09.60 sets. Pairing and remote page loading were reported;
+launcher installation and the root chain remain untested on that unit.
+
+A separate, user-supplied 65U7H / U6 report describes successful PIN pairing
+with a controller identity and the RemoteNOW credential profile, but no action
+responses afterward. The researcher and public source still need attribution;
+do not treat `transport_protocol=3160` alone as a verified profile selector.
+
 ## 4. Pairing flow quirks
 
 - Trigger the PIN dialog with `ui_service/vidaa_app_connect`

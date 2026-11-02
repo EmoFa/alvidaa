@@ -146,7 +146,12 @@ Details: [findings/06-ssh-gauntlet.md](findings/06-ssh-gauntlet.md)
    IPv6 fallback resolvers are closed only by AdGuard being first in
    `resolv.conf` — router-side RA control would finish the job.
 2. Keep a backup of the previous hook (`otaTest.v1.bak`) on the TV. A
-   kill-switch is planned for v11; it is not established for the current hook.
+   kill-switch is planned for v11; it is not established for the current
+   hook — recovery today is `rm /var/local/otaTest.sh` over SSH, which
+   is equivalent. Full rollback ladder (hook → UI restore from the
+   canary `.bak` + Pi-side tar → factory reset → partition dumps for
+   file-level restore; verified boot makes reflash impossible and
+   unnecessary) is in the post's "What if it breaks?" section.
 3. One MQTT session per credential set, one agent on the TV at a time.
 4. Never commit `server/keys/`; never publish vendor binaries.
 5. The endgame is the teardown: delete the hook, fresh boot, verified

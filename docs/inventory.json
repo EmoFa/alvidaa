@@ -34,25 +34,25 @@
       }
     },
     {
-      "id": "09.60V.Q0612 (2026-06)",
+      "id": "09.60 (similar; exact build unconfirmed)",
       "model": "?",
       "region": "?",
-      "soc": "MTK9603",
-      "vidaa_os": "9.0",
-      "transport_protocol": "3290",
-      "browser": "Chromium 111.5563.5.1",
-      "build_date": "2026-06",
+      "soc": "?",
+      "vidaa_os": "?",
+      "transport_protocol": "?",
+      "browser": "?",
+      "build_date": "possibly 2026-06",
       "tested_by": ["possibly_matt"],
       "capabilities": {
-        "pairing": "working",
+        "pairing": "untested",
         "launcher": "untested",
-        "file_bridge_traversal": "closed",
-        "file_bridge_write": "working",
-        "identity_gate": "absent?",
+        "file_bridge_traversal": "untested",
+        "file_bridge_write": "untested",
+        "identity_gate": "untested",
         "euladpp_untar": "untested",
         "devtools_forge": "untested",
         "root": "in progress",
-        "notes": "/var/local write confirmed — counterexample to the EU_A identity gate; region/model unconfirmed"
+        "notes": "Community report: /var/local write achieved by unspecified method; exact firmware, model, region, and gate status unconfirmed. Root chain in progress."
       }
     },
     {
@@ -100,14 +100,14 @@
       }
     },
     {
-      "id": "09.60V.Q0612 (2026-07)",
+      "id": "09.60V.Q0612 (build date unconfirmed)",
       "model": "?",
       "region": "?",
       "soc": "MTK9603",
       "vidaa_os": "9.0",
-      "transport_protocol": "3290",
-      "browser": "Chromium 111",
-      "build_date": "2026-07",
+      "transport_protocol": "?",
+      "browser": "?",
+      "build_date": "possibly 2026-07",
       "tested_by": ["____dls"],
       "capabilities": {
         "pairing": "working",
@@ -117,8 +117,30 @@
         "identity_gate": "untested",
         "euladpp_untar": "untested",
         "devtools_forge": "untested",
-        "root": "blocked-at-fileWrite",
-        "notes": "traversal closed confirmed; downgrade search unsuccessful"
+        "root": "untested",
+        "notes": "Community report: MQTT connected and traversal appeared closed; fileWrite, root, browser, protocol and build date unconfirmed; downgrade search unsuccessful."
+      }
+    },
+    {
+      "id": "V0000.06.29X.P0813",
+      "model": "65U7H",
+      "region": "India",
+      "soc": "MTK9900",
+      "vidaa_os": "U6 (exact version after update unconfirmed)",
+      "transport_protocol": "3160",
+      "browser": "Chromium 88 Odin",
+      "build_date": "?",
+      "tested_by": [],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "untested",
+        "file_bridge_traversal": "open",
+        "file_bridge_write": "untested",
+        "identity_gate": "untested",
+        "euladpp_untar": "untested",
+        "devtools_forge": "untested",
+        "root": "in progress",
+        "notes": "User-supplied community report; researcher attribution and public source pending. Pairing reported, but actions silent; traversal reported; write and root not confirmed."
       }
     }
   ]

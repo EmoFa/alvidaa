@@ -1,8 +1,16 @@
 # Tested models & how to report yours
 
-The README carries the matrix; this file explains where every field comes
-from. **Report by PR, not issue**: fork, add one row to the README table,
-open a PR.
+The README carries the generated matrix; this file explains where every field
+comes from. To report by PR, add an entry to `docs/inventory.json` and run
+`scripts/gen-inventory.py` to update the README and playbook tables.
+
+## Community reports awaiting details
+
+- [uzueta reported](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19rwnxey9q5j5/)
+  that the launcher-only setup worked, but did not provide a model or firmware
+  and did not try root. This is a useful launcher report, not a verified matrix
+  entry until those details are available; the full watcher flow was not
+  separately described.
 
 ## Fields
 

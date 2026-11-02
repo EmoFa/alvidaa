@@ -107,11 +107,12 @@
   `/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/cert/cert.{key,pem}` (readable text),
   `PWD` = the CHA dir, and `start-security.sh` is root-only (EACCES).
 
-## The no-traversal root lane: euladpp (Oct 30)
+## euladpp: a candidate root lane and its later test (Oct 30)
 
 Field report from a 2026-07 firmware (V0000.09.60V.Q0612, MTK9603, VIDAA 9.0)
-says the `../` escape is **closed** — the sandbox got patched. But the dump
-shows a root lane that needs no traversal at all:
+says the `../` escape is **closed**. An initial hypothesis from the older
+09.01 dump was that euladpp could provide a root path without traversal;
+subsequent testing did not establish that path:
 
 - `euladpp-init-check.sh` (root, every boot): if
   `/APPS/euladpp/current/versionInfo.json` is missing/broken, it **untars
@@ -121,27 +122,17 @@ shows a root lane that needs no traversal at all:
   still `/APPS`; on 2026-07 firmware, test `fileWrite("euladpp/probe.txt")`).
 - `euladpp-upgrade-install.sh` (root): `rm -rf current; mv upgrade current`
   — root `mv`/`rm -rf` over attacker-influenceable paths in `/APPS/euladpp`.
-- The untar runs **GNU tar 1.17 (2006)** — no `..`/absolute-path/symlink
-  hardening. A crafted archive (symlink member → `/var/local/`, then a file
-  member through it) writes any path as root → e.g. `otaTest.sh` → root at
-  the *next* boot. Classic tar-slip; test harness staged on the Pi
-  (`slip.tar.gz`), live-TV validation pending (network flapped).
+- The initial tar-slip idea assumed GNU tar 1.17 would follow a symlink or
+  accept `..` members. The later test below disproved both assumptions for
+  the vectors tested on the 09.01 unit.
 - Trigger without reboot: `euladpp-upgrade-install.sh` appears tied to the
   EULA-acceptance flow — the `Hisense_*` bridge may expose the trigger.
 
-Lanes still open on patched firmware even without traversal, ranked:
-1. euladpp tar-slip (above) — if the sandbox base includes `/APPS/euladpp`.
-2. `Appinfo.json` self-install (in-sandbox) — persistent browser-context
-   code exec; probe the installed-app context (file:// XHR? sandbox same?).
-3. phoenix raw API re-fuzz on the newer build (`localhost:9009`, no auth,
-   CORS `*`; also WSS 9888) — the action table may differ between
-   generations; the implementation lives in
-   `/APPS/pkgs/tv.vidaa.jsservice.modules`.
-4. **Chromium 111 N-days** — the browser is 2.5+ years unpatched upstream;
-   renderer escape is the heavyweight lane if the bridge stays closed.
-5. Downgrade: per-model signed `.bin`s only, MTK anti-rollback likely armed
-   on 2026 firmware — community archives (TechPowerUp thread) are the only
-   public source, success unlikely.
+Other hypotheses, including app-install behavior and the raw API on newer
+firmware, require model-specific confirmation. The 09.60 EU_A reporter
+observed `fileWrite` denied even for in-sandbox paths, so a reachable base
+alone does not establish an install or write path. See
+[the patched-firmware playbook](10-patched-firmware-playbook.md).
 
 **Tar-slip verdict (live-tested Oct 30):** GNU tar 1.17 on this firmware
 refuses BOTH classic vectors — symlink members are created but unlinked

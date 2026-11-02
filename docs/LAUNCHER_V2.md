@@ -328,3 +328,39 @@ no TV writes for collection.
 
 Restore state after the last experiment: original loader restored
 (md5 fe34aa5d…), watcher re-enabled, TV functional — user watching.
+
+## Recovery runbook — black home screen (validated 2026-10-30/11-02)
+
+The one failure mode we've produced and recovered from twice. Symptoms: TV
+boots to a black screen on the home input; sources and the webview apps may
+still work.
+
+**Root cause:** the Cobalt engine caches the home page in its profile
+(`/var/local/hisenseUI/cobalt_home`, set by `startgui.sh`). A broken
+`index.html` deploy poisons that cache — restoring `index.html` alone does
+NOT fix the screen; the cache must be cleared in the same batch.
+
+**Recovery (validated twice):** from the root shell (dropbear 2222, key
+`server/keys/tv_root_ed25519`):
+
+```sh
+cp /APPS/channelA/hisenseUI/index.html.alvidaa-bak \
+   /APPS/channelA/hisenseUI/index.html
+rm -rf /var/local/hisenseUI/cobalt_home/*
+reboot
+```
+
+Original loader is also mirrored at `fx505:~/alvidaa_backups/hisenseUI_index.html`
+and `m1` seed (`alvidaa-firmware` repo, `index.html.alvidaa-bak`).
+
+**Access notes:**
+- Deep standby = the whole network stack is down: no ping, no 2222, no 36669.
+  Only a physical power-on recovers it; allow ~60–90 s after power-on before
+  SSH answers (the hook's network wait runs first).
+- If the TV is on an HDMI source when you need the home to load, the home
+  page fetch happens on HOME press / power-on-to-home — the engine process
+  starts at boot but the page loads when the launcher app activates.
+
+**Deployment law (updated):** every `index.html` deploy MUST batch
+`rm -rf /var/local/hisenseUI/cobalt_home/*` + reboot in the same write
+window — an edit without a cache clear silently serves the stale page.

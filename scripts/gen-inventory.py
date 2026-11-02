@@ -18,6 +18,10 @@ PLAYBOOK = os.path.join(ROOT, "docs", "findings", "10-patched-firmware-playbook.
 
 MARK = ("<!-- INVENTORY:START -->", "<!-- INVENTORY:END -->")
 
+def attribution(f):
+    names = f.get("tested_by", [])
+    return ", ".join("@" + esc(u) for u in names) if names else "community report (name pending)"
+
 def esc(s):
     return str(s).replace("|", "\\|")
 
@@ -33,7 +37,7 @@ def readme_table(fw):
             browser=esc(f.get("browser", "?")),
             launcher=f["capabilities"].get("launcher", "untested"),
             root=f["capabilities"].get("root", "untested"),
-            by=", ".join("@"+u for u in f.get("tested_by", [])))
+            by=attribution(f))
         for f in fw
     ]
     return "\n".join([cols, sep] + rows)
@@ -52,7 +56,7 @@ def playbook_table(fw):
                 gate=c.get("identity_gate", "untested"),
                 eula=c.get("euladpp_untar", "untested"),
                 root=c.get("root", "untested"),
-                by=", ".join("@"+u for u in f.get("tested_by", []))))
+                by=attribution(f)))
     return "\n".join([cols, sep] + rows)
 
 def replace_between(text, start, end, new):

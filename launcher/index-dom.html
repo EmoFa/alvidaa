@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>alvidaa</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #0a0d12; overflow: hidden; height: 100%; }
+  body { font-family: sans-serif; color: #e8eaee; position: relative; }
+  #bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        object-fit: cover; z-index: 0; }
+  #dim { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+         background: rgba(5,8,12,0.35); z-index: 1; }
+  #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
+  #clock { position: absolute; top: 30px; left: 48px; font-size: 56px; font-weight: bold; }
+  #date { position: absolute; top: 96px; left: 50px; font-size: 20px; color: #8a8f98; }
+  #status { position: absolute; top: 30px; right: 52px; font-size: 14px; color: #8a8f98; }
+  .rowtitle { position: absolute; left: 48px; font-size: 13px; color: #7d8590; }
+  .row { position: absolute; left: 48px; right: 24px; height: 96px;
+         display: flex; gap: 12px; overflow: hidden; }
+  .tile { flex: 0 0 160px; width: 160px; height: 96px; border-radius: 12px;
+          background: #1a2027; position: relative; overflow: hidden; }
+  .tile.focus { background: #182028; outline: 3px solid #f2f4f8; border-radius: 14px; }
+  .tile img { position: absolute; top: 6px; left: 10px; max-width: 140px;
+              max-height: 52px; object-fit: contain; }
+  .tile .label { position: absolute; bottom: 8px; left: 0; width: 100%;
+                 text-align: center; font-size: 14px; color: #e8eaee;
+                 white-space: nowrap; overflow: hidden; }
+  .tile .sub { position: absolute; top: 10px; right: 10px; font-size: 12px; }
+  .tile .sub.sig { color: #4ade80; } .tile .sub.nosig { color: #6b7280; }
+  .tile .glyph { position: absolute; top: 14px; left: 0; width: 100%;
+                 text-align: center; font-size: 40px; }
+  #toast { position: absolute; bottom: 14px; width: 100%; text-align: center;
+           font-size: 20px; color: #e8eaee; }
+  #hint { position: absolute; bottom: 14px; left: 48px; font-size: 13px; color: #3d4552; }
+</style>
+</head><body>
+<img id="bg" alt="">
+<div id="dim"></div>
+<div id="ui">
+  <div id="clock">--:--</div>
+  <div id="date"></div>
+  <div id="status"></div>
+  <div class="rowtitle" style="top:164px">INPUTS</div>
+  <div class="row" id="r0" style="top:182px"></div>
+  <div class="rowtitle" style="top:298px">APPS</div>
+  <div class="row" id="r1" style="top:316px"></div>
+  <div id="toast"></div>
+  <div id="hint">navigate · OK open · ▲▼ rows</div>
+</div>
+<script>
+"use strict";
+// alvidaa v2-dom — the native launcher for the home engine. DOM instead of
+// canvas (this Cobalt build renders DOM reliably; canvas pages go black).
+// Stateless: config/state pushed over WS to the bridge. ES2018, no frameworks.
+
+var S = { apps: null, sources: null, state: null, online: false, hello: false,
+          row: 0, col: 0, busy: false, toast: "", toastUntil: 0, installed: null };
+
+var BRIDGE = { hiutils: false, legacy: false, checked: false };
+function detectBridge() {
+  if (BRIDGE.checked) return BRIDGE;
+  BRIDGE.checked = true;
+  try { BRIDGE.hiutils = typeof HiUtils_createRequest !== "undefined"; } catch (e) {}
+  try { BRIDGE.legacy = typeof Hisense_installApp !== "undefined"; } catch (e) {}
+  return BRIDGE;
+}
+function installVisible() {
+  if (S.installed === true && !/[?&]setup/.test(location.search)) return false;
+  var b = detectBridge();
+  return (b.hiutils || b.legacy) && !S.installedNow;
+}
+
+// ---------------------------------------------------------------- websocket
+var ws = null, wsRetry = 0;
+function connect() {
+  try { ws = new WebSocket("ws://192.168.0.85:8770/ws"); } catch (e) { scheduleReconnect(); return; }
+  ws.onopen = function () { S.online = true; wsRetry = 0; render(); };
+  ws.onmessage = function (ev) {
+    var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.t === "hello") {
+      S.hello = true; S.online = true;
+      S.apps = m.apps || []; S.sources = m.sources || []; S.state = m.state;
+      S.installed = !!m.installed; S.busy = false;
+      clampFocus(); render(); preloadIcons();
+    } else if (m.t === "tvstate") { S.state = m.state; renderStatus(); }
+    else if (m.t === "sources") { S.sources = m.sources || S.sources; clampFocus(); renderRows(); }
+    else if (m.t === "apps") { S.apps = m.apps || S.apps; clampFocus(); renderRows(); }
+  };
+  ws.onclose = function () { S.online = false; scheduleReconnect(); render(); };
+  ws.onerror = function () { try { ws.close(); } catch (e) {} };
+}
+function scheduleReconnect() {
+  setTimeout(connect, Math.min(8000, 1000 * Math.pow(2, wsRetry++)));
+}
+function send(obj) { if (S.online && ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function act(type, val) {
+  if (S.busy) return;
+  S.busy = true; toast("…");
+  send({ t: type === "launch" ? "launch" : "source", name: val, id: val });
+}
+
+// ---------------------------------------------------------------- icons
+var ICONS = {};
+function preloadIcons() {
+  var list = S.apps || [];
+  for (var i = 0; i < list.length; i++) {
+    var src = list[i].icon;
+    if (!src || ICONS[src]) continue;
+    var im = new Image();
+    im.onload = renderRows; im.src = src; ICONS[src] = im;
+  }
+}
+
+// ---------------------------------------------------------------- data
+function items(row) {
+  if (row === 0) return (S.sources || []).map(function (s) {
+    return { label: s.name || s.id, sub: s.signal ? "signal" : "no signal",
+             sig: s.signal, glyph: s.glyph || "", icon: s.icon || "", val: s.id };
+  });
+  var out = (S.apps || []).map(function (a) {
+    return { label: a.name, sub: "", icon: a.icon || "", val: a.name };
+  });
+  return out;
+}
+function installVisible() {
+  if (S.installed === true && !/[?&]setup/.test(location.search)) return false;
+  var b = detectBridge();
+  return (b.hiutils || b.legacy) && !S.installedNow;
+}
+function rowCount() { return installVisible() ? 3 : 2; }
+function clampFocus() {
+  if (S.row >= rowCount()) S.row = rowCount() - 1;
+  var n = items(S.row).length;
+  if (S.col >= n) S.col = Math.max(0, n - 1);
+}
+function rowVisibleCount(idx) { return items(idx).length; }
+function rowStart(idx) {
+  var n = items(idx).length, PAGE = 5;
+  if (n <= PAGE) return 0;
+  return Math.max(0, Math.min(S.col - 2, n - PAGE));
+}
+
+// ---------------------------------------------------------------- render
+function el(id) { return document.getElementById(id); }
+function renderStatus() {
+  el("status").innerHTML = S.online
+    ? '<span style="color:#4ade80">●</span> ' + (S.state === "remote_launcher" ? "vidaa home" : (S.state || "tv"))
+    : '<span style="color:#f87171">server offline</span>';
+}
+function renderClock() {
+  var now = new Date();
+  function p2(n) { return (n < 10 ? "0" : "") + n; }
+  el("clock").textContent = p2(now.getHours()) + ":" + p2(now.getMinutes());
+  var days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var mons = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  el("date").textContent = days[now.getDay()] + ", " + mons[now.getMonth()] + " " + now.getDate();
+}
+setInterval(function () { renderClock(); if (Date.now() < S.toastUntil) {} else if (el("toast").textContent && Date.now() > S.toastUntil) { el("toast").textContent = ""; } }, 1000);
+
+function renderRows() {
+  for (var r = 0; r < 2; r++) {
+    var row = el("r" + r);
+    var list = items(r), start = rowStart(r);
+    var end = Math.min(list.length, start + 5);
+    var html = "";
+    for (var i = start; i < end; i++) {
+      var it = list[i];
+      var focused = (S.row === r && S.col === i);
+      var cls = "tile" + (focused ? " focus" : "");
+      var inner = "";
+      if (it.glyph) inner += '<div class="glyph">' + it.glyph + "</div>";
+      else if (it.icon && ICONS[it.icon] && ICONS[it.icon].complete)
+        inner += '<img src="' + it.icon + '" alt="">';
+      else if (r === 1 || it.label)
+        inner += '<div class="glyph" style="color:rgba(232,234,238,0.3);font-size:34px;top:20px">' +
+                 (it.label || "?").charAt(0).toUpperCase() + "</div>";
+      inner += '<div class="label">' + esc(labelTrim(it.label)) + "</div>";
+      if (it.sub) inner += '<div class="sub ' + (it.sig ? "sig" : "nosig") + '">' + it.sub + "</div>";
+      html += '<div class="' + cls + '" data-r="' + r + '" data-c="' + i + '">' + inner + "</div>";
+    }
+    if (!S.hello && S.online) html = '<div style="color:#555;padding-top:40px">loading…</div>';
+    else if (list.length === 0) html = '<div style="color:#3d4552;padding-top:40px">' +
+      (r === 0 ? "no inputs reported" : "no apps reported") + "</div>";
+    row.innerHTML = html;
+  }
+  // install tile
+  var old = el("installTile"); if (old) old.remove();
+  if (installVisible()) {
+    var t = document.createElement("div");
+    t.className = "tile" + (S.row === 2 ? " focus" : "");
+    t.id = "installTile";
+    t.style.cssText = "position:absolute;top:452px;left:48px;";
+    t.innerHTML = '<div class="label" style="bottom:24px">＋ INSTALL AS APP</div>';
+    t.dataset.r = "2"; t.dataset.c = "0";
+    el("ui").appendChild(t);
+  }
+  renderStatus();
+}
+function labelTrim(t) {
+  t = t || "?";
+  while (t.length > 3 && t.length > 14) t = t.slice(0, -1);
+  return t;
+}
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+function toast(t) { el("toast").textContent = t; S.toastUntil = Date.now() + 2500; }
+
+// tile positions are flex — focus highlight handled by CSS class; scroll via
+// transform on the row for the pages beyond the first five
+function updateScroll() {
+  for (var r = 0; r < 2; r++) {
+    var st = rowStart(r);
+    el("r" + r).style.transform = "translateX(" + (-st * 172) + "px)";
+  }
+}
+
+// ---------------------------------------------------------------- actions
+function activate(row, col) {
+  if (row === 2) { installAsApp(); return; }
+  var it = items(row)[col];
+  if (!it) return;
+  if (it.shortcut) { location.href = it.shortcut; return; }
+  act(row === 0 ? "source" : "launch", it.val);
+}
+document.addEventListener("keydown", function (e) {
+  var rows = rowCount(), list = items(S.row);
+  if (e.key === "ArrowRight") { if (S.col < list.length - 1) { S.col++; } }
+  else if (e.key === "ArrowLeft") { if (S.col > 0) { S.col--; } }
+  else if (e.key === "ArrowUp") { if (S.row > 0) S.row--; }
+  else if (e.key === "ArrowDown") { if (S.row < rows - 1) S.row++; }
+  else if (e.key === "Enter") { activate(S.row, S.col); e.preventDefault(); return; }
+  clampFocus(); updateScroll(); renderRows(); e.preventDefault();
+});
+document.addEventListener("click", function (e) {
+  var t = e.target.closest ? e.target.closest(".tile") : null;
+  if (!t) return;
+  var r = parseInt(t.dataset.r, 10), c = parseInt(t.dataset.c, 10);
+  S.row = r; S.col = c;
+  if (r === 2) { installAsApp(); return; }
+  renderRows(); activate(r, c);
+});
+
+// ---------------------------------------------------------------- install
+var APP_ENTRY_ID = "vidaa-home";
+var APP_URL = location.href.split("?")[0].split("#")[0];
+function installAsApp() {
+  var b = detectBridge();
+  var icon = APP_URL + "icon.png";
+  if (b.hiutils) {
+    try {
+      var cur = HiUtils_createRequest("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
+      var list = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
+      if (!list.AppInfo) list.AppInfo = [];
+      var kept = [];
+      for (var k = 0; k < list.AppInfo.length; k++) {
+        var e0 = list.AppInfo[k];
+        if (e0.Id === APP_ENTRY_ID) continue;
+        if ((e0.AppName === "Home" || e0.Title === "Home") && e0.URL !== APP_URL) continue;
+        kept.push(e0);
+      }
+      list.AppInfo = kept;
+      list.AppInfo.push({
+        Id: APP_ENTRY_ID, AppName: "Home", Title: "Home",
+        URL: APP_URL, StartCommand: APP_URL,
+        IconURL: icon, Icon_96: icon, Image: icon, Thumb: icon,
+        Type: "Browser", InstallTime: new Date().toISOString().split("T")[0],
+        RunTimes: 0, StoreType: "custom", PreInstall: false
+      });
+      var res = HiUtils_createRequest("fileWrite", {
+        path: "websdk/Appinfo.json", mode: 6, writedata: JSON.stringify(list)
+      });
+      toast(res.ret ? "installed! restart the TV" : "install failed: " + (res.msg || "?"));
+    } catch (e) { toast("install error: " + e); }
+  } else if (b.legacy) {
+    try {
+      Hisense_installApp(APP_ENTRY_ID, "Home", icon, icon, icon, APP_URL, "custom", function (r) {
+        toast(r === 0 || r === "0" ? "installed! restart the TV" : "install failed (" + r + ")");
+      });
+    } catch (e) { toast("install error: " + e); }
+  }
+}
+
+// ---------------------------------------------------------------- wallpaper
+(function () {
+  var bg = el("bg");
+  bg.onload = renderRows;
+  bg.src = "http://192.168.0.85:8770/bg/bg" + (new Date().getDate() % 3 + 1) + ".png";
+})();
+
+connect();
+renderClock();
+renderRows();
+setInterval(renderClock, 1000);
+</script>
+</body></html>

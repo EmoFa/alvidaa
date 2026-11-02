@@ -15,6 +15,7 @@ the blog and [STORY.md](STORY.md) draw from these files. Split into modules:
 | [08-image-exploration.md](findings/08-image-exploration.md) | Loewe chassis bones, the multi-brand ODM platform (CVTE/Cultraview), CVTE factory remount scripts, DEV build marker. |
 | [09-endpoints.md](findings/09-endpoints.md) | The complete vidaahub.com service map, telemetry API surface, `/data` silos. Live tiers in `firmware/ENDPOINTS.md` (gitignored working copy). |
 | [10-patched-firmware-playbook.md](findings/10-patched-firmware-playbook.md) | The consolidated lane map for 09.60V/MTK9603-class firmware (traversal closed): generation status table, primitives, candidate chains ranked, open questions. Community-maintained — PR your probe results. |
+| [11-firmware-notes.md](findings/11-firmware-notes.md) | Firmware notes: the dynamic domain map (evt/jrnl/ads endpoints, DoH evasion via dns.google), on-box tooling, JS service inventory, package-manager metadata, the euladpp consent plane, loose ends. |
 
 ## Status snapshot (Oct 30)
 

@@ -101,7 +101,7 @@ your TV's boot behavior.
 | 55A60LEVS | EU_A | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07 EU_A) | 3290 | Chromium 111.5563.5.1 | untested | blocked-at-fileWrite | @Affectionate-End-601 |
 | 43A60LEVS | EU | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07) | 3290 | Chromium 111 "Odin" (111.5563.x) | untested | untested | @Wing-Tsit-Chong |
 | ? | ? | MTK9603 | 9.0 | 09.60V.Q0612 (build date unconfirmed) | ? | ? | untested | untested | @____dls |
-| 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | community report (name pending) |
+| 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | pavanjadhaw |
 <!-- INVENTORY:END -->
 
 **Report yours by PR, not issue** — add a firmware entry to [docs/inventory.json](docs/inventory.json) (single source of truth; fields and where to find them: [docs/TESTED-MODELS.md](docs/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.

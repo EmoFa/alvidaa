@@ -33,3 +33,7 @@ All 12 partition images captured (byte-verified). p41 `/APPS` walked:
   from the `TVOUT` wiretap before blocking.
 - `/data` (p27) = per-app silos (YTTV, amazon, netflix, vudu, airplay, QDA,
   webui) — third-party app state; keep images private.
+
+## DoH evasion — the layer that beats DNS blocking
+
+`/APPS/domain/domain_list.json` ships `dohServers: ["dns.google/dns-query"]` + `dohDomains: ["vidaahub.com"]` — vidaahub lookups bypass the LAN resolver via DoH by design. REJECT 8.8.8.8/8.8.4.4 :443 from the TV, then the fallback resolver (AdGuard) and its domain rules bite. Tiered lists: firmware/adguard-blocklist.txt + firmware/tvfw. The map self-declares the telemetry/ad hosts (evt-na, *-jrnl-na, rsc-ads, dvcstatus-dataretrv, file-ul) and is uid-314-writable via the bridge (mode 6).

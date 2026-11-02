@@ -800,6 +800,57 @@ came back with the load-bearing facts:
 - `process.env.json` in the UI: `BRAND: HIS, AREA: NA, PLAT: 9602`,
   `REPORT: false` — a telemetry flag in the build snapshot, teasing.
 
+**R0: the guardrails went in** (no hook churn — the boot hook already
+sources `/var/local/tvrc`, so the rules appended there survive reboots):
+the DNS bypass is closed in-kernel — all outbound 53/853 rejected except
+AdGuard, verified live (`github.com` resolves through the Pi; `1.1.1.1`
+now answers `Operation not permitted`) — and the OTA host is frozen
+(`ota-tv.vidaahub.com` → 131.189.69.51, REJECT). Honest caveats filed:
+`ip6tables` doesn't exist on this firmware, so the IPv6 fallback
+resolvers are only mitigated by AdGuard being first in `resolv.conf`
+(router-side RA control would finish the job), and the OTA block is an
+IP rule on a rotating CDN — the DNS close is the durable layer. Unfreeze
+is one deleted file's worth of lines and a reboot, by design.
+
+**The wiretap got its salvager — and its first catch.** The LOG rules
+write to the kernel ring buffer, and the TV's own kernel spam wraps it in
+minutes; fourteen hours of wiretap had evaporated down to one line. A
+two-minute background loop now mines `dmesg`, strips timestamps, and
+keeps the unique endpoint set. The first haul, before the ring even
+finished one wrap: **the TV phoning an Amazon S3 bucket over plaintext
+HTTP, port 80, no TLS** (`16.182.75.50` — reverse-resolves to
+`s3-us-east-1-r-w.amazonaws.com`), and DNS flowing through AdGuard only.
+One oddity: a SYN to the Pi on port 5555 — ADB's port, on a TV that has
+no ADB. Noted, unexplained.
+
+**The caller got its name the same afternoon.** With every TV DNS query
+flowing through AdGuard, the query log held the answer:
+**`spectrum.s3.amazonaws.com`** — a telemetry-flavored bucket name if
+ever there was one — queried at 16:23 UTC and answered with exactly that
+S3 address. Now blocked for the TV client. The whole AdGuard layer
+landed in the same pass: two per-client entries (TV + Fire Stick), the
+Perflyst blocklists rule-tagged with `$client=` modifiers (AdGuard has
+no per-blocklist client scoping in any version — verified in the source
+before choosing the mechanism), the OTA freeze at DNS level
+(`ota-tv.vidaahub.com`, durable where the kernel IP rule rotates), and
+the full BLOCK tier from the endpoint map — recommend-ui, home-ui,
+layout-ui, topic-ui, sport-vidaa, promovod — so the stock home's
+recommendation tiles starve at the resolver. Scoping proven with a
+`check_host` matrix; the TV was asleep, so the end-to-end dig is queued
+for its next waking.
+
+**And the TV left the LAN.** Tailscale (1.104.4, armv7) is on the
+tailnet — `hisensetv-88b863c83aa5`, kernel 4.19.79, key-only SSH
+reachable from anywhere, not just the couch. The admin console
+screenshot went into the post with the tailnet IPs and emails blurred.
+
+**And the repo went public.** README rebuilt around the truth (a
+launcher and the first public root path for 2024+ VIDAA), the findings
+split into nine modules, an agent-briefing file, a security-disclosure
+document in preparation, the tested-models matrix waiting for other
+people's TVs. "GitHub publish pending my courage" — the courage arrived
+somewhere between the shotgun pickup and the wiretap.
+
 [📷 PHOTO 11: the connected session printing `1` — the gate in root's shell costume — and then the `#` prompt]
 
 ## Of course we ran Doom
@@ -834,12 +885,22 @@ static busybox's `setsid` covered it), and the framebuffer *refuses
 (cross-compiled the same way) became the screenshot tool.
 
 The proof: E1M1's hangar, the pistol up, two imps down on the floor,
-HEALTH 34%, doomguy bleeding in the status bar — the shareware attract
-demo playing itself at 1920×1080, because input isn't mapped yet. The
-remote is the obvious controller (the D-pad emits `/dev/input` events;
-wiring them into `DG_GetKey` is the next rung). For now, Doom plays
-itself on a television built to show sponsored tiles, and it does not
-intend to stop.
+HEALTH 34%, doomguy bleeding in the status bar at 1920×1080. And the
+next morning it got *playable*: the remote turned out to be Bluetooth,
+not IR — the MStar IR receiver sits silent while the "Hisense" HID
+device carries everything as standard Linux key events. The map took
+one capture (UP=103, DOWN=108, LEFT=105, RIGHT=106) plus a surprise:
+**OK is keycode 352, `KEY_OK`** — a dedicated Linux keycode, not Enter.
+Arrows feed the doom arrows, OK feeds Enter, unknown buttons log
+themselves to `doom.log` so the map teaches itself.
+
+Then the last rite: a **Doom tile in the launcher's app row**. Pressing
+it opens a near-blank page that tells the Pi's server, which spawns the
+binary over the root SSH channel and lets it own the framebuffer; the
+page goes black so the browser stops painting; pressing HOME kills Doom
+and the watcher bounces back to alvidaa. The app row reads
+Live TV · YouTube · Spotify · Browser · Recon · **Doom** — a 1993 game
+sitting where the sponsored tiles used to be.
 
 The tally: cert-gated MQTT, the browser bridge, the errno escape, the
 boot hook, five locks, one key — and the last mile was 365 KB of 1993.
@@ -946,6 +1007,7 @@ It just said alvida to its ads.
 | Oct 29, evening | "Check online for firmware gaps" → no public root for 2024+ → recon v1–v8 ladder built and climbed in ~90 minutes. |
 | Oct 29, night | `rc.local` root primitive found; hook armed; fake reboot exposed by `/proc/uptime`; **wall plug pulled** → **ROOT CONFIRMED**. |
 | Oct 29, late night | Hook v2 harvest (toolbox, shadow, applet inventory), hook v3 (busybox-over-`/dev/tcp`), dropbear cross-built with `zig cc`. Hook v4 fired → **Hisense's EULA firewall discovered** → hook v5 punches the holes. The five-lock gauntlet (firewall, key path, `/etc/shells`, the `chmod 777` perms walk, and the gate-as-shell costume) cleared version by version — **hook v10: `ssh -p 2222` lands at a root shell. Jailbreak complete.** First hour of ownership: eMMC mapped (3.87 GB, 42 partitions), `server/tv` wrapper, and the verity rootfs (p20) dumped to the Pi and unpacked — `cli-login-aes.pem` in hand. The actual project begins. |
+| Oct 30 | Doom goes playable (BT remote on `event3`, OK=352) and gets a launcher tile; R0 guardrails applied via `tvrc` (DNS close verified, OTA host frozen); wiretap salvager installed — first catch: the TV calls an Amazon S3 bucket over plaintext HTTP. Repo published. |
 
 ## Photo shopping list
 

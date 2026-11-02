@@ -6,12 +6,15 @@
 
 ## Generation status
 
-| Generation | SoC | Traversal (`../`) | `fileWrite` | Root | Notes |
-| --- | --- | --- | --- | --- | --- |
-| 09.01O.P0813 (2025-08) | MTK9602 | **open** (unfiltered concat) | open (uid 314) | ✅ full chain | this repo's reference unit, 50A51HUV |
-| 09.60V.Q0612 (2026-06) | MTK9603 | **closed** (literal `../` substring test) | **works** (`/var/local` confirmed) | in progress | possibly_matt, region ? |
-| 09.60V.Q0612 (2026-07, EU_A) | MTK9603 | **closed** (same validator) | **503 identity gate** | blocked at fileWrite | AE601, 55A60LEVS |
-| 09.60V.Q0612 (2026-07) | MTK9603 | closed (assumed) | ? | recon pending | Wing-Tsit-Chong, 43A60LEVS |
+<!-- INVENTORY:START -->
+| Generation | SoC | Traversal (`../`) | `fileWrite` | Identity gate | euladpp | Root | Source |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 09.01O.P0813 (50A51HUV, US/CAN) | MTK9602 | open | open | n-a | armed | achieved | @carteakey |
+| 09.60V.Q0612 (2026-06) (?, ?) | MTK9603 | closed | working | absent? | untested | in progress | @possibly_matt |
+| 09.60V.Q0612 (2026-07 EU_A) (55A60LEVS, EU_A) | MTK9603 | closed | gated | working | armed | blocked-at-fileWrite | @Affectionate-End-601 |
+| 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | @Wing-Tsit-Chong |
+| 09.60V.Q0612 (2026-07) (?, ?) | MTK9603 | closed | untested | untested | untested | blocked-at-fileWrite | @____dls |
+<!-- INVENTORY:END -->
 
 **Read of the table:** the identity gate is not universal across 09.60 —
 one June build accepts `/var/local` writes while the EU_A July build gates

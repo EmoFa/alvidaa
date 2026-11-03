@@ -40,7 +40,7 @@ Two lanes share one TV:
 | `server/tv` | root one-shot/interactive wrapper over dropbear (PATH-fixed) |
 | `launcher/recon.html` | the probe page pattern (v1–v8 in git history) |
 | `launcher/hookinstall.html`, `hookcheck.html` | remote hook install/verify |
-| `docs/findings/01…09` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints |
+| `docs/findings/01…11` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints, patched firmware playbook, firmware notes |
 | `firmware/ENDPOINTS.md` | live endpoint/kill-list working copy (gitignored) |
 
 ## Canonical recipes

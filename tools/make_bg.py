@@ -51,9 +51,13 @@ def render(theme, seed):
         rows.append(row)
     return rows
 
-os.makedirs(OUT, exist_ok=True)
-for i, th in enumerate(THEMES, 1):
-    path = os.path.join(OUT, f"bg{i}.png")
-    with open(path, "wb") as f:
-        f.write(png(render(th, i)))
-    print(path, os.path.getsize(path), "bytes")
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    for i, th in enumerate(THEMES, 1):
+        path = os.path.join(OUT, f"bg{i}.png")
+        with open(path, "wb") as f:
+            f.write(png(render(th, i)))
+        print(path, os.path.getsize(path), "bytes")
+
+if __name__ == "__main__":
+    main()

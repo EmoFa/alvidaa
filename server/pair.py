@@ -64,8 +64,9 @@ def cert_paths():
 PROFILES = ["modern", "middle", "standard", "legacy"]
 
 class Pairer:
-    def __init__(self, profile):
+    def __init__(self, profile, host=None):
         self.profile = profile
+        self.host = host or HOST
         self.client_id, self.username, self.password = creds(profile)
         self.rc = None
         self.pushes = queue.Queue()
@@ -93,7 +94,7 @@ class Pairer:
         self.pushes.put((msg.topic.rsplit("/", 1)[-1], payload))
 
     def connect(self, timeout=6):
-        self.c.connect(HOST, 36669, 30)
+        self.c.connect(self.host, 36669, 30)
         self.c.loop_start()
         deadline = time.time() + timeout
         while time.time() < deadline and self.rc is None:
@@ -136,86 +137,101 @@ def wait_for_any(q, want_topics, timeout):
             return payload
     return None
 
-print(f"TV: {HOST}, cert: {'vidaa (2024)' if 'vidaa_cert' in str(cert_paths()) else 'RemoteNOW (2018)'}")
-tokens = None
-for profile in PROFILES:
-    p = Pairer(profile)
-    print(f"[{profile}] connecting as {p.username} ...", flush=True)
-    if not p.connect():
-        print(f"[{profile}] rejected (rc={p.rc}) — TV shows the 'outdated app' popup; next profile")
-        p.stop()
-        continue
-    print(f"[{profile}] MQTT session established", flush=True)
-    p.subscribe_pairing_topics()
-    time.sleep(0.5)
-    # trigger the PIN dialog ONCE (re-triggering rotates the code)
-    p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/vidaa_app_connect",
-                '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}')
-    dialog = wait_for_any(p.pushes, ("authentication", "authenticationcode"), 6)
-    print(f"[{profile}] PIN dialog push: {dialog}", flush=True)
-    print(f"\n>>> LOOK AT THE TV — enter the 4-digit code shown there <<<", flush=True)
-    pin = PIN_ARG
-    pin_file = os.path.join(KEYS, ".pin")
-    deadline = time.time() + 240
-    last_trigger = 0.0
-    while not (pin and len(pin) == 4 and pin.isdigit()):
-        # surface whatever the TV pushes while we wait (no re-trigger: it rotates the PIN)
-        try:
-            topic, payload = p.pushes.get(timeout=0.5)
-            print(f"  push {topic}: {str(payload)[:140]}", flush=True)
-            continue  # pushes during wait are informational; keep looping for pin
-        except queue.Empty:
-            pass
-        try:
-            pin = open(pin_file).read().strip()
-        except OSError:
-            pin = None
-        if pin and len(pin) == 4 and pin.isdigit():
-            os.remove(pin_file)
-            break
-        if time.time() > deadline:
-            print("timed out waiting for PIN file; rerun")
+def pair(host=None, pin_arg=None):
+    host = host or HOST
+    if not host:
+        sys.exit("usage: pair.py <tv-ip> [pin]   (or set HISENSE_HOST)")
+    pin_arg = pin_arg if pin_arg is not None else PIN_ARG
+
+    print(f"TV: {host}, cert: {'vidaa (2024)' if 'vidaa_cert' in str(cert_paths()) else 'RemoteNOW (2018)'}")
+    tokens = None
+    for profile in PROFILES:
+        p = Pairer(profile, host=host)
+        print(f"[{profile}] connecting as {p.username} ...", flush=True)
+        if not p.connect():
+            print(f"[{profile}] rejected (rc={p.rc}) — TV shows the 'outdated app' popup; next profile")
             p.stop()
-            sys.exit(2)
-    if not (pin and len(pin) == 4 and pin.isdigit()):
-        pin = PIN_ARG
-    p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/authenticationcode",
-                json.dumps({"authNum": int(pin)}))
-    print(f"[{profile}] PIN submitted — waiting for validation", flush=True)
-    result = None
-    deadline = time.time() + 15
-    while time.time() < deadline:
-        try:
-            topic, payload = p.pushes.get(timeout=max(0.1, deadline - time.time()))
-        except queue.Empty:
-            break
-        print(f"  push {topic}: {str(payload)[:140]}", flush=True)
-        if topic == "authenticationcode" and isinstance(payload, dict):
-            result = payload
-            break
-    if not isinstance(result, dict) or int(result.get("result", 0)) != 1:
-        print(f"[{profile}] PIN rejected: {result}")
+            continue
+        print(f"[{profile}] MQTT session established", flush=True)
+        p.subscribe_pairing_topics()
+        time.sleep(0.5)
+        # trigger the PIN dialog ONCE (re-triggering rotates the code)
+        p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/vidaa_app_connect",
+                    '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}')
+        dialog = wait_for_any(p.pushes, ("authentication", "authenticationcode"), 6)
+        print(f"[{profile}] PIN dialog push: {dialog}", flush=True)
+        print(f"\n>>> LOOK AT THE TV — enter the 4-digit code shown there <<<", flush=True)
+        pin = pin_arg
+        pin_file = os.path.join(KEYS, ".pin")
+        deadline = time.time() + 240
+        last_trigger = 0.0
+        while not (pin and len(pin) == 4 and pin.isdigit()):
+            # surface whatever the TV pushes while we wait (no re-trigger: it rotates the PIN)
+            try:
+                topic, payload = p.pushes.get(timeout=0.5)
+                print(f"  push {topic}: {str(payload)[:140]}", flush=True)
+                continue  # pushes during wait are informational; keep looping for pin
+            except queue.Empty:
+                pass
+            try:
+                pin = open(pin_file).read().strip()
+            except OSError:
+                pin = None
+            if pin and len(pin) == 4 and pin.isdigit():
+                os.remove(pin_file)
+                break
+            if time.time() > deadline:
+                print("timed out waiting for PIN file; rerun")
+                p.stop()
+                sys.exit(2)
+        if not (pin and len(pin) == 4 and pin.isdigit()):
+            pin = pin_arg
+        p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/authenticationcode",
+                    json.dumps({"authNum": int(pin)}))
+        print(f"[{profile}] PIN submitted — waiting for validation", flush=True)
+        result = None
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            try:
+                topic, payload = p.pushes.get(timeout=max(0.1, deadline - time.time()))
+            except queue.Empty:
+                break
+            print(f"  push {topic}: {str(payload)[:140]}", flush=True)
+            if topic == "authenticationcode" and isinstance(payload, dict):
+                result = payload
+                break
+        if not isinstance(result, dict) or int(result.get("result", 0)) != 1:
+            print(f"[{profile}] PIN rejected: {result}")
+            p.stop()
+            sys.exit(3)
+        print(f"[{profile}] PIN accepted — requesting tokens")
+        p.c.publish(f"/remoteapp/tv/platform_service/{p.client_id}/data/gettoken", '{"refreshtoken": ""}')
+        p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/authenticationcodeclose")
+        tok = wait_for(p.pushes, "tokenissuance", 15) or wait_for(p.pushes, "gettoken", 5)
         p.stop()
-        sys.exit(3)
-    print(f"[{profile}] PIN accepted — requesting tokens")
-    p.c.publish(f"/remoteapp/tv/platform_service/{p.client_id}/data/gettoken", '{"refreshtoken": ""}')
-    p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/authenticationcodeclose")
-    tok = wait_for(p.pushes, "tokenissuance", 15) or wait_for(p.pushes, "gettoken", 5)
-    p.stop()
-    if isinstance(tok, dict) and tok.get("accesstoken"):
-        tokens = tok
-        tokens["_profile"] = profile
-        tokens["_username"] = p.username
-        tokens["_client_id"] = p.client_id
-        break
-    print(f"[{profile}] no token issuance; trying next profile")
+        if isinstance(tok, dict) and tok.get("accesstoken"):
+            tokens = tok
+            tokens["_profile"] = profile
+            tokens["_username"] = p.username
+            tokens["_client_id"] = p.client_id
+            break
+        print(f"[{profile}] no token issuance; trying next profile")
 
-if not tokens:
-    print("FAILED: no profile produced tokens. See tv/vidaa/README (cert requirements).")
-    sys.exit(4)
+    if not tokens:
+        print("FAILED: no profile produced tokens. See tv/vidaa/README (cert requirements).")
+        sys.exit(4)
 
-with open(TOKENS_FILE, "w") as f:
-    json.dump(tokens, f, indent=2)
-os.chmod(TOKENS_FILE, 0o600)
-print(f"PAIRED — tokens.json written (profile={tokens['_profile']}, "
-      f"access valid {tokens.get('accesstoken_duration_day', '?')} days)")
+    with open(TOKENS_FILE, "w") as f:
+        json.dump(tokens, f, indent=2)
+    os.chmod(TOKENS_FILE, 0o600)
+    print(f"PAIRED — tokens.json written (profile={tokens['_profile']}, "
+          f"access valid {tokens.get('accesstoken_duration_day', '?')} days)")
+    return True
+
+def main():
+    host = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("HISENSE_HOST", "")
+    pin = sys.argv[2] if len(sys.argv) > 2 else None
+    pair(host, pin)
+
+if __name__ == "__main__":
+    main()

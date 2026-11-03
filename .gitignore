@@ -1,4 +1,5 @@
 server/keys/
+server/iconcache/
 server/recon-report*.json
 server/.paired
 server/.host

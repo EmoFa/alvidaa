@@ -28,7 +28,7 @@ Point the agent at the repo and start here:
 > transport_protocol, firmware version, and SoC."
 
 Add your row to the [README tested-models
-matrix](../README.md#status--tested-models) by PR — that table is how the
+matrix](../README.md#tested-models) by PR — that table is how the
 next owner knows whether your hardware matches theirs.
 
 ## Phase 1 — the launcher (a day, fully reversible)

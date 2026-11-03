@@ -839,6 +839,45 @@ recommendation tiles starve at the resolver. Scoping proven with a
 `check_host` matrix; the TV was asleep, so the end-to-end dig is queued
 for its next waking.
 
+**The next two days were the consolidation.** The backup question got its
+final answer: **42/42 partitions captured, byte-verified, mirrored on two
+machines** — 943,718,400 bytes of p42 alone, rescued in chunks after
+sustained reads at its tail hung the block layer hard enough to drop SSH.
+The brick question is now closed at the strongest level available to
+software: every read-write partition's exact prior state is restorable
+file-by-file through the bridge.
+
+The security analysis got teeth. The `euladpp` tar archives carried a
+tar-slip lane that needed no `../` at all — and the verdict came back
+"GNU tar 1.17 hardened both vectors," one for the disclosure file. The
+bridge's full API table got decoded from its own source, including the
+mode-list bases (`channelA`, `/OAD`, `/tmp`) — and then the
+**security-code forge**: the successor to the "05328087" serial-console
+era checks an HMAC-SHA1 whose inputs are all public (the MAC rides the
+SSDP descriptor; `GetDeviceCode` returns a constant), and the forged code
+was accepted live — `setDebugPort` flipped to the develop-devtool level.
+The debug port stays firewalled; the decision is documented. That one
+goes to Hisense.
+
+And the blocking war got its second layer. The TV ships
+**DNS-over-HTTPS evasion by design** — `/APPS/domain/domain_list.json`
+declares `dns.google/dns-query` for vidaahub lookups, so a plain DNS
+block was never going to hold. Countermeasure: REJECT 8.8.8.8/8.8.4.4:443
+at the kernel, tiered kill-list artifacts built
+(`firmware/adguard-blocklist.txt` + `firmware/tvfw`), and the
+wiretap moved to a two-phase methodology — a baseline floor, then a
+deliberate privacy-toggles-ON window via the `euladpp` switches, to
+measure what "off" actually means. The patched-firmware playbook
+(09.60V/MTK9603 lanes) and a machine-readable inventory went up for the
+community rows. The harvest then got read —
+1,153 lines collected, and the first window already told a story:
+**447 DoH bootstrap attempts to 8.8.8.8** — the evasion firing
+constantly, exactly as the countermeasure predicted. The kill-list went
+live at both layers the same hour: `firmware/tvfw` at the kernel, and 17
+TV-scoped rules in AdGuard (the tiered blocklist applied and
+check_host-verified by the AdGuard agent; `ota-tv` resolving again at
+DNS level by design, since the kernel now owns that block).
+
 **And the TV left the LAN.** Tailscale (1.104.4, armv7) is on the
 tailnet — `hisensetv-88b863c83aa5`, kernel 4.19.79, key-only SSH
 reachable from anywhere, not just the couch. The admin console

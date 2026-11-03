@@ -10,17 +10,19 @@
 | Generation | SoC | Traversal (`../`) | `fileWrite` | Identity gate | euladpp | Root | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 09.01O.P0813 (50A51HUV, US/CAN) | MTK9602 | open | open | n-a | armed | achieved | @carteakey |
-| 09.60 (similar; exact build unconfirmed) (?, ?) | ? | untested | untested | untested | untested | in progress | @possibly_matt |
+| 09.60X.Q0609 (2026-06) (? (MTK9618 unit), ?) | MTK9618 | untested | untested | untested | untested | achieved | @possibly_matt |
 | 09.60V.Q0612 (2026-07 EU_A) (55A60LEVS, EU_A) | MTK9603 | closed | gated | working | armed | blocked-at-fileWrite | @Affectionate-End-601 |
 | 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | @Wing-Tsit-Chong |
 | 09.60V.Q0612 (build date unconfirmed) (?, ?) | MTK9603 | closed | untested | untested | untested | untested | @____dls |
-| V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | community report (name pending) |
+| V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | @pavanjadhaw |
+| V0100.01.00A.N0410 (HE40E5600FFWTS, ? (EU, German-language docs)) | MTK5863-class (MT53xx, armv7 Cortex-A53) | open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp) | open (File.write text-only EINVAL for binary; binaries via File.download/curl) | n-a | n-a (generation lacks the package) | achieved | @xXLucyNyuXx (angryzero/hisense-root) |
 <!-- INVENTORY:END -->
 
 **Read of the table:** the July EU_A reporter observed `fileWrite` rejected
-by an identity/permissions gate. Another owner reported a `/var/local` write
-on similar firmware, but their exact build, method and gate status remain
-unknown. These reports don't yet establish why the results differ.
+by an identity/permissions gate. On a different MTK9618 build, possibly_matt
+reported a root shell using an IPK post-install path; the `/var/local` write
+they initially investigated was not used in that chain. The report does not
+establish that the same method works on the EU_A unit.
 
 ## Observations and candidate primitives
 
@@ -121,9 +123,12 @@ the TechPowerUp community thread is the only public archive. Long shot.
    first-boot capture is clean).
 2. **Security-code forge → devtools** (test `deviceCode` action + forge on
    09.60; needs `hiSecurity.js` unchanged).
-3. **possibly_matt's report** — establish the exact firmware, write method
-   and applicable boot path before assessing whether any part of the 09.01
-   hook or SSH approach applies. The full root chain remains unconfirmed.
+3. **possibly_matt's report** — on MTK9618 firmware `V0000.09.60X.Q0609`,
+   they report root code execution via an IPK post-install path followed by a
+   telnet root shell. They say the `otaTest.sh` hook was not present and the
+   earlier `/var/local` write wasn't used. A detailed write-up, replication,
+   boot persistence, exact model and region are still pending; this is not yet
+   a documented or independently verified chain for other firmware.
 4. **Chromium N-days** — port a public renderer exploit for 111.x to
    armv7; highest effort, works even if every gate above is patched.
 
@@ -139,7 +144,8 @@ with CORS `*`), and keep the tested-models matrix row coming by PR.
 A user-supplied report describes an India-region 65U7H, board 65A65GAVT,
 MTK9900 aarch64, updated from `V0000.06.21U.N1023` to
 `V0000.06.29X.P0813`, with `transport_protocol=3160` and Chromium 88 Odin.
-The researcher attribution and public source are pending; these observations
+The report was attributed to `pavanjadhaw` in the README; a public source is
+still pending. These observations
 have not been independently verified by this project:
 
 - PIN pairing was reported using the newer client certificate, a
@@ -166,5 +172,5 @@ the 09.60 EU_A findings above.
 - 09.01 decode: modules 03/04 (this repo), live-verified.
 - [09.60 EU_A preflight](https://raw.githubusercontent.com/dsu851/alvidaa/refs/heads/main/docs/findings/10-owner-tv-preflight.md): Affectionate-End-601's fork; setup-wizard permissions remain unverified.
 - [09.60 pairing port](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19rx89p6gsqyq/): Wing-Tsit-Chong's community report.
-- [Similar-firmware `/var/local` write](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19s06fieygsqq/): possibly_matt's community report; method and exact build unconfirmed.
-- 65U7H U6: user-supplied community report; attribution and public source pending. The report describes a different WebSDK bridge, successful pairing with silent actions, and a disabled `otaTest.sh` hook. Independent confirmation is pending.
+- [MTK9618 root-shell report](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19s1t59bjad1d/): possibly_matt reports a telnet root shell after an IPK post-install path; detailed write-up and persistence are pending.
+- 65U7H U6: community report attributed to `pavanjadhaw`; public source pending. The report describes a different WebSDK bridge, successful pairing with silent actions, and a disabled `otaTest.sh` hook. Independent confirmation is pending.

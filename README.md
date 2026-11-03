@@ -82,6 +82,7 @@ your TV's boot behavior.
 | --- | --- |
 | [docs/ROOT.md](docs/ROOT.md) | **The root chain, stage by stage** — start here for lane 2 |
 | [docs/findings/](docs/findings/) | The lab notebook, split into nine modules (MQTT auth wall → endpoints) |
+| [docs/EXPLOITS.md](docs/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |
 | [docs/HACK-YOUR-OWN.md](docs/HACK-YOUR-OWN.md) | The staged prompt ladder for running this with your own AI agent |
 | [docs/LAUNCHER_V2.md](docs/LAUNCHER_V2.md) | The on-TV launcher port plan (root-era roadmap, R0–R6) |
 | [docs/DOOM.md](docs/DOOM.md) | DOOM at 1080p on the TV's framebuffer — the full recipe |
@@ -97,11 +98,12 @@ your TV's boot behavior.
 | Model | Region | SoC | VIDAA OS | Firmware | `transport_protocol` | Browser | Launcher | Root chain | Tested by |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 50A51HUV | US/CAN | MTK9602 | U09.01 | 09.01O.P0813 | 3290 | Chromium 111 "odin" | working | achieved | @carteakey |
-| ? | ? | ? | ? | 09.60 (similar; exact build unconfirmed) | ? | ? | untested | in progress | @possibly_matt |
+| ? (MTK9618 unit) | ? | MTK9618 | ? | 09.60X.Q0609 (2026-06) | ? | ? | untested | achieved | @possibly_matt |
 | 55A60LEVS | EU_A | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07 EU_A) | 3290 | Chromium 111.5563.5.1 | untested | blocked-at-fileWrite | @Affectionate-End-601 |
 | 43A60LEVS | EU | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07) | 3290 | Chromium 111 "Odin" (111.5563.x) | untested | untested | @Wing-Tsit-Chong |
 | ? | ? | MTK9603 | 9.0 | 09.60V.Q0612 (build date unconfirmed) | ? | ? | untested | untested | @____dls |
-| 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | pavanjadhaw |
+| 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | @pavanjadhaw |
+| HE40E5600FFWTS | ? (EU, German-language docs) | MTK5863-class (MT53xx, armv7 Cortex-A53) | pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit) | V0100.01.00A.N0410 | untested (vector did not use MQTT) | hisenseUI (Chromium 59.0.3071.115/V8 5.9, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security) | custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI) | achieved | @xXLucyNyuXx (angryzero/hisense-root) |
 <!-- INVENTORY:END -->
 
 **Report yours by PR, not issue** — add a firmware entry to [docs/inventory.json](docs/inventory.json) (single source of truth; fields and where to find them: [docs/TESTED-MODELS.md](docs/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.

@@ -3,6 +3,9 @@
 The lab notebook. Every discovery gets written down the moment it happens;
 the blog and [STORY.md](STORY.md) draw from these files. Split into modules:
 
+For a method-by-method index with evidence and tested devices, see the
+generated [exploit and method inventory](EXPLOITS.md).
+
 | Module | Contents |
 | --- | --- |
 | [01-mqtt-bridge.md](findings/01-mqtt-bridge.md) | SSDP discovery, RemoteNow/MQTT channel, the 2024 auth gate (cert + dynamic credentials), pairing quirks (PIN rotation, wildcard-sub denial), broker quirks, app self-install, the VIDAA browser. |

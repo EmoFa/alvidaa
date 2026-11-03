@@ -104,6 +104,7 @@ your TV's boot behavior.
 | ? | ? | MTK9603 | 9.0 | 09.60V.Q0612 (build date unconfirmed) | ? | ? | untested | untested | @____dls |
 | 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | @pavanjadhaw |
 | HE40E5600FFWTS | ? (EU, German-language docs) | MTK5863-class (MT53xx, armv7 Cortex-A53) | pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit) | V0100.01.00A.N0410 | untested (vector did not use MQTT) | hisenseUI (Chromium 59.0.3071.115/V8 5.9, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security) | custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI) | achieved | @xXLucyNyuXx (angryzero/hisense-root) |
+| 43E7DS | EU (DE) | ? | ? | 09.60W.Q0612 | ? | ? | blocked | untested | @ryjr2ddznn-lab |
 <!-- INVENTORY:END -->
 
 **Report yours by PR, not issue** — add a firmware entry to [docs/inventory.json](docs/inventory.json) (single source of truth; fields and where to find them: [docs/TESTED-MODELS.md](docs/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.

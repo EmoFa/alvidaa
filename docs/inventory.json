@@ -178,6 +178,30 @@
         "root": "achieved",
         "notes": "chain: USB ext4 dangling-symlink (tvi) bypasses IsSubDentry whitelist -> File.download plants libtvsysinfo.so shadow (direct NEEDED, LD_LIBRARY_PATH index 17 = /3rd_rw/loglevel/lib, writable+free) with appended DT_INIT payload (RX segment extended) -> root at load, self-unlink, root_loop channel; dropbear 2022.83 key-only + OpenSSH sftp-server + HamService-wrapper persistence; dead ends documented (factory/AM injection, V8, liblogLevel shadow, FAT32). Repo: git.hanime.zip/angryzero/hisense-root"
       }
+    },
+    {
+      "id": "09.60W.Q0612",
+      "model": "43E7DS",
+      "region": "EU (DE)",
+      "soc": "?",
+      "vidaa_os": "?",
+      "transport_protocol": "?",
+      "browser": "?",
+      "build_date": "?",
+      "tested_by": [
+        "ryjr2ddznn-lab"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "blocked",
+        "file_bridge_traversal": "untested",
+        "file_bridge_write": "gated",
+        "identity_gate": "working",
+        "euladpp_untar": "untested",
+        "devtools_forge": "untested",
+        "root": "untested",
+        "notes": "Pairing required the TV's real Wi-Fi MAC (a placeholder/random MAC is silently rejected at the MQTT layer; TLS completes but auth fails). Launcher self-install (HiUtils_createRequest fileWrite to websdk/Appinfo.json) rejected with exact TV-reported error: 'client request permission check error' -- matches the identity gate documented for the 09.60 generation. Root chain not attempted (official-interfaces-only testing)."
+      }
     }
   ]
 }

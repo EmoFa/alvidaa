@@ -364,3 +364,27 @@ and `m1` seed (`alvidaa-firmware` repo, `index.html.alvidaa-bak`).
 **Deployment law (updated):** every `index.html` deploy MUST batch
 `rm -rf /var/local/hisenseUI/cobalt_home/*` + reboot in the same write
 window — an edit without a cache clear silently serves the stale page.
+
+## Post-mortem + final deploy tool (2026-11-03)
+
+The flash-kill deploy broke the home: the on-TV `sed` edits scrambled the
+one-line minified `index.html` (script tag landed before the doctype).
+Lesson codified: **never edit files in place on the TV — build locally,
+push, verify md5.** `tools/deploy-overlay.sh` now does exactly that:
+fetches the pristine loader from the TV's own `.alvidaa-bak`, builds the
+final file locally (head flash-kill style + bootstrap script), pushes with
+md5 verification, clears the Cobalt cache, reboots. One command, one write,
+one reboot, idempotent.
+
+Also discovered: the TV is **dual-homed** (WiFi `.11` + Ethernet `.25` at
+various times) — DHCP shuffles its address, which broke the bridge twice.
+Static reservations for both TV MACs (WiFi `bc:5c:17:bc:46:88`, Ethernet
+`88:b8:63:c8:3a:a5`) are required router-side.
+
+Final architecture (all validated):
+- stock `index.html.alvidaa-bak` + head flash-kill style + one bootstrap
+  `<script src>` → overlay launcher (`alvidaa-remote.js`) served by the bridge
+- stock system intact beneath (sdk.js boots, services run, keys route)
+- stock UI hidden via CSS; ads never render; the `ads` service never called
+- UI updates = edit `alvidaa-remote.js` on the Pi, zero TV writes
+- HOME from any app returns to the overlay (key_priority 25000 routing)

@@ -1,37 +1,47 @@
 #!/usr/bin/env bash
-# Deploy the alvidaa overlay to the TV — the validated batched sequence.
-# One TV write + one cache clear + one reboot, per the write-minimization law.
+# Deploy the alvidaa overlay to the TV — validated, deterministic batch.
 #
-# What lands on the TV:
-#   1. head style: #app hidden + alvidaa background from parse-time
-#      (kills the stock-home/ads flash before sdk.js renders)
-#   2. the bootstrap script tag (loads launcher/alvidaa-remote.js from the bridge)
-#   3. Cobalt cache clear (stale page otherwise serves forever)
-#   4. reboot
+# Builds the final index.html LOCALLY (from the TV's own pristine backup) and
+# pushes it — never sed-edit files on the TV (the one-line minified HTML
+# mangles under in-place edits; that killed the UI once already).
+#
+# Batch = 1 TV write + 1 cache clear + 1 reboot (write-minimization law).
 #
 # Usage: tools/deploy-overlay.sh [tv-ip]   (default 192.168.0.11)
 set -euo pipefail
 
 TV="${1:-192.168.0.11}"
 KEY="$(cd "$(dirname "$0")" && pwd)/../server/keys/tv_root_ed25519"
-HERE="$(cd "$(dirname "$0")" && pwd)"
+BRIDGE="http://192.168.0.85:8770"
+WORK="$(mktemp -d)"
 
-echo "==> head style + bootstrap + cache clear + reboot on $TV"
-ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
+echo "==> 1/4 fetch pristine loader (TV's own .alvidaa-bak)"
+ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" \
+  'cat /APPS/channelA/hisenseUI/index.html.alvidaa-bak' > "$WORK/orig.html"
+echo "    original: $(wc -c < "$WORK/orig.html") bytes"
+
+echo "==> 2/4 build final (head flash-kill style + bootstrap script)"
+python3 - "$WORK/orig.html" "$WORK/final.html" "$BRIDGE" <<'PYEOF'
+import hashlib, sys
+orig, out, bridge = sys.argv[1], sys.argv[2], sys.argv[3]
+s = open(orig).read()
+assert "</head>" in s and "</html>" in s, "unexpected original structure"
+s = s.replace("</head>",
+  '<style id="alvidaa-head-style">#app{display:none!important}'
+  'html,body{background:#0a0d12!important}</style></head>')
+s += '<script src="' + bridge + '/alvidaa-remote.js"></script>\n'
+open(out, "w").write(s)
+print("    built:", len(s.encode()), "bytes, md5", hashlib.md5(s.encode()).hexdigest())
+PYEOF
+
+echo "==> 3/4 push + verify + cache clear + reboot"
+cat "$WORK/final.html" | ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
+cat > /APPS/channelA/hisenseUI/index.html
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/openbox/bin:/var/local
-F=/APPS/channelA/hisenseUI/index.html
-# 1. idempotent head style (removes any previous insert first)
-sed -i "/alvidaa-head-style/d" "$F"
-sed -i "s|</head>|<style id=\"alvidaa-head-style\">#app{display:none!important}html,body{background:#0a0d12!important}</style></head>|" "$F"
-# 2. idempotent bootstrap script tag
-sed -i "/alvidaa-remote.js/d" "$F"
-echo "<script src=\"http://192.168.0.85:8770/alvidaa-remote.js\"></script>" >> "$F"
-# 3. cache clear + 4. reboot
+MD1=$(/var/local/tvtools/busybox md5sum /APPS/channelA/hisenseUI/index.html | cut -d" " -f1)
+echo "    on TV: $MD1"
 /var/local/tvtools/busybox rm -rf /var/local/hisenseUI/cobalt_home/*
 sync
-/var/local/tvtools/busybox md5sum "$F"
-sleep 1
-reboot
-' 2>/dev/null || true
-
-echo "==> reboot issued — TV returns in ~90s with: dark bg → overlay (no stock flash, no ads)"
+reboot'
+echo "==> 4/4 reboot issued — expect: dark bg → overlay (no stock flash, no ads)"
+rm -rf "$WORK"

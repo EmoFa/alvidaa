@@ -182,6 +182,8 @@
     bg.onload = renderRows;
     bg.src = BRIDGE + "/bg/bg" + (new Date().getDate() % 3 + 1) + ".png";
   })();
+  var boot = document.getElementById("alvidaa-boot");
+  if (boot) boot.remove();
   connect();
   renderClock();
   renderRows();

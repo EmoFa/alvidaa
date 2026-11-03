@@ -24,6 +24,22 @@ reported a root shell using an IPK post-install path; the `/var/local` write
 they initially investigated was not used in that chain. The report does not
 establish that the same method works on the EU_A unit.
 
+## Third and fourth roots (Nov 3)
+
+The matrix now carries four generations, three of them rooted:
+
+- **MTK9618 / 09.60X.Q0609 (possibly_matt):** root achieved via the IPK
+  channel's post-install script — the rc.local `otaTest.sh` hook is absent
+  on that build, so the blind-exec door is generation-specific. Write-up
+  pending; sharing privately first (patch-risk concern).
+- **HE40E5600FFWTS / V0100.01.00A.N0410 (xXLucyNyuXx, pre-9 Opera era):**
+  a fundamentally different chain on a fundamentally different generation —
+  the *browser itself runs as root* (uid 0, full CapEff, no seccomp), a
+  dangling ext4 symlink (`tvi`) bypasses the `IsSubDentry` whitelist for
+  binary delivery, and a `LD_LIBRARY_PATH` shadow lib with an appended
+  `DT_INIT` payload executes as root at load. Full repo:
+  git.hanime.zip/angryzero/hisense-root (dead ends documented).
+
 ## Observations and candidate primitives
 
 ### 1. MQTT control + remote page loading

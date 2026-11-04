@@ -42,7 +42,8 @@ assert "</head>" in s and "</html>" in s, "unexpected original structure"
 s = s.replace("</head>",
   '<style id="alvidaa-head-style">#app{display:none!important}'
   'html,body{background:#0a0d12!important}</style></head>')
-s += '<script src="' + bridge + '/alvidaa-remote.js"></script>\n'
+assert "</body>" in s, "unexpected original structure: missing </body>"
+s = s.replace("</body>", '<script src="' + bridge + '/alvidaa-remote.js"></script></body>')
 open(out, "w").write(s)
 print("    built:", len(s.encode()), "bytes, md5", hashlib.md5(s.encode()).hexdigest())
 PYEOF
@@ -51,9 +52,10 @@ echo "==> 3/4 push + verify + cache clear + reboot"
 cat "$WORK/final.html" | ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
 cat > /APPS/channelA/hisenseUI/index.html
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/openbox/bin:/var/local
-MD1=$(/var/local/tvtools/busybox md5sum /APPS/channelA/hisenseUI/index.html | cut -d" " -f1)
+MD1=$(/var/local/tvtools/busybox md5sum /APPS/channelA/hisenseUI/index.html | /var/local/tvtools/busybox cut -d" " -f1)
 echo "    on TV: $MD1"
 /var/local/tvtools/busybox rm -rf /var/local/hisenseUI/cobalt_home/*
 sync
-reboot'
+. /etc/profile >/dev/null 2>&1
+/usr/local/bin/reboot'
 echo "==> 4/4 reboot issued — expect: boot → overlay; bridge down = dark background, no fallback"

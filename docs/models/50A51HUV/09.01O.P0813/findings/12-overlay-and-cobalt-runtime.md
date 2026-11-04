@@ -65,3 +65,40 @@ On cold boot or wake from deep standby:
 - With the script failed and `#app` hidden by CSS, the TV is permanently locked on the dark background.
 
 **Rule**: In-engine scripts must reside on local flash (e.g. `<script src="./alvidaa-remote.js"></script>`) with world-readable permissions (`644 UhisApp:UGhisApp`). The local script can then instantiate a WebSocket connection with backoff retries until the network interface is up.
+
+## 6. Cobalt localStorage Ownership, Recreation, and Flush Traps
+
+Discovered 2026-11-04 during the gray/black-screen hunt on the overlay.
+
+- Storage lives at `/var/local/hisenseUI/cobalt_home/.starboard.<base64
+  origin>.storage` — for the home page the origin key decodes to
+  `file:///hisenseUI/index.html`. The directory is `UhisUI:UGhisUI`.
+- **Ownership trap**: the file was found `root:root 0600` while the home
+  engine (`UIMainWebModule`, syslog tag `hisenseUI`) runs as `netflix`.
+  The engine could neither read nor write its own localStorage: the
+  overlay's `alvidaa_cache_v1` never persisted, and every boot started
+  cold. A manual `chmod 666` restored access; after the next engine
+  crash + reboot the engine **recreated the file as `UhisUI:UGhisUI
+  0600`** — so the engine self-manages storage it creates, and a
+  root-owned fossil is the anomaly that permanently breaks it until
+  manually fixed.
+- **Data-loss trap**: storage recreation silently loses everything it
+  held — including *stock-home layout customizations* (hidden/removed
+  apps). Observed 2026-11-04: the user's hidden apps reappeared on the
+  stock home after the file was recreated (29067 → 24718 bytes) during
+  the engine crash loop. Losing this file resets the user's home.
+- **Flush granularity**: on a healthy page, writes reach flash within
+  ~10 ms (marker timestamps). On a wedge or crash, everything after the
+  last flush is lost — in our traces only the first ~10 ms of markers
+  survived, so localStorage is *not* a reliable crash black-box recorder.
+- **Diagnostic technique that works on this engine**: per-key
+  localStorage markers (one key per lifecycle stage, e.g.
+  `alvidaa_d_<stage>`) plus a `window.onerror` hook — a poor man's
+  console for a browser you cannot inspect. Cobalt masks uncaught errors
+  from `file://` scripts as `Script error. @0:0` with no line/column,
+  so per-stage markers, not stack traces, are the usable signal.
+
+**Rules**: never leave cobalt storage root-owned after running the
+engine from a root context; treat any storage-file recreation as a
+data-loss event for both the overlay cache and the stock-home layout;
+never keep the only copy of user-visible state in this storage.

@@ -7,6 +7,10 @@ boot-time home. Ownership: this document and everything under `launcher/` +
 `server/` belongs to the launcher lane; the firmware/telemetry digging
 (binaries, Ghidra, endpoint mapping) lives in the other session.
 
+> The project now maintains **two lanes side by side** — the unrooted
+> external-server path and the rooted native path. The split, and what must
+> stay in sync between them, is documented in [LANES.md](LANES.md).
+
 ## Where v1.3 stands (the baseline v2 builds on)
 
 - Server: Python (`server/vidaa_server.py`) on the Pi (`alvidaa.service`,

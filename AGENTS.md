@@ -42,7 +42,7 @@ Two lanes share one TV:
 | `launcher/recon.html` | the probe page pattern (v1–v8 in git history) |
 | `launcher/hookinstall.html`, `hookcheck.html` | remote hook install/verify |
 | `docs/models/50A51HUV/09.01O.P0813/findings/01…09,11–12` and `docs/research/10-patched-firmware-playbook.md` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints, patched firmware playbook, firmware notes, cobalt runtime & overlay traps |
-| `docs/launcher/` | launcher deployment and the on-TV launcher v2 roadmap |
+| `docs/launcher/` | launcher deployment, the on-TV launcher v2 roadmap, and the two-lane architecture (LANES.md) |
 | `docs/project/` | the project story, AI prompt ladder and blog draft |
 | `docs/research/` | cross-model inventory, method catalogue, tested-models guide and playbook |
 | `scripts/check.sh` | read-only health check: generated tables vs JSON, python/shell syntax, relative doc links |

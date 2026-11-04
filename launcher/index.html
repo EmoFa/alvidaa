@@ -241,12 +241,12 @@ function preloadIcons() {
 
 // ---------------------------------------------------------------- layout
 var F = {
-  clock: "600 56px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  mid: "500 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  small: "500 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  tiny: "600 11px monospace",
-  label: "600 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  letter: "600 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+  clock: "300 58px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  mid: "500 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  small: "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  tiny: "600 10px monospace",
+  label: "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  letter: "600 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
 };
 
 function tileW() { return 160; }
@@ -293,7 +293,7 @@ function rowStart(idx) {
 
 function hue(s) {
   var h = 0;
-  for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
+  for (var i = 0; i < (s || "").length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
   return h;
 }
 
@@ -331,23 +331,52 @@ function bumpFocus() {
 }
 
 function drawTile(x, y, focused, it, hotkeyNum) {
-  var scale = focused ? 1 + 0.07 * easeOut(focusAnim) : 1;
+  var scale = focused ? 1 + 0.08 * easeOut(focusAnim) : 1;
   ctx.save();
   if (scale !== 1) {
     var cx = x + tileW() / 2, cy = y + tileH() / 2;
     ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);
   }
-  // focused tiles get a fake shadow (offset dark roundrect) + light border
+
+  // 2026 Dark Glass / Elevated Card Surface
   if (focused) {
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    roundRect(x + 1, y + 5, tileW(), tileH(), 14);
+    // 1. Multi-layer ambient bloom glow behind focused card
+    var glow = ctx.createRadialGradient(
+      x + tileW() / 2, y + tileH() / 2, tileW() * 0.15,
+      x + tileW() / 2, y + tileH() / 2, tileW() * 0.8
+    );
+    glow.addColorStop(0, "rgba(56, 189, 248, 0.28)");
+    glow.addColorStop(0.65, "rgba(99, 102, 241, 0.1)");
+    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = glow;
+    roundRect(x - 16, y - 12, tileW() + 32, tileH() + 24, 20);
     ctx.fill();
-    ctx.fillStyle = "#f2f4f8";
-    roundRect(x - 2, y - 2, tileW() + 4, tileH() + 4, 14);
+
+    // 2. Focused drop shadow
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    roundRect(x, y + 6, tileW(), tileH(), 16);
+    ctx.fill();
+
+    // 3. Crisp luminous border
+    ctx.fillStyle = "#ffffff";
+    roundRect(x - 2, y - 2, tileW() + 4, tileH() + 4, 16);
+    ctx.fill();
+  } else {
+    // Rest state: subtle card shadow + hairline specular border
+    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+    roundRect(x, y + 4, tileW(), tileH(), 14);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+    roundRect(x - 1, y - 1, tileW() + 2, tileH() + 2, 15);
     ctx.fill();
   }
+
   if (it.install) {  // setup tile: two-line label, no icon
-    ctx.fillStyle = focused ? "#f2f4f8" : "#c8cdd4";
+    ctx.fillStyle = focused ? "#1e293b" : "#111827";
+    roundRect(x, y, tileW(), tileH(), 14);
+    ctx.fill();
+    ctx.fillStyle = focused ? "#f8fafc" : "#cbd5e1";
     ctx.font = F.small;
     ctx.textAlign = "center";
     ctx.fillText("＋ INSTALL", x + tileW() / 2, y + tileH() / 2 - 4);
@@ -356,26 +385,45 @@ function drawTile(x, y, focused, it, hotkeyNum) {
     ctx.restore();
     return;
   }
+
   var base = it.icon && ICONS[it.icon] && ICONS[it.icon].complete && ICONS[it.icon].naturalWidth;
-  ctx.fillStyle = focused ? "#182028" : (base ? "#1a2027" : "hsl(" + hue(it.label) + ",30%," + (focused ? 22 : 14) + "%)");
-  roundRect(x, y, tileW(), tileH(), 12);
+  var cardGrad = ctx.createLinearGradient(x, y, x, y + tileH());
+  if (focused) {
+    cardGrad.addColorStop(0, "#222c3c");
+    cardGrad.addColorStop(1, "#141b24");
+  } else {
+    cardGrad.addColorStop(0, base ? "#171d27" : "hsl(" + hue(it.label) + ",22%,14%)");
+    cardGrad.addColorStop(1, "#0f131a");
+  }
+  ctx.fillStyle = cardGrad;
+  roundRect(x, y, tileW(), tileH(), 14);
   ctx.fill();
-  if (focused) {  // accent underline
-    ctx.fillStyle = "#4cc2ff";
-    roundRect(x + 14, y + tileH() - 6, tileW() - 28, 3, 1.5);
+
+  if (focused) {
+    // 2026 Cyan Neon Pill Accent at bottom
+    var pillGrad = ctx.createLinearGradient(x + 20, y, x + tileW() - 20, y);
+    pillGrad.addColorStop(0, "#38bdf8");
+    pillGrad.addColorStop(0.5, "#818cf8");
+    pillGrad.addColorStop(1, "#38bdf8");
+    ctx.fillStyle = pillGrad;
+    roundRect(x + (tileW() - 44) / 2, y + tileH() - 5, 44, 3, 1.5);
     ctx.fill();
   }
+
+  // Hotkey numeral (1-9)
   if (hotkeyNum >= 1 && hotkeyNum <= 9) {
     ctx.font = F.tiny;
     ctx.textAlign = "right";
-    ctx.fillStyle = focused ? "rgba(242,244,248,0.55)" : "rgba(174,180,189,0.28)";
+    ctx.fillStyle = focused ? "rgba(248,250,252,0.6)" : "rgba(148,163,184,0.3)";
     ctx.fillText(String(hotkeyNum), x + tileW() - 8, y + 14);
     ctx.textAlign = "left";
   }
+
+  // Tile Graphic (Glyph, Preloaded Icon, or Modern Letter Badge)
   if (it.glyph) {
     ctx.font = "38px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillStyle = focused ? "#f2f4f8" : "#c8cdd4";
+    ctx.fillStyle = focused ? "#f8fafc" : "#cbd5e1";
     ctx.fillText(it.glyph, x + tileW() / 2, y + tileH() / 2 + 8);
     ctx.textAlign = "left";
   } else if (base) {
@@ -385,44 +433,57 @@ function drawTile(x, y, focused, it, hotkeyNum) {
     var dw = im.naturalWidth * s, dh = im.naturalHeight * s;
     ctx.drawImage(im, x + (tileW() - dw) / 2, y + (boxH - dh) / 2 + 4, dw, dh);
   } else {
-    ctx.fillStyle = focused ? "rgba(232,234,238,0.85)" : "rgba(232,234,238,0.25)";
+    ctx.fillStyle = focused ? "rgba(248,250,252,0.85)" : "rgba(203,213,225,0.22)";
     ctx.font = F.letter;
     ctx.textAlign = "center";
     ctx.fillText((it.label || "?").charAt(0).toUpperCase(), x + tileW() / 2, y + tileH() / 2 + 12);
     ctx.textAlign = "left";
   }
-  // label
-  ctx.fillStyle = focused ? "#f2f4f8" : "#aeb4bd";
+
+  // Label text with ellipsis truncation
+  ctx.fillStyle = focused ? "#f8fafc" : "#94a3b8";
   ctx.font = F.small;
   var label = it.label || "";
   while (label.length > 3 && ctx.measureText(label).width > tileW() - 18) label = label.slice(0, -1);
   ctx.textAlign = "center";
   ctx.fillText(label, x + tileW() / 2, y + tileH() - (it.sub ? 8 : 8));
   ctx.textAlign = "left";
-  if (it.sub) {  // signal state: dot + text
-    ctx.fillStyle = it.signal ? "#4ade80" : "#6b7280";
+
+  // HDMI / Input live signal indicator badge
+  if (it.sub) {
+    var hasSig = !!it.signal;
+    var dotX = x + 16, dotY = y + tileH() - 22;
+    if (hasSig) {
+      ctx.fillStyle = "rgba(34, 197, 94, 0.25)";
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = hasSig ? "#22c55e" : "#64748b";
     ctx.beginPath();
-    ctx.arc(x + 16, y + tileH() - 24, 4, 0, Math.PI * 2);
+    ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = it.signal ? "#4ade80" : "#6b7280";
-    ctx.fillText(it.sub, x + 26, y + tileH() - 20);
+
+    ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = hasSig ? (focused ? "#4ade80" : "#22c55e") : (focused ? "#94a3b8" : "#64748b");
+    ctx.fillText(hasSig ? "LIVE" : "STANDBY", dotX + 9, dotY + 4);
   }
   ctx.restore();
 }
 
 function drawRow(idx, y, title) {
   ctx.font = F.label;
-  ctx.fillStyle = "#7d8590";
+  ctx.fillStyle = "#64748b";
   ctx.fillText(title, left(), y - 12);
   var list = items(idx);
   var n = list.length;
   if (!S.hello && S.online) {
-    ctx.font = F.mid; ctx.fillStyle = "#555";
+    ctx.font = F.mid; ctx.fillStyle = "#64748b";
     ctx.fillText("loading…", left(), y + 44);
     return;
   }
   if (n === 0) {
-    ctx.font = F.mid; ctx.fillStyle = "#3d4552";
+    ctx.font = F.mid; ctx.fillStyle = "#475569";
     ctx.fillText(idx === 0 ? "no inputs reported" : "no apps reported", left(), y + 44);
     return;
   }
@@ -432,14 +493,14 @@ function drawRow(idx, y, title) {
     var x = left() + (i - start) * (tileW() + gap());
     var focused = (rowActive && S.col === i);
     var hk = rowActive && i < 9 ? (i + 1) : 0;
-    if (!focused) drawTile(x, y, false, list[i], hk);  // focused tile drawn last (scale overlap)
+    if (!focused) drawTile(x, y, false, list[i], hk);
     HIT.push({ x: x, y: y, w: tileW(), h: tileH(), row: idx, col: i });
   }
   if (rowActive && S.col >= start && S.col < Math.min(n, start + PAGE)) {
     drawTile(left() + (S.col - start) * (tileW() + gap()), y, true, list[S.col], S.col < 9 ? S.col + 1 : 0);
   }
   ctx.font = F.small;
-  ctx.fillStyle = "#565e69";
+  ctx.fillStyle = "#475569";
   var end = Math.min(n, start + PAGE);
   if (start > 0) ctx.fillText("‹ " + start, left() - 2, y + 24);
   if (end < n) ctx.fillText((n - end) + " ›", left() + PAGE * (tileW() + gap()) - 30, y + 24);
@@ -455,72 +516,122 @@ function draw() {
 
   var key = S.row + ":" + S.col;
   if (key !== lastFocusKey) { lastFocusKey = key; focusAnim = 0; }
+
+  // 2026 Deep OLED Background with Ambient Mesh Bloom
+  ctx.fillStyle = "#07090e";
+  ctx.fillRect(0, 0, W, H);
+
   if (BG && BG.complete && BG.naturalWidth) {
     var sc = Math.max(W / BG.naturalWidth, H / BG.naturalHeight);
     ctx.drawImage(BG, (W - BG.naturalWidth * sc) / 2, (H - BG.naturalHeight * sc) / 2,
                   BG.naturalWidth * sc, BG.naturalHeight * sc);
-    ctx.fillStyle = "rgba(5,8,12,0.35)";
+    ctx.fillStyle = "rgba(5,7,12,0.45)";
     ctx.fillRect(0, 0, W, H);
   } else {
-    var g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "#141a24");
-    g.addColorStop(1, "#0a0d12");
-    ctx.fillStyle = g;
+    // Ethereal top ambient radial bloom
+    var amb = ctx.createRadialGradient(W / 2, -30, 20, W / 2, 140, W * 0.7);
+    amb.addColorStop(0, "rgba(56, 189, 248, 0.08)");
+    amb.addColorStop(0.5, "rgba(99, 102, 241, 0.04)");
+    amb.addColorStop(1, "rgba(7, 9, 14, 0)");
+    ctx.fillStyle = amb;
     ctx.fillRect(0, 0, W, H);
   }
 
+  // Smooth perimeter vignette
+  var vig = ctx.createRadialGradient(W / 2, H / 2, W * 0.35, W / 2, H / 2, W * 0.72);
+  vig.addColorStop(0, "rgba(0, 0, 0, 0)");
+  vig.addColorStop(1, "rgba(0, 0, 0, 0.4)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2026 Header: 300-weight clock & uppercase tracked date
   var now = new Date();
   lastDrawnMinute = now.getMinutes();
   function p2(n) { return (n < 10 ? "0" : "") + n; }
-  ctx.fillStyle = "#e8eaee";
+
+  ctx.fillStyle = "#f8fafc";
   ctx.font = F.clock;
-  ctx.fillText(p2(now.getHours()) + ":" + p2(now.getMinutes()), left(), 82);
-  ctx.font = F.mid;
-  ctx.fillStyle = "#8a8f98";
-  var days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  var mons = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  ctx.fillText(days[now.getDay()] + ", " + mons[now.getMonth()] + " " + now.getDate(), left(), 110);
+  ctx.fillText(p2(now.getHours()) + ":" + p2(now.getMinutes()), left(), 80);
 
-  ctx.font = F.small;
-  ctx.textAlign = "right";
-  if (S.online) {
-    ctx.fillStyle = "#4ade80";
-    ctx.fillText("●", W - 52, 46);
-    ctx.fillStyle = "#7d8590";
-    ctx.fillText(S.state === "remote_launcher" ? "vidaa home" : (S.state || "tv"), W - 62, 46);
-  } else {
-    ctx.fillStyle = S.hello ? "#fbbf24" : "#f87171";
-    ctx.fillText(S.hello ? "cached · reconnecting…" : "server offline", W - 52, 46);
-  }
-  ctx.textAlign = "left";
+  ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  var days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  var mons = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  ctx.fillText(days[now.getDay()] + " · " + mons[now.getMonth()] + " " + now.getDate(), left() + 2, 104);
 
-  drawRow(0, 170, "INPUTS");
-  drawRow(1, 300, "APPS");
+  // Top-Right Glass Capsule Status Pill
+  var pillW = 144, pillH = 30, pillX = W - left() - pillW, pillY = 50;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+  roundRect(pillX, pillY, pillW, pillH, 15);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+  roundRect(pillX - 0.5, pillY - 0.5, pillW + 1, pillH + 1, 15.5);
+  ctx.fill();
+  ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
+  roundRect(pillX, pillY, pillW, pillH, 15);
+  ctx.fill();
+
+  var dotColor = S.online ? "#22c55e" : (S.hello ? "#f59e0b" : "#ef4444");
+  var dotGlow = S.online ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)";
+  ctx.fillStyle = dotGlow;
+  ctx.beginPath();
+  ctx.arc(pillX + 16, pillY + pillH / 2, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = dotColor;
+  ctx.beginPath();
+  ctx.arc(pillX + 16, pillY + pillH / 2, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctx.fillStyle = S.online ? "#e2e8f0" : "#94a3b8";
+  ctx.fillText(S.online ? "ALVIDAA · LIVE" : (S.hello ? "RECONNECTING" : "OFFLINE"), pillX + 28, pillY + pillH / 2 + 4);
+
+  drawRow(0, 168, "INPUTS & SOURCES");
+  drawRow(1, 298, "APPS & CHANNELS");
 
   if (installVisible()) {
-    var iy = 436;
+    var iy = 434;
     ctx.font = F.label;
-    ctx.fillStyle = "#7d8590";
-    ctx.fillText("SETUP", left(), iy - 12);
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("SYSTEM SETUP", left(), iy - 12);
     var focused = (S.row === 2);
     drawTile(left(), iy, focused,
       { label: "INSTALL AS APP", install: true, sub: "", icon: null, val: null }, 0);
     HIT.push({ x: left(), y: iy, w: tileW(), h: tileH(), row: 2, col: 0 });
   }
 
+  // 2026 Floating Glass Pill for Auto-switch countdown & toasts
   var nowMs = Date.now();
   if (S.autoSwitchAt > nowMs && S.autoSwitchId) {
     var rem = Math.max(1, Math.ceil((S.autoSwitchAt - nowMs) / 1000));
+    var msg = "Switching to " + S.autoSwitchName + " in " + rem + "s… (press any key to stay)";
     ctx.font = F.mid;
-    ctx.fillStyle = "#4cc2ff";
+    var mw = ctx.measureText(msg).width;
+    var bx = (W - mw) / 2 - 20, by = H - 36, bw = mw + 40, bh = 28;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+    roundRect(bx, by, bw, bh, 14);
+    ctx.fill();
+    ctx.fillStyle = "rgba(56, 189, 248, 0.25)";
+    roundRect(bx - 1, by - 1, bw + 2, bh + 2, 15);
+    ctx.fill();
+    ctx.fillStyle = "#38bdf8";
     ctx.textAlign = "center";
-    ctx.fillText("Switching to " + S.autoSwitchName + " in " + rem + "s… (press any key to stay)", W / 2, H - 14);
+    ctx.fillText(msg, W / 2, H - 17);
     ctx.textAlign = "left";
   } else if (nowMs < S.toastUntil && S.toast) {
+    var tmsg = S.toast === "…" ? "working…" : S.toast;
     ctx.font = F.mid;
-    ctx.fillStyle = "#e8eaee";
+    var tmw = ctx.measureText(tmsg).width;
+    var tbx = (W - tmw) / 2 - 20, tby = H - 36, tbw = tmw + 40, tbh = 28;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+    roundRect(tbx, tby, tbw, tbh, 14);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    roundRect(tbx - 1, tby - 1, tbw + 2, tbh + 2, 15);
+    ctx.fill();
+    ctx.fillStyle = "#f8fafc";
     ctx.textAlign = "center";
-    ctx.fillText(S.toast === "…" ? "working…" : S.toast, W / 2, H - 14);
+    ctx.fillText(tmsg, W / 2, H - 17);
     ctx.textAlign = "left";
   }
 }

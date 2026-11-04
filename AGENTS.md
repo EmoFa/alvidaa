@@ -41,10 +41,13 @@ Two lanes share one TV:
 | `launcher/recon.html` | the probe page pattern (v1–v8 in git history) |
 | `launcher/hookinstall.html`, `hookcheck.html` | remote hook install/verify |
 | `docs/findings/01…11` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints, patched firmware playbook, firmware notes |
+| `scripts/check.sh` | read-only health check: generated tables vs JSON, python/shell syntax, relative doc links |
 | `firmware/ENDPOINTS.md` | live endpoint/kill-list working copy (gitignored) |
 
 ## Canonical recipes
 
+- Verify before you commit: `./scripts/check.sh` — read-only, no regeneration.
+  Fails on stale generated tables, syntax errors, or broken relative links.
 - Root shell: `./server/tv` (interactive) or `./server/tv 'cmd'`. PATH is
   exported by the wrapper — dropbear sessions have none.
 - Load any page on the TV: `curl "http://<server>:8770/api/open?url=…"`.

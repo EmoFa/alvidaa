@@ -13,7 +13,7 @@
   },
   "inputs": {},
   "watcher": {
-    "enabled": true,
+    "enabled": false,
     "app": "Home",
     "interval": 3,
     "cooldown": 6
@@ -21,7 +21,7 @@
   "shortcuts": [
     {
       "name": "Doom",
-      "url": "http://192.168.0.85:8770/doom"
+      "url": "http://127.0.0.1:8770/doom"
     }
   ]
 }

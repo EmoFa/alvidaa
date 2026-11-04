@@ -153,3 +153,54 @@ boot-time OEM deploy copies the staging tree **unfiltered**:
 that lane, and it stays data-only. Method entries filed in
 [EXPLOITS.md](../../../../research/EXPLOITS.md) (uart-console-gate,
 oem-staging-deployer, ipk-channel-symlink-flipper).
+
+### superwatch_server and the IPK channel (2026-11-04, static)
+
+From the pristine vendor tree (`usr-local/bin` + `usr-local/scripts`; binaries
+via strings only — no disassembly, no live test):
+
+- **`superwatch_server` is a root UDS command server** at
+  `/var/run/superwatch_socket` (source path in the binary:
+  `systools/superwatch_server/src/`). Its `CommandFactory` registers:
+  `RunIpkInstall`, `RunIpkUninstall`, `RunIpkBackup`, `RunIpkRestore`,
+  `RunIpkClearBackup`, `RunRecreateSoftlink`, `RunCheckPkgsUsd`,
+  `GetDirUsage`, `MkDirForPVR`, `DropCache`, `IrGetLog`,
+  `EnterWifiTestmode`, plus a `GeneralCommand` base class. Each command logs
+  the client's `pid/uid/gid` (peer credentials) and passes through a
+  per-command authorization check (`command unauthorized %d acess`); the
+  check's policy (which uid may run which command) is compiled in and was not
+  extracted. The boot map starts it as root (`start-superwatch.sh` loop +
+  `superwatch &`).
+- **The install command runs `opkg` as root**: `RunIpkInstallCommand` →
+  `ipk_install.sh` = `opkg ${pkg_options} --force-reinstall install ${ipk_path}`
+  + `ipk-update -n ${pkg_name}`, with the path and options taken from the
+  socket message. `opkg` executes post-install scripts as root. The result
+  file `/tmp/ipk_install_result` is created, chmodded 640 and **chowned
+  314:314** — same for `check_pkgs_used.sh`'s result. The design intent is
+  that **phoenix (uid 314) is the client class** for this socket. This is the
+  same architecture the 100U7Q chain drives (`pkgmgr` → root superwatch
+  socket → install 82/83); on this unit it is statically confirmed end to end
+  on the server side, but the client-side authorization model is unresolved
+  and no client was demonstrated. The sibling scripts `ipk_backup.sh`,
+  `ipk_restore_backup.sh`, `ipk_clear_backup.sh`, `ipk_recreat_softlink.sh`
+  implement the other IPK commands (backup/restore mirror packages between
+  `/APPS/pkgs` and `/OAD/pkgs/backup`; the `cp -a` source path is
+  symlink-following).
+- **The package feed is plaintext HTTP**: `opkg.conf` (in
+  `apps/opt-pkgs/`) sets `dest apps /APPS/pkgs`, `dest opt /opt/pkgs`,
+  `option cache_dir /OAD/pkgs/download`, and sources
+  `http://d2op21qr755kpl.cloudfront.net/mtk9603/Packages{,_all,.gz}` — no
+  `option signature-check` and no keyring in the conf. Vendor-encrypted IPKs
+  are handled out-of-band by `ipk-decrypt` (RSA_public_decrypt + AES-CBC) and
+  `app_upgrade` (libcurl downloader with Authenticate/CheckVersion/Download
+  services). Whether the app-store path enforces the RSA layer is a
+  binary-analysis question; the opkg conf itself imposes nothing.
+- **`secure_exec`** is a small setuid/caps wrapper ("execvp process and set
+  uid,gid,groups,caps by secure_exec", usage
+  `secure_exec <label> <full-path> <argv...>`) — the policy is compiled in
+  per label; `masman`/`systemserver`/`tvmain`/`startgui.sh`/`rescueOTA` all
+  start through it.
+- **`masman`** listens on `127.0.0.1:12321`, has a command interface
+  ("Available commands:") and `-S`/`-s` options for startup/shutdown shell
+  scripts — not used in the boot invocation. Loopback-only, root-run; noted
+  for the map, not pursued.

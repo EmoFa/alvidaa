@@ -133,3 +133,50 @@ gate, including on in-sandbox paths. The mode list alone does not bypass it.
 Whether the debug-code behavior carries over is also untested; an accepted
 code on the older TV does not establish root on a newer one. See
 [the community playbook](../../../../research/10-patched-firmware-playbook.md).
+
+### Static pass over the archived jsservice.basic IPK (2026-11-04)
+
+Source: `apps/opt-pkgs/backup/tv.vidaa.jsservice.basic_1.0.0-d20250813o_mtk9602.ipk`
+in the pristine vendor tree (Forgejo seed) — the vendor's own backup copy of the
+JS-service framework package. Control block: `Phase: debug`, `PackageType:
+Property`, `Persistent: true`, `DualChannel: true`, `Architecture: mtk9602`,
+version `1.0.0-d20250813o`. It may drift from the copy actually running on the
+TV; the fileRead/fileWrite behavior below is what the *archived build* does,
+and it matches the live probe results recorded above.
+
+- **The hiutils API table, authoritatively** (`services/hiutils/index.js`,
+  `supportedAPI`, 22 entries): `hiSdkSignCreate`, `hiSdkSignCreateSoundbar`,
+  `hiSdkJsonVerifyHeap`, `writeTvRunLog`, `createRandomString`, `fileRead`,
+  `fileWrite`, `installApplication`, `getDefaultCDNInfo`, `securityEncrypt`,
+  `securityDecrypt`, `setDebugPort`, `getDebugPort`, `deviceCode`,
+  `checkAccessCode`, `getVersionStatus`, `getFrameTvSupport`, `getUIVersion`,
+  `getOSVersion`, `openModuleLog`, `getDabTool`, `setDabTool`, `setDns`.
+  This closes the v5-era "authoritative table is in the service JS" gap: the
+  guessed-name space (17 names, all "Not supported api") missed
+  `installApplication`, `setDebugPort`, `setDabTool`, `setDns`, and others.
+- **fileRead/fileWrite are base-dir concatenation, no normalization**
+  (`services/hiutils/fileOperation.js`): `full_path = path_list[params.mode] +
+  params.path` with `path_list = ['/tmp/', '/APPS/varlocal/applications/UI/',
+  '/APPS/channelA/', '/APPS/varlocal/', '/data/', '/vddt/', '/APPS/', '/OAD/']`.
+  No path normalization and no `..` filtering in this build — the JS layer of
+  the traversal primitive, confirming what the live probes measured. Mode 6 is
+  `/OAD/`: the bridge reaches OTA staging directly, which is one more reason
+  for the hands-off rule. The 2026-07 firmware reporter's "strict path joiner"
+  is evidently a later addition.
+- **`fetcher` service** (`services/fetcher/index.js`, `autoStart: false`):
+  `fetchResponse`, `fetchHead`, `fetchFile`. `functions/fetch/fetchfile.js`
+  downloads an arbitrary `url` to an arbitrary `directory` argument (axios +
+  stream-throttle, 8 MB/s cap, optional cancel) — the FaaS-fetcher write
+  primitive that the 100U7Q chain relies on, present in the basic package.
+- **`installApplication`** writes its argument verbatim to
+  `/APPS/websdk/Appinfo.json` (creating it 660, group 713 if absent) — the
+  app-store install descriptor, writable from any page via the bridge.
+- **`setDns`** repoints the TV's DNS at runtime (`setTVAPI('dns', ...)` plus a
+  wired/wireless re-apply; empty arg resets to 8.8.8.8). Kill-list relevance:
+  anything with bridge access can change the resolver the kill-list depends on.
+- **`setDabTool`** writes the DAB debug flag file only when
+  `getSecurityLevel()` is 6 or 9, with the security validity date as content —
+  the debug-code gate from the section above, at the API layer.
+- `ipchandler` (autoStart, keepAlive) exposes a single API, `sendServiceReady`,
+  over a native `servicehandler` module (KMQ); `tvinfo` carries the TV-API
+  side. No exec-class API exists anywhere in this package.

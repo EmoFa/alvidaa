@@ -6,7 +6,7 @@
   // remote D-pad + click hit-testing, and auto-switch countdown.
   if (document.getElementById("alvidaa-cv")) return;
 
-  var BRIDGE = "http://192.168.0.85:8770";
+  var BRIDGE = "http://127.0.0.1:8770";
   function resolveUrl(u) {
     if (!u) return "";
     if (/^(https?:|data:)/.test(u)) return u;

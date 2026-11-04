@@ -17,15 +17,14 @@
 #
 # Batch = 1 TV write + 1 cache clear + 1 reboot (write-minimization law).
 #
-# Usage: tools/deploy-overlay.sh <tv-ip> <bridge-url>
-#        or set TV_HOST and BRIDGE_URL in the environment.
+# Usage: tools/deploy-overlay.sh <tv-ip> [bridge-url]
+#        or set TV_HOST and BRIDGE_URL in the environment (bridge defaults to http://127.0.0.1:8770).
 set -euo pipefail
 
 TV="${1:-${TV_HOST:-}}"
 KEY="$(cd "$(dirname "$0")" && pwd)/../server/keys/tv_root_ed25519"
-BRIDGE="${2:-${BRIDGE_URL:-}}"
+BRIDGE="${2:-${BRIDGE_URL:-http://127.0.0.1:8770}}"
 [ -n "$TV" ] || { echo "ERROR: pass <tv-ip> or set TV_HOST"; exit 1; }
-[ -n "$BRIDGE" ] || { echo "ERROR: pass <bridge-url> or set BRIDGE_URL"; exit 1; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -51,7 +50,8 @@ print("    built:", len(s.encode()), "bytes, md5", hashlib.md5(s.encode()).hexdi
 PYEOF
 
 echo "==> 3/4 push overlay + index.html + verify + cache clear + reboot"
-tar -cf - -C "$HERE/../launcher" alvidaa-remote.js -C "$WORK" final.html | ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
+sed "s|http://127.0.0.1:8770|${BRIDGE}|g" "$HERE/../launcher/alvidaa-remote.js" > "$WORK/alvidaa-remote.js"
+tar -cf - -C "$WORK" alvidaa-remote.js final.html | ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
 /var/local/tvtools/busybox tar -xf - -C /tmp/
 cat /tmp/final.html > /APPS/channelA/hisenseUI/index.html
 cat /tmp/alvidaa-remote.js > /APPS/channelA/hisenseUI/alvidaa-remote.js

@@ -56,6 +56,8 @@ MD1=$(/var/local/tvtools/busybox md5sum /APPS/channelA/hisenseUI/index.html | /v
 echo "    on TV: $MD1"
 /var/local/tvtools/busybox rm -rf /var/local/hisenseUI/cobalt_home/*
 sync
-. /etc/profile >/dev/null 2>&1
-/usr/local/bin/reboot'
+# Findings 12 §4: `. /etc/profile` hangs in a non-interactive dropbear session,
+# so the reboot never fires; /usr/local/bin/reboot also needs LD_LIBRARY_PATH.
+# The static busybox reboot is the validated path.
+/var/local/tvtools/busybox reboot -f'
 echo "==> 4/4 reboot issued — expect: boot → overlay; bridge down = dark background, no fallback"

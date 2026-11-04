@@ -81,7 +81,7 @@ your TV's boot behavior.
 | Doc | What it is |
 | --- | --- |
 | [docs/ROOT.md](docs/ROOT.md) | **The root chain, stage by stage** — start here for lane 2 |
-| [docs/findings/](docs/findings/) | The lab notebook, split into nine modules (MQTT auth wall → endpoints) |
+| [docs/findings/](docs/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |
 | [docs/EXPLOITS.md](docs/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |
 | [docs/HACK-YOUR-OWN.md](docs/HACK-YOUR-OWN.md) | The staged prompt ladder for running this with your own AI agent |
 | [docs/LAUNCHER_V2.md](docs/LAUNCHER_V2.md) | The on-TV launcher port plan (root-era roadmap, R0–R6) |

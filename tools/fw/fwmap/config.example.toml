@@ -1,0 +1,44 @@
+# fwmap configuration overlay.
+# Copy to config.toml and pass --config config.toml.
+# Only add hosts you are authorized to query, and keep the rate polite.
+
+[general]
+# Seconds between requests (default 2.0, i.e. 1 request / 2 s).
+rate_limit_seconds = 2.0
+# Per-request timeout in seconds.
+timeout_seconds = 20.0
+# Retries after the first attempt.
+max_retries = 3
+# Hard cap for pagination/sitemap/page crawling per strategy.
+max_pages = 20
+# Refuse response bodies larger than this while scanning (not downloads).
+max_body_bytes = 20971520
+# Additional opt-in hosts for --allow-host style usage.
+# allow_hosts = ["www.hisense.es"]
+# user_agent = "fwmap/0.1 (public firmware metadata crawler)"
+# strategies = ["media", "sitemap", "pages", "slug"]
+# fetch_model_pages = true
+
+# The built-in default already contains this region. Keeping it here documents
+# which facts are artifact-backed and which are not.
+[regions.es]
+host = "www.hisense.es"
+hosts = ["www.hisense.es", "hisense.es"]
+# Model pages are plural; the download index is singular.
+page_prefix = "/descargas-firmware"
+index_prefix = "/descarga-firmware"
+media_prefix = "/wp-content/uploads/firmwares/"
+archive_extensions = [".tar.gz", ".tgz", ".tar", ".zip", ".bin", ".pkg", ".7z", ".rar"]
+# confirmed = page route, index route and the <MODEL>_pkg_<YYYYMMDD> filename
+# pattern were observed in local artifacts/transcripts (100u7q page; m7000
+# links). Media API, sitemap, pagination and other regions remain hypotheses
+# until a live run proves them (see coverage.filename_pattern_proven).
+evidence_tier = "confirmed"
+
+# Example: another region. UNVERIFIED: no local artifact backs this structure.
+# [regions.pt]
+# host = "www.hisense.pt"
+# hosts = ["www.hisense.pt", "hisense.pt"]
+# page_prefix = "/descargas-firmware"
+# media_prefix = "/wp-content/uploads/firmwares/"
+# evidence_tier = "hypothesis"

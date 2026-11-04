@@ -1,0 +1,11 @@
+// Copy to live_cmd.txt next to recon.html while the server runs.
+// The TV page polls /cmd every ~600 ms, evaluates ONE expression/statement with
+// the recon helpers in scope, and POSTs the result back to /recon.
+//
+// Examples (uncomment exactly one per drop):
+//   listDir("/mnt/usb")
+//   fileXHR("file:///3rd_rw/root_proof.txt")
+//   fileXHR("file:///3rd_rw/appdata/root_loop.pid")
+//   (function(){ return HiBrowser.File.write("root_cmd.sh", "id\n", 1); })()
+
+fileXHR("file:///3rd_rw/root_proof.txt")

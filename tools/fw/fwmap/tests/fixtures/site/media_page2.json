@@ -1,0 +1,18 @@
+[
+  {
+    "id": 104,
+    "date": "2024-02-03T09:00:00",
+    "slug": "55a6g-pkg-20240202",
+    "source_url": "https://www.hisense.es/wp-content/uploads/firmwares/55a6g_pkg_20240202.zip",
+    "mime_type": "application/zip",
+    "media_details": {"filesize": 55555}
+  },
+  {
+    "id": 105,
+    "date": "2023-12-13T09:00:00",
+    "slug": "m7000-pkg-20231212",
+    "source_url": "https://www.hisense.es/wp-content/uploads/firmwares/m7000_pkg_20231212.tar.gz",
+    "mime_type": "application/gzip",
+    "media_details": {"filesize": 98765432}
+  }
+]

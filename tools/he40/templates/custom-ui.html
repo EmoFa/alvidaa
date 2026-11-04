@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280,height=720">
+<title>My TV</title>
+<style>
+  html, body { margin:0; width:100%; height:100%; background:#0b0b0b; color:#eee;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; overflow:hidden; }
+  .wrap { padding:2.2vw; }
+  h1 { font-size:2.8vw; margin:0 0 1.2vw 0; font-weight:300; letter-spacing:.04em; }
+  .row { display:flex; gap:1vw; flex-wrap:wrap; }
+  button { font-size:1.25vw; padding:1vw 1.5vw; border-radius:.55vw;
+    border:1px solid #444; background:#1b1b1b; color:#eee; cursor:pointer; }
+  button:hover { background:#2a2a2a; }
+  pre { margin-top:1.5vw; font-size:.95vw; color:#8f8; white-space:pre-wrap; }
+  .hint { color:#888; font-size:1vw; margin-top:1.5vw; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>My TV</h1>
+  <div class="row">
+    <button onclick="launch('dtv_app_mtk')">TV</button>
+    <button onclick="launch('netflix')">Netflix</button>
+    <button onclick="launch('youtube')">YouTube</button>
+    <button onclick="launch('opera4x')">TV Browser</button>
+    <button onclick="launch('factory_lite')">Factory</button>
+    <button onclick="probe()">APIs</button>
+  </div>
+  <pre id="out">ready.</pre>
+  <div class="hint">
+    Custom UI template. API names/signatures are UNVERIFIED — check them in the UI
+    DevTools (9223) or the web browser (9224). No shell access from JS; use the
+    root loop/SSH instead.
+  </div>
+</div>
+<script>
+function out(o){ document.getElementById('out').textContent = JSON.stringify(o,null,2); }
+
+function launch(id){
+  var o = {app:id};
+  try {
+    // UI context (hisenseUI / UI_jsplugins)
+    if (typeof Hisense_StartApp === 'function') {
+      Hisense_StartApp(':am,' + id + ',:start=' + id);
+      o.via = 'Hisense_StartApp';
+    } else if (typeof HiBrowser !== 'undefined' && HiBrowser && HiBrowser.System) {
+      // web-browser context (hisense_browser / libhspdk-jsx)
+      HiBrowser.System.startApp(':am,' + id + ',:start=' + id);
+      o.via = 'HiBrowser.System.startApp';
+    } else if (typeof TVAPI !== 'undefined' && TVAPI && TVAPI.StartApp) {
+      TVAPI.StartApp(id);
+      o.via = 'TVAPI.StartApp';
+    } else if (typeof guijs !== 'undefined' && guijs && guijs.StartApp) {
+      guijs.StartApp(id);
+      o.via = 'guijs.StartApp';
+    } else {
+      o.via = 'none';
+      o.note = 'No start API found; see 03-ui.md / DevTools.';
+    }
+  } catch(e) { o.err = String(e); }
+  out(o);
+}
+
+function probe(){
+  var o = {};
+  ['Hisense_StartApp','HiBrowser','TVAPI','guijs','model','UI'].forEach(function(k){
+    try { o[k] = (typeof window[k] !== 'undefined') ? typeof window[k] : 'undefined'; }
+    catch(e){ o[k] = String(e); }
+  });
+  o.href = location.href;
+  out(o);
+}
+</script>
+</body>
+</html>

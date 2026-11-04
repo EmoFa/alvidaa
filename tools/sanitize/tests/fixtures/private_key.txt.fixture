@@ -1,0 +1,4 @@
+# Synthetic canary: fake PEM header, no key material.
+-----BEGIN OPENSSH PRIVATE KEY-----
+EXAMPLE_ONLY_NOT_A_KEY
+-----END OPENSSH PRIVATE KEY-----

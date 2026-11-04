@@ -37,7 +37,7 @@ CLIENT_ID_PATTERN = "38D65DC30F45109A369A86FCE866A85B"
 MODERN_SALT = "h!i@s#$v%i^d&a*a"
 STANDARD_SALT = "h*i&s%e!r^v0i1c9"
 XOR_MASK = 6239759785777146216
-TV_MAC = os.environ.get("TV_MAC", "")  # TV WiFi MAC — from its SSDP descriptor (see docs/FINDINGS.md §1)
+TV_MAC = os.environ.get("TV_MAC", "")  # TV WiFi MAC — from its SSDP descriptor (see docs/models/50A51HUV/09.01O.P0813/findings/01-mqtt-bridge.md)
 
 def creds(profile):
     ts = int(time.time())

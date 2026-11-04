@@ -1,0 +1,19 @@
+{
+  "AppInfo": [
+    {
+      "AppId": "MyApp",
+      "Thumb": "file:///3rd_rw/appdata/custom/icon.png",
+      "Icon_96": "file:///3rd_rw/appdata/custom/icon.png",
+      "Image": "file:///3rd_rw/appdata/custom/icon.png",
+      "URL": "file:///3rd_rw/appdata/custom/index.html",
+      "AppName": "MyApp",
+      "Title": "MyApp",
+      "IconURL": "file:///3rd_rw/appdata/custom/icon.png",
+      "StartCommand": "file:///3rd_rw/appdata/custom/index.html",
+      "InstallTime": "2026-10-26",
+      "RunTimes": 0,
+      "StoreType": "foxxum",
+      "PreInstall": false
+    }
+  ]
+}

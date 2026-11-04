@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!-- Authorized use only: your own device. Rooting can brick the TV. No warranty. -->
+<!-- Purpose: TV-side recon page. Runs in the TV's root browser and exposes
+     read/list helpers, a live command channel (/cmd) and result shipping (/recon).
+     Serve it from recon/server.py; open it as http://<host>:<port>/recon.html. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>VIDAA Recon</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#cfe3d5;
+    font-family:Consolas,"DejaVu Sans Mono",monospace;font-size:20px;}
+  pre{white-space:pre-wrap;word-break:break-word;padding:14px 18px;line-height:1.3;}
+  .sec{color:#6fb3ff;font-weight:bold;} .ok{color:#7bd88f;} .no{color:#e07a6a;} .warn{color:#e6c15a;}
+</style>
+</head>
+<body>
+<pre id="o">loading phase…</pre>
+<script>
+var O=document.getElementById("o"), collected=[];
+function log(m,c){ if(O.textContent==="loading phase…") O.textContent=""; if(c){var d=document.createElement("span");d.className=c;d.textContent=m;O.insertBefore(d,O.firstChild);}else O.insertBefore(document.createTextNode(m),O.firstChild); collected.push(m); }
+function sec(t){ log("\n==== "+t+" ====","sec"); }
+function kv(k,v){ log("\n  "+k+": "+v); }
+function raw(l,t,max){ max=max||6000; var s=(t==null?"":String(t)); if(s.length>max) s=s.slice(0,max)+"\n  …[+"+(s.length-max)+"]"; log("\n  -- "+l+" --\n  "+s.replace(/\n/g,"\n  ")); }
+function has(f){ return typeof window[f]==="function"; }
+function fileXHR(path){ try{ var x=new XMLHttpRequest(); x.open("GET",path,false); x.send(null); if(x.status===200||x.status===0) return x.responseText; return null; }catch(e){ return "ERR:"+e; } }
+function fileRead(rel,flag){ try{ if(typeof File!=="undefined"&&File.read) return File.read(rel,flag||1); }catch(e){ return "ERR:"+e; } return null; }
+function parseListing(html){
+  if(html==null) return null;
+  var s=String(html); if(s.indexOf("ERR:")===0) return s;
+  var out=[], re=/addRow\(\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*(\d+)/g, m;
+  while((m=re.exec(s))!==null){
+    var name=m[1]; if(name==="."||name==="..") continue;
+    out.push((m[3]==="1"?"[D] ":"[F] ")+name);
+  }
+  return out.length? out.join("\n  ") : "(empty or no addRow entries)";
+}
+function listDir(d){ var r=fileXHR("file://"+d+"/"); return parseListing(r); }
+function readFile(p){ var r=fileXHR("file://"+p); if(r==null) return null; if(String(r).indexOf("ERR:")===0) return null; if(String(r).indexOf("<!DOCTYPE")===0) return "(directory)"; return r; }
+function shipNow(){
+  var payload="PHASE "+location.href+"\nTIME "+new Date().toISOString()+"\n\n"+collected.join("");
+  log("\n\n[shipping "+collected.join("").length+" chars…]");
+  fetch("/recon",{method:"POST",headers:{"Content-Type":"text/plain"},body:payload})
+    .then(function(r){ log("\n[shipped "+r.status+"]","ok"); })
+    .catch(function(e){ log("\n[ship FAILED "+e+"]","no"); });
+}
+window.__recon={log:log,sec:sec,kv:kv,raw:raw,has:has,fileXHR:fileXHR,fileRead:fileRead,parseListing:parseListing,listDir:listDir,readFile:readFile,shipNow:shipNow,collected:collected};
+
+// OPTIONAL: if you drop a phase.js next to this page, it is evaluated with the
+// helpers above. A missing file is not an error.
+fetch("/phase.js?t="+Date.now()).then(function(r){return r.text();})
+  .then(function(code){ (function(R){ with(R){ eval(code); } })(window.__recon); })
+  .catch(function(e){ log("\nload phase.js FAILED: "+e,"no"); });
+
+// LIVE HOOK: polls /cmd, evals one JS command, reports the completion value.
+// One page reload is needed after this file changes; afterwards commands can be
+// sent by dropping JS into live_cmd.txt on the host.
+function __liveEval(code){
+  try { return (function(R){ with(R){ return eval(code); } })(window.__recon); }
+  catch(e){ return "LIVE_ERR: "+e; }
+}
+function __livePoll(){
+  fetch("/cmd?t="+Date.now()).then(function(r){
+    if(r.status!==200) return null;
+    return r.text().then(function(code){
+      if(!code) return;
+      var out=__liveEval(code);
+      var payload="LIVE CMD:\n"+code+"\n\nLIVE RESULT:\n"+String(out);
+      fetch("/recon",{method:"POST",headers:{"Content-Type":"text/plain"},body:payload});
+    });
+  }).catch(function(e){}).then(function(){ setTimeout(__livePoll,600); });
+}
+setTimeout(__livePoll,1500);
+</script>
+</body>
+</html>

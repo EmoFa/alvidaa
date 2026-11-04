@@ -1,0 +1,14 @@
+{
+  "https://www.hisense.es/robots.txt": {
+    "status": 200,
+    "body": "User-agent: *\nDisallow: /wp-json/\n"
+  },
+  "https://www.hisense.es/descargas-firmware/": {
+    "status": 200,
+    "body": "<html><body><a href=\"/descargas-firmware/m7000/\">M7000</a></body></html>"
+  },
+  "https://www.hisense.es/descarga-firmware/": {
+    "status": 200,
+    "body": "<html><body><a href=\"/descargas-firmware/m7000/\">M7000</a></body></html>"
+  }
+}

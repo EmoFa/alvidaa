@@ -1,0 +1,26 @@
+[
+  {
+    "id": 101,
+    "date": "2025-01-02T10:00:00",
+    "slug": "100u65qevs-pkg-20250101",
+    "source_url": "https://www.hisense.es/wp-content/uploads/firmwares/100u65qevs_pkg_20250101.tar.gz",
+    "mime_type": "application/gzip",
+    "media_details": {"filesize": 123456789}
+  },
+  {
+    "id": 102,
+    "date": "2023-12-13T09:00:00",
+    "slug": "m7000-pkg-20231212",
+    "source_url": "https://www.hisense.es/wp-content/uploads/firmwares/m7000_pkg_20231212.tar.gz",
+    "mime_type": "application/gzip",
+    "media_details": {"filesize": 98765432}
+  },
+  {
+    "id": 103,
+    "date": "2024-05-01T09:00:00",
+    "slug": "m7000-preview",
+    "source_url": "https://www.hisense.es/wp-content/uploads/2024/05/m7000-preview.jpg",
+    "mime_type": "image/jpeg",
+    "media_details": {"filesize": 12345}
+  }
+]

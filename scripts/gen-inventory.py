@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Render the firmware inventory (docs/inventory.json) into the human tables.
+"""Render the firmware inventory (docs/research/inventory.json) into the human tables.
 
 Updates two files, between INVENTORY markers:
   - README.md:                              the tested-models matrix
-  - docs/findings/10-...-playbook.md:       the generation status table
+  - docs/research/10-patched-firmware-playbook.md:       the generation status table
 
 Single source of truth is the JSON — never hand-edit the rendered tables.
 Usage: scripts/gen-inventory.py [--check]  (--check fails if output would change)
@@ -12,9 +12,9 @@ import json, sys, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
-INV = os.path.join(ROOT, "docs", "inventory.json")
+INV = os.path.join(ROOT, "docs", "research", "inventory.json")
 README = os.path.join(ROOT, "README.md")
-PLAYBOOK = os.path.join(ROOT, "docs", "findings", "10-patched-firmware-playbook.md")
+PLAYBOOK = os.path.join(ROOT, "docs", "research", "10-patched-firmware-playbook.md")
 
 MARK = ("<!-- INVENTORY:START -->", "<!-- INVENTORY:END -->")
 
@@ -107,7 +107,7 @@ def main():
     if rd_new != rd:
         changed.append("README.md")
     if pb_new != pb:
-        changed.append("docs/findings/10-patched-firmware-playbook.md")
+        changed.append("docs/research/10-patched-firmware-playbook.md")
 
     if check:
         if changed:

@@ -142,3 +142,14 @@ Combined with the init-check's `chown -R UhisTvm` + `chmod -R 644`
 stripping any setuid bits, the euladpp untar is **file-ops-as-root only —
 no code exec**. The no-traversal root lane needs a different primitive;
 Chromium N-days and the installed-app context remain the open ones.
+
+**Static-audit corrections (2026-11-04, from the pristine vendor tree):**
+`euladpp-init-check.sh` decompresses into `/OAD/eulaDppTemp`, not
+`/opt/eulaDppTemp` — `/opt/euladpp` is the read-only backup source the script
+copies `eulaDpp.tar.gz` from when the `/APPS` copy is missing. And the
+boot-time OEM deploy copies the staging tree **unfiltered**:
+`oem_files_white_name.ini` gates only `import_oem_data.sh`/`export_oem_data.sh`
+(the USB lane), not `deploy_oem_data.sh` — the destination set is what bounds
+that lane, and it stays data-only. Method entries filed in
+[EXPLOITS.md](../../../../research/EXPLOITS.md) (uart-console-gate,
+oem-staging-deployer, ipk-channel-symlink-flipper).

@@ -49,7 +49,8 @@ Two lanes share one TV:
 - Verify before you commit: `./scripts/check.sh` — read-only, no regeneration.
   Fails on stale generated tables, syntax errors, or broken relative links.
 - Root shell: `./server/tv` (interactive) or `./server/tv 'cmd'`. PATH is
-  exported by the wrapper — dropbear sessions have none.
+  exported by the wrapper — dropbear sessions have none. Default host is
+  `192.168.0.11`; override with `TV_HOST=<ip>` when the TV's DHCP lease moves.
 - Load any page on the TV: `curl "http://<server>:8770/api/open?url=…"`.
 - MQTT traps: subscribe to **exact topics** (wildcards silently denied);
   list payloads are JSON **arrays**; one session per credential set;

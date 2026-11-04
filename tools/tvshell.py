@@ -6,11 +6,13 @@ Sends each command, reads until a quiet window, prints the output.
 This speaks plain TCP to busybox telnetd (-l /bin/sh) — no telnet IAC
 negotiation is attempted beyond swallowing initial bytes.
 """
+import os
 import socket
 import sys
 import time
 
-HOST, PORT = "192.168.0.12", 2323
+HOST = os.environ.get("TV_HOST", "192.168.0.11")   # override when the TV moves
+PORT = 2323
 QUIET = 0.8      # seconds of silence before a command's output is considered done
 MAXWAIT = 12.0
 

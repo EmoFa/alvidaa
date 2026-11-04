@@ -2,12 +2,16 @@
 # Root shell/one-shot into the TV over dropbear (port 2222).
 #   server/tv                    -> interactive root shell (PATH fixed)
 #   server/tv 'cat /proc/mounts' -> one-shot command
+# Host: $TV_HOST, default 192.168.0.11. The TV is DHCP-shuffled (see the
+# LAUNCHER_V2 post-mortem) — set TV_HOST whenever it moves. Never assume
+# 192.168.0.12: that address now belongs to another device on the LAN.
 # The dropbear session does not run /etc/profile, so PATH is set here.
 KEY="$(dirname "$0")/keys/tv_root_ed25519"
+TV="${TV_HOST:-192.168.0.11}"
 FIX="export PATH=/usr/local/bin:/usr/local/scripts:/bin:/usr/bin:/sbin:/usrbin:/opt/bin:/3rd/bin/wpa_supplicant/common:\$PATH;"
 if [ $# -eq 0 ]; then
     exec ssh -t -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        -p 2222 -i "$KEY" root@192.168.0.12 "$FIX exec /bin/sh -i"
+        -p 2222 -i "$KEY" root@"$TV" "$FIX exec /bin/sh -i"
 fi
 exec ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -p 2222 -i "$KEY" root@192.168.0.12 "$FIX $*"
+    -p 2222 -i "$KEY" root@"$TV" "$FIX $*"

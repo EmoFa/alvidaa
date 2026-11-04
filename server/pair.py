@@ -9,7 +9,8 @@ This tool walks the app-style handshake:
   -> authenticationcode -> gettoken -> tokenissuance -> tokens.json
 
 Usage: venv/bin/python pair.py [tv-ip] [pin]
-  tv-ip  defaults to 192.168.0.12 / $HISENSE_HOST
+  tv-ip  required unless $HISENSE_HOST is set (there is no built-in default —
+         the TV's address is DHCP-assigned and moves)
   pin    the 4-digit code shown on the TV; prompts on stdin if omitted
 
 Certificates: keys/vidaa_cert.pem + keys/vidaa_key.pem (from the official

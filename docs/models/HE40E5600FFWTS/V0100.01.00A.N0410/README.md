@@ -10,6 +10,11 @@ are **UNVERIFIED**. This is a separate chain from [the 50A51HUV / MTK9602 guide]
 > writable paths are properties of this build. Another firmware, panel size or
 > board revision is untested; nothing here is a generic VIDAA exploit.
 
+> Source citations prefixed `vidaa/he40/...` are line references into the
+> author's private research record, not files in this repository. See
+> [EVIDENCE.md](EVIDENCE.md) for the claim matrix; the guide itself is
+> self-contained.
+
 ## What this is
 
 A no-flash software root path for one Hisense/MediaTek TV:
@@ -235,7 +240,7 @@ the size and hash before going on; do not reboot on an unverified write.
 **Correction to older wording:** the shadow library is loaded when
 `hisense_browser` **next starts**. The browser is *not* started at boot — it is
 launched on demand when the TV browser tile is opened
-(`modding/02-boot.md:177`). A reboot alone therefore does not execute the
+(`vidaa/he40/modding/02-boot.md:177`). A reboot alone therefore does not execute the
 payload.
 
 Recorded procedure: reboot the TV, then **open the TV browser once**. That

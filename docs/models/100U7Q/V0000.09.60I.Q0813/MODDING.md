@@ -10,6 +10,10 @@ states that everything in its `modding/` directory was measured on the device,
 and that anything not measured is marked UNVERIFIED and is not a recipe. That
 distinction is preserved here.
 
+> Source citations prefixed `vidaa/100u7q/...` are line references into the
+> private research record, not files in this repository. See
+> [EVIDENCE.md](EVIDENCE.md) for the claim matrix.
+
 ## System layout, storage, constraints
 
 `/proc/mounts` (recorded):
@@ -134,21 +138,21 @@ the `postinst`.
 
 | Area | Status | Basis |
 |---|---|---|
-| Mounts, writable set, `nosuid`, SELinux | measured | `01-system.md:6-38`, `:83-95` |
-| Boot chain, inert `/OAD` hooks, no writable boot hook | measured/documented | `01-system.md:40-62`; `05-limits.md:33-39` |
-| `fetcher` empty permission block and the four-segment route | documented code | `HOW-IT-WORKS.md:16-19` |
-| `fetchFile` arbitrary write as uid 314 | documented code + operational reliance | `HOW-IT-WORKS.md:33-49` |
-| superwatch socket mode/group and `82` install | documented code + stated measurement (no raw transcript) | `HOW-IT-WORKS.md:52-64` |
-| `postinst` uid 0 / full capabilities | measured | `HOW-IT-WORKS.md:71-81` |
-| No signature check | documented claim, no excerpt → **UNVERIFIED/documented** | `HOW-IT-WORKS.md:83-84` |
-| Dropbear patches and offset 15162 | documented code + build recipe | `BUILD.md:26-72` |
-| Port 8008 / 22 dropped / 2222 timeout | measured | `HOW-IT-WORKS.md:119-125`; `01-system.md:64-81` |
-| Root SSH uid 0 + PTY | measured | `04-ssh.md:3-4`, `:54-58` |
-| Re-arm with `83` then `82` | documented procedure | `README.md:100-111` |
-| Automatic boot persistence | **none on this build** | `05-limits.md:33-39` |
-| Persistence candidates | **UNVERIFIED** | `06-open.md:6-21`, `:40` |
-| DevTools ports | **UNVERIFIED** (did not open) | `06-open.md:23-32` |
-| Full rollback | **UNVERIFIED / operator-defined** | `03-root.md:99-102` |
+| Mounts, writable set, `nosuid`, SELinux | measured | `vidaa/100u7q/modding/01-system.md:6-38`, `:83-95` |
+| Boot chain, inert `/OAD` hooks, no writable boot hook | measured/documented | `vidaa/100u7q/modding/01-system.md:40-62`; `vidaa/100u7q/modding/05-limits.md:33-39` |
+| `fetcher` empty permission block and the four-segment route | documented code | `vidaa/100u7q/docs/HOW-IT-WORKS.md:16-19` |
+| `fetchFile` arbitrary write as uid 314 | documented code + operational reliance | `vidaa/100u7q/docs/HOW-IT-WORKS.md:33-49` |
+| superwatch socket mode/group and `82` install | documented code + stated measurement (no raw transcript) | `vidaa/100u7q/docs/HOW-IT-WORKS.md:52-64` |
+| `postinst` uid 0 / full capabilities | measured | `vidaa/100u7q/docs/HOW-IT-WORKS.md:71-81` |
+| No signature check | documented claim, no excerpt → **UNVERIFIED/documented** | `vidaa/100u7q/docs/HOW-IT-WORKS.md:83-84` |
+| Dropbear patches and offset 15162 | documented code + build recipe | `vidaa/100u7q/docs/BUILD.md:26-72` |
+| Port 8008 / 22 dropped / 2222 timeout | measured | `vidaa/100u7q/docs/HOW-IT-WORKS.md:119-125`; `vidaa/100u7q/modding/01-system.md:64-81` |
+| Root SSH uid 0 + PTY | measured | `vidaa/100u7q/modding/04-ssh.md:3-4`, `:54-58` |
+| Re-arm with `83` then `82` | documented procedure | `vidaa/100u7q/README.md:100-111` |
+| Automatic boot persistence | **none on this build** | `vidaa/100u7q/modding/05-limits.md:33-39` |
+| Persistence candidates | **UNVERIFIED** | `vidaa/100u7q/modding/06-open.md:6-21`, `:40` |
+| DevTools ports | **UNVERIFIED** (did not open) | `vidaa/100u7q/modding/06-open.md:23-32` |
+| Full rollback | **UNVERIFIED / operator-defined** | `vidaa/100u7q/modding/03-root.md:99-102` |
 
 ## Rollback and recovery
 

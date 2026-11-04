@@ -10,6 +10,11 @@ chain and to [the 50A51HUV / MTK9602 guide](../../50A51HUV/09.01O.P0813/README.m
 > The chain rests on four properties of this build. A different firmware
 > almost certainly breaks at least one of them.
 
+> Source citations prefixed `vidaa/100u7q/...` are line references into the
+> author's private research record, not files in this repository. See
+> [EVIDENCE.md](EVIDENCE.md) for the claim matrix; the guide itself is
+> self-contained.
+
 ## What this is
 
 A LAN-only root path that abuses the TV's own local service stack:

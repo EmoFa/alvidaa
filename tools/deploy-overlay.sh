@@ -5,9 +5,15 @@
 # pushes it — never edit files in place on the TV (the one-line minified HTML
 # mangles under in-place edits; that killed the UI once already).
 #
-# The final file = pristine loader + head flash-kill style + self-healing
-# bootstrap (boot screen + retrying script loader; un-hides the stock home
-# if the bridge stays unreachable).
+# The final file = pristine loader + head flash-kill style + ONE plain
+# <script src> to alvidaa-remote.js. Deliberately NOT the self-healing
+# bootstrap: its retrying XHR deadlocks Cobalt after a CORS preflight
+# (OPTIONS 200, POST never sent) and reproducibly froze the home engine
+# (2026-11-03). Do not reintroduce it without a non-XHR fallback path.
+#
+# Failure mode by design: if the bridge is unreachable the script never
+# loads, the head style keeps the stock UI hidden, and the home shows the
+# dark flash-kill background with no launcher. There is no on-TV fallback.
 #
 # Batch = 1 TV write + 1 cache clear + 1 reboot (write-minimization law).
 #
@@ -49,4 +55,4 @@ echo "    on TV: $MD1"
 /var/local/tvtools/busybox rm -rf /var/local/hisenseUI/cobalt_home/*
 sync
 reboot'
-echo "==> 4/4 reboot issued — expect: starting screen → overlay (self-heals to stock home if bridge is down)"
+echo "==> 4/4 reboot issued — expect: boot → overlay; bridge down = dark background, no fallback"

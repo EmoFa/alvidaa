@@ -105,7 +105,6 @@ your TV's boot behavior.
 | 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | @pavanjadhaw |
 | HE40E5600FFWTS | ? (EU, German-language docs) | MTK5863-class (MT53xx, armv7 Cortex-A53) | pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit) | V0100.01.00A.N0410 | untested (vector did not use MQTT) | hisenseUI (Chromium 59.0.3071.115/V8 5.9, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security) | custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI) | achieved (boot persistence verified across multiple reboots) | @xXLucyNyuXx (angryzero/hisense-root) |
 | 100U7Q (100U70QEVS) | EU_A | MT9655 (32-bit ARM userland) | U09.60 | V0000.09.60I.Q0813 | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | @xXLucyNyuXx (angryzero/vidaa) |
-| 43E7DS | EU (DE) | ? | ? | 09.60W.Q0612 | ? | ? | blocked | untested | @ryjr2ddznn-lab |
 | 43E7DS (43Q60SEVS_02, serial type 43E7SE) | EU_A (DEU) | MTK9603 | 9.0 | 09.60W.Q0612 (EU_A) | ? | Chromium 111 "odin" | working | untested | @ryjr2ddznn-lab |
 <!-- INVENTORY:END -->
 

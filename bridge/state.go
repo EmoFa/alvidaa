@@ -369,8 +369,11 @@ func (b *Bridge) snapshot() map[string]any {
 		"t":          "hello",
 		"state":      stateType,
 		"autoSwitch": cfg.AutoSwitch,
-		"installed":  false,
-		"shortcuts":  validShortcuts(cfg.Shortcuts),
+		// This bridge is the on-TV home lane: the launcher web app is
+		// installed by construction (the watcher launches it), so the page
+		// must not offer INSTALL AS APP.
+		"installed": true,
+		"shortcuts": validShortcuts(cfg.Shortcuts),
 	}
 	apps := b.visibleApps()
 	out["apps"] = apps

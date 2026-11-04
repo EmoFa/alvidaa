@@ -97,5 +97,10 @@ up well after the home engine loads at boot, so the overlay must out-wait it.
 - Never edit TV files in place on the device; always fetch → patch → push →
   md5-verify (`tools/deploy-overlay.sh` does this for the overlay lane).
 - Reboots go through `/var/local/tvtools/busybox reboot -f` (findings 12 §4).
-- On boot, `hisenseUI` loads at t≈5s while the bridge may take 60–150s —
-  any overlay feature must tolerate `offline` state on frame 1.
+- On boot, `hisenseUI` loads at t≈5s; hook v12 starts the bridge early
+  (~t≈15s, before the LAN wait — loopback MQTT needs no network). The
+  framework's app list populates when the UI stack is ready, so the first
+  Home press after a cold boot may precede the first successful bounce;
+  the watcher (1s poll) bounces from then on. VIDAA resumes the last
+  active input on boot, so the auto-bounce only fires once you actually
+  enter home.

@@ -159,10 +159,14 @@ and it matches the live probe results recorded above.
   params.path` with `path_list = ['/tmp/', '/APPS/varlocal/applications/UI/',
   '/APPS/channelA/', '/APPS/varlocal/', '/data/', '/vddt/', '/APPS/', '/OAD/']`.
   No path normalization and no `..` filtering in this build — the JS layer of
-  the traversal primitive, confirming what the live probes measured. Mode 6 is
-  `/OAD/`: the bridge reaches OTA staging directly, which is one more reason
-  for the hands-off rule. The 2026-07 firmware reporter's "strict path joiner"
-  is evidently a later addition.
+  the traversal primitive, confirming what the live probes measured. Mode 7 is
+  `/OAD/` (mode 6 is `/APPS/`, matching the mode table above): the bridge
+  reaches OTA staging directly, which is one more reason for the hands-off
+  rule recorded earlier in this file ("Do not write to `/OAD`") and in
+  [AGENTS.md](../../../../../AGENTS.md) ground rules — `/OAD` is verified-boot
+  OTA staging, and findings 12's cold-boot/flash traps are why local-flash
+  assets live under `/APPS/channelA`, never `/OAD`. The 2026-07 firmware
+  reporter's "strict path joiner" is evidently a later addition.
 - **`fetcher` service** (`services/fetcher/index.js`, `autoStart: false`):
   `fetchResponse`, `fetchHead`, `fetchFile`. `functions/fetch/fetchfile.js`
   downloads an arbitrary `url` to an arbitrary `directory` argument (axios +
@@ -172,8 +176,16 @@ and it matches the live probe results recorded above.
   `/APPS/websdk/Appinfo.json` (creating it 660, group 713 if absent) — the
   app-store install descriptor, writable from any page via the bridge.
 - **`setDns`** repoints the TV's DNS at runtime (`setTVAPI('dns', ...)` plus a
-  wired/wireless re-apply; empty arg resets to 8.8.8.8). Kill-list relevance:
-  anything with bridge access can change the resolver the kill-list depends on.
+  wired/wireless re-apply; empty arg resets to 8.8.8.8). Threat model, both
+  directions: it is a kill-list reinforcement path — the launcher/bridge can
+  re-pin the TV resolver at the kill-list resolver after OEM resets, network
+  changes, or firmware defaults — and an attack surface: any page that reaches
+  the bridge can point the TV at a hostile resolver, silently unwinding every
+  block. Detection is asymmetric: a blocklist bypass shows up as
+  previously-blocked domains resolving in the AdGuard query log from the TV's
+  source IP, and the sanctioned DoH bypass (`/APPS/domain/domain_list.json`,
+  dns.google via vidaahub.com) already requires the REJECT rules documented in
+  [09-endpoints.md](09-endpoints.md).
 - **`setDabTool`** writes the DAB debug flag file only when
   `getSecurityLevel()` is 6 or 9, with the security validity date as content —
   the debug-code gate from the section above, at the API layer.

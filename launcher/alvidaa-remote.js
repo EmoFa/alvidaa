@@ -18,7 +18,7 @@
   if (!st) {
     st = document.createElement("style");
     st.id = "alvidaa-cv-style";
-    st.textContent = "#app { display: none !important; } html, body { margin: 0; padding: 0; background: #0a0d12 !important; overflow: hidden; height: 100%; }";
+    st.textContent = "#app { display: none !important; } html, body { margin: 0; padding: 0; background: #07080c !important; overflow: hidden; height: 100%; }";
     document.head.appendChild(st);
   }
 
@@ -28,7 +28,7 @@
   var W = 960, H = 540, SCALE = 2;
   cv.width = W * SCALE;
   cv.height = H * SCALE;
-  cv.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;display:block;background:#0a0d12";
+  cv.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;display:block;background:#07080c";
   (document.body || document.documentElement).appendChild(cv);
 
   var ctx = cv.getContext("2d");
@@ -200,18 +200,18 @@
 
   // ---------------------------------------------------------------- layout
   var F = {
-    clock: "300 58px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    mid: "500 18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    clock: "300 58px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
+    mid: "500 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     small: "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    tiny: "600 10px monospace",
-    label: "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    letter: "600 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    tiny: "600 9px -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace",
+    label: "600 11px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif",
+    letter: "600 20px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
   };
 
   function tileW() { return 160; }
   function tileH() { return 88; }
   function gap() { return 12; }
-  function left() { return 48; }
+  function left() { return 56; }
 
   function items(row) {
     if (row === 0) {
@@ -289,123 +289,213 @@
       ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy);
     }
 
-    // 2026 Dark Glass / Elevated Card Surface
+    // 1. Shadow & Glow
     if (focused) {
+      // Ambient bloom glow behind focused card (soft, diffused Apple TV bloom)
       var glow = ctx.createRadialGradient(
         x + tileW() / 2, y + tileH() / 2, tileW() * 0.15,
-        x + tileW() / 2, y + tileH() / 2, tileW() * 0.8
+        x + tileW() / 2, y + tileH() / 2, tileW() * 0.75
       );
-      glow.addColorStop(0, "rgba(56, 189, 248, 0.28)");
-      glow.addColorStop(0.65, "rgba(99, 102, 241, 0.1)");
+      glow.addColorStop(0, "rgba(255, 255, 255, 0.16)");
+      glow.addColorStop(0.5, "rgba(148, 163, 184, 0.06)");
       glow.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = glow;
-      roundRect(x - 16, y - 12, tileW() + 32, tileH() + 24, 20);
+      roundRect(x - 14, y - 10, tileW() + 28, tileH() + 20, 20);
       ctx.fill();
 
-      ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+      // Focused drop shadow
+      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
       roundRect(x, y + 6, tileW(), tileH(), 16);
       ctx.fill();
 
+      // Crisp luminous white border
       ctx.fillStyle = "#ffffff";
       roundRect(x - 2, y - 2, tileW() + 4, tileH() + 4, 16);
       ctx.fill();
     } else {
+      // Rest state: subtle card shadow
       ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
       roundRect(x, y + 4, tileW(), tileH(), 14);
       ctx.fill();
 
-      ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+      // Subtle 1px rest border
+      ctx.fillStyle = "rgba(255, 255, 255, 0.07)";
       roundRect(x - 1, y - 1, tileW() + 2, tileH() + 2, 15);
       ctx.fill();
     }
 
+    // 2. Card Background Gradient
     var fullIcon = resolveUrl(it.icon);
     var base = fullIcon && ICONS[fullIcon] && ICONS[fullIcon].complete && ICONS[fullIcon].naturalWidth;
+
     var cardGrad = ctx.createLinearGradient(x, y, x, y + tileH());
     if (focused) {
-      cardGrad.addColorStop(0, "#222c3c");
-      cardGrad.addColorStop(1, "#141b24");
+      cardGrad.addColorStop(0, "#232a36");
+      cardGrad.addColorStop(1, "#141822");
     } else {
-      cardGrad.addColorStop(0, base ? "#171d27" : "hsl(" + hue(it.label) + ",22%,14%)");
-      cardGrad.addColorStop(1, "#0f131a");
+      cardGrad.addColorStop(0, base ? "#161b24" : "hsl(" + hue(it.label) + ", 18%, 13%)");
+      cardGrad.addColorStop(1, "#0d1017");
     }
     ctx.fillStyle = cardGrad;
     roundRect(x, y, tileW(), tileH(), 14);
     ctx.fill();
 
-    if (focused) {
-      var pillGrad = ctx.createLinearGradient(x + 20, y, x + tileW() - 20, y);
-      pillGrad.addColorStop(0, "#38bdf8");
-      pillGrad.addColorStop(0.5, "#818cf8");
-      pillGrad.addColorStop(1, "#38bdf8");
-      ctx.fillStyle = pillGrad;
-      roundRect(x + (tileW() - 44) / 2, y + tileH() - 5, 44, 3, 1.5);
-      ctx.fill();
-    }
+    // 3. Subtle 1px Specular Highlight at top edge of tiles
+    ctx.beginPath();
+    ctx.moveTo(x + 14, y + 1);
+    ctx.lineTo(x + tileW() - 14, y + 1);
+    ctx.strokeStyle = focused ? "rgba(255, 255, 255, 0.28)" : "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
+    // 4. Hotkey Numeral Keycap (1-9) in top-right
     if (hotkeyNum >= 1 && hotkeyNum <= 9) {
+      var hkW = 16, hkH = 16;
+      var hkX = x + tileW() - hkW - 8, hkY = y + 8;
+      ctx.fillStyle = focused ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.05)";
+      roundRect(hkX, hkY, hkW, hkH, 4);
+      ctx.fill();
+      ctx.strokeStyle = focused ? "rgba(255, 255, 255, 0.28)" : "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1;
+      roundRect(hkX, hkY, hkW, hkH, 4);
+      ctx.stroke();
+
       ctx.font = F.tiny;
-      ctx.textAlign = "right";
-      ctx.fillStyle = focused ? "rgba(248,250,252,0.6)" : "rgba(148,163,184,0.3)";
-      ctx.fillText(String(hotkeyNum), x + tileW() - 8, y + 14);
+      ctx.textAlign = "center";
+      ctx.fillStyle = focused ? "#ffffff" : "rgba(148, 163, 184, 0.7)";
+      ctx.fillText(String(hotkeyNum), hkX + hkW / 2, hkY + hkH / 2 + 3);
       ctx.textAlign = "left";
     }
 
-    if (it.glyph) {
-      ctx.font = "38px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillStyle = focused ? "#f8fafc" : "#cbd5e1";
-      ctx.fillText(it.glyph, x + tileW() / 2, y + tileH() / 2 + 8);
-      ctx.textAlign = "left";
-    } else if (base) {
+    // 5. Clean, elegant emerald signal badge for active HDMI inputs (top-left)
+    if (it.sub) {
+      var hasSig = !!it.signal;
+      var bx = x + 8, by = y + 8;
+      var bw = hasSig ? 44 : 58, bh = 17;
+
+      ctx.fillStyle = hasSig ? "rgba(16, 185, 129, 0.16)" : "rgba(255, 255, 255, 0.04)";
+      roundRect(bx, by, bw, bh, 8.5);
+      ctx.fill();
+
+      ctx.strokeStyle = hasSig ? "rgba(16, 185, 129, 0.35)" : "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 1;
+      roundRect(bx, by, bw, bh, 8.5);
+      ctx.stroke();
+
+      var dotX = bx + 7, dotY = by + bh / 2;
+      if (hasSig) {
+        ctx.fillStyle = "rgba(16, 185, 129, 0.35)";
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = "#64748b";
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.font = "600 9px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = hasSig ? (focused ? "#6ee7b7" : "#34d399") : (focused ? "#94a3b8" : "#64748b");
+      ctx.fillText(hasSig ? "LIVE" : "STANDBY", dotX + 6, dotY + 3);
+    }
+
+    // 6. Tile Graphic: Preloaded Icon, Custom Glyph, Hardware Display Icon, or Typographic Badge
+    if (base) {
       var im = ICONS[fullIcon];
-      var boxW = tileW() - 24, boxH = tileH() - (it.sub ? 40 : 28);
+      var boxW = tileW() - 32, boxH = 38;
       var s = Math.min(boxW / im.naturalWidth, boxH / im.naturalHeight);
       var dw = im.naturalWidth * s, dh = im.naturalHeight * s;
-      ctx.drawImage(im, x + (tileW() - dw) / 2, y + (boxH - dh) / 2 + 4, dw, dh);
+      ctx.drawImage(im, x + (tileW() - dw) / 2, y + 14 + (boxH - dh) / 2, dw, dh);
+    } else if (it.glyph) {
+      ctx.font = "26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillStyle = focused ? "#ffffff" : "#cbd5e1";
+      ctx.fillText(it.glyph, x + tileW() / 2, y + 42);
+      ctx.textAlign = "left";
+    } else if (it.sub) {
+      // Elegant minimalist hardware display icon for inputs without custom glyph
+      var mw = 28, mh = 17, mx = x + (tileW() - mw) / 2, my = y + 23;
+      ctx.strokeStyle = focused ? "rgba(255, 255, 255, 0.9)" : "rgba(148, 163, 184, 0.6)";
+      ctx.lineWidth = 1.5;
+      roundRect(mx, my, mw, mh, 3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mx + mw / 2, my + mh);
+      ctx.lineTo(mx + mw / 2, my + mh + 4);
+      ctx.moveTo(mx + mw / 2 - 5, my + mh + 4);
+      ctx.lineTo(mx + mw / 2 + 5, my + mh + 4);
+      ctx.stroke();
     } else {
-      ctx.fillStyle = focused ? "rgba(248,250,252,0.85)" : "rgba(203,213,225,0.22)";
+      // Beautiful, crisp typographic app letter badge fallback
+      var bSize = 36;
+      var bx = x + (tileW() - bSize) / 2;
+      var by = y + 14;
+      var br = 9;
+      var h = hue(it.label);
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      roundRect(bx, by + 2, bSize, bSize, br);
+      ctx.fill();
+
+      var bGrad = ctx.createLinearGradient(bx, by, bx, by + bSize);
+      bGrad.addColorStop(0, "hsl(" + h + ", 65%, 46%)");
+      bGrad.addColorStop(1, "hsl(" + h + ", 75%, 30%)");
+      ctx.fillStyle = bGrad;
+      roundRect(bx, by, bSize, bSize, br);
+      ctx.fill();
+
+      // 1px specular top highlight on badge
+      ctx.beginPath();
+      ctx.moveTo(bx + br, by + 1);
+      ctx.lineTo(bx + bSize - br, by + 1);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffffff";
       ctx.font = F.letter;
       ctx.textAlign = "center";
-      ctx.fillText((it.label || "?").charAt(0).toUpperCase(), x + tileW() / 2, y + tileH() / 2 + 12);
+      ctx.fillText((it.label || "?").charAt(0).toUpperCase(), bx + bSize / 2, by + bSize / 2 + 7);
       ctx.textAlign = "left";
     }
 
-    ctx.fillStyle = focused ? "#f8fafc" : "#94a3b8";
+    // 7. Label text with ellipsis truncation
+    ctx.fillStyle = focused ? "#ffffff" : "#94a3b8";
     ctx.font = F.small;
     var label = it.label || "";
     while (label.length > 3 && ctx.measureText(label).width > tileW() - 18) label = label.slice(0, -1);
     ctx.textAlign = "center";
-    ctx.fillText(label, x + tileW() / 2, y + tileH() - 8);
+    ctx.fillText(label, x + tileW() / 2, y + tileH() - 12);
     ctx.textAlign = "left";
 
-    if (it.sub) {
-      var hasSig = !!it.signal;
-      var dotX = x + 16, dotY = y + tileH() - 22;
-      if (hasSig) {
-        ctx.fillStyle = "rgba(34, 197, 94, 0.25)";
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = hasSig ? "#22c55e" : "#64748b";
-      ctx.beginPath();
-      ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillStyle = hasSig ? (focused ? "#4ade80" : "#22c55e") : (focused ? "#94a3b8" : "#64748b");
-      ctx.fillText(hasSig ? "LIVE" : "STANDBY", dotX + 9, dotY + 4);
-    }
     ctx.restore();
   }
 
   function drawRow(idx, y, title) {
+    var list = items(idx);
+    var n = list.length;
+    var start = rowStart(idx);
+    var end = Math.min(n, start + PAGE);
+
     ctx.font = F.label;
     ctx.fillStyle = "#64748b";
     ctx.fillText(title, left(), y - 12);
-    var list = items(idx);
-    var n = list.length;
+
+    // Minimal pagination counter on right
+    if (n > PAGE) {
+      ctx.textAlign = "right";
+      ctx.font = "500 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = "#475569";
+      ctx.fillText((start + 1) + "–" + end + " of " + n, left() + PAGE * tileW() + (PAGE - 1) * gap(), y - 12);
+      ctx.textAlign = "left";
+    }
+
     if (!S.hello && S.online) {
       ctx.font = F.mid; ctx.fillStyle = "#64748b";
       ctx.fillText("loading…", left(), y + 44);
@@ -416,23 +506,18 @@
       ctx.fillText(idx === 0 ? "no inputs reported" : "no apps reported", left(), y + 44);
       return;
     }
-    var start = rowStart(idx);
+
     var rowActive = (S.row === idx);
-    for (var i = start; i < Math.min(n, start + PAGE); i++) {
+    for (var i = start; i < end; i++) {
       var x = left() + (i - start) * (tileW() + gap());
       var focused = (rowActive && S.col === i);
       var hk = rowActive && i < 9 ? (i + 1) : 0;
       if (!focused) drawTile(x, y, false, list[i], hk);
       HIT.push({ x: x, y: y, w: tileW(), h: tileH(), row: idx, col: i });
     }
-    if (rowActive && S.col >= start && S.col < Math.min(n, start + PAGE)) {
+    if (rowActive && S.col >= start && S.col < end) {
       drawTile(left() + (S.col - start) * (tileW() + gap()), y, true, list[S.col], S.col < 9 ? S.col + 1 : 0);
     }
-    ctx.font = F.small;
-    ctx.fillStyle = "#475569";
-    var end = Math.min(n, start + PAGE);
-    if (start > 0) ctx.fillText("‹ " + start, left() - 2, y + 24);
-    if (end < n) ctx.fillText((n - end) + " ›", left() + PAGE * (tileW() + gap()) - 30, y + 24);
   }
 
   var lastDrawnMinute = -1;
@@ -446,107 +531,160 @@
     var key = S.row + ":" + S.col;
     if (key !== lastFocusKey) { lastFocusKey = key; focusAnim = 0; }
 
-    // 2026 Deep OLED Background with Ambient Mesh Bloom
-    ctx.fillStyle = "#07090e";
+    // Deep OLED Obsidian Base
+    ctx.fillStyle = "#07080c";
     ctx.fillRect(0, 0, W, H);
 
     if (BG && BG.complete && BG.naturalWidth) {
       var sc = Math.max(W / BG.naturalWidth, H / BG.naturalHeight);
       ctx.drawImage(BG, (W - BG.naturalWidth * sc) / 2, (H - BG.naturalHeight * sc) / 2,
                     BG.naturalWidth * sc, BG.naturalHeight * sc);
-      ctx.fillStyle = "rgba(5,7,12,0.45)";
+      ctx.fillStyle = "rgba(6, 8, 12, 0.6)";
       ctx.fillRect(0, 0, W, H);
     } else {
-      var amb = ctx.createRadialGradient(W / 2, -30, 20, W / 2, 140, W * 0.7);
-      amb.addColorStop(0, "rgba(56, 189, 248, 0.08)");
-      amb.addColorStop(0.5, "rgba(99, 102, 241, 0.04)");
-      amb.addColorStop(1, "rgba(7, 9, 14, 0)");
+      // Ultra-subtle ethereal ambient bloom from top
+      var amb = ctx.createRadialGradient(W / 2, -20, 20, W / 2, 120, W * 0.75);
+      amb.addColorStop(0, "rgba(56, 189, 248, 0.05)");
+      amb.addColorStop(0.45, "rgba(99, 102, 241, 0.025)");
+      amb.addColorStop(1, "rgba(7, 8, 12, 0)");
       ctx.fillStyle = amb;
       ctx.fillRect(0, 0, W, H);
     }
 
-    var vig = ctx.createRadialGradient(W / 2, H / 2, W * 0.35, W / 2, H / 2, W * 0.72);
+    // Soft perimeter vignette
+    var vig = ctx.createRadialGradient(W / 2, H / 2, W * 0.35, W / 2, H / 2, W * 0.75);
     vig.addColorStop(0, "rgba(0, 0, 0, 0)");
-    vig.addColorStop(1, "rgba(0, 0, 0, 0.4)");
+    vig.addColorStop(1, "rgba(0, 0, 0, 0.45)");
     ctx.fillStyle = vig;
     ctx.fillRect(0, 0, W, H);
 
-    // 2026 Header
+    // Refined Header: Light typography clock with hours/minutes hierarchy & clean uppercase date
     var now = new Date();
     lastDrawnMinute = now.getMinutes();
     function p2(n) { return (n < 10 ? "0" : "") + n; }
 
-    ctx.fillStyle = "#f8fafc";
-    ctx.font = F.clock;
-    ctx.fillText(p2(now.getHours()) + ":" + p2(now.getMinutes()), left(), 80);
+    var hh = p2(now.getHours());
+    var mm = p2(now.getMinutes());
 
-    ctx.font = "600 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillStyle = "#94a3b8";
-    var days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    var mons = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    ctx.fillText(days[now.getDay()] + " · " + mons[now.getMonth()] + " " + now.getDate(), left() + 2, 104);
+    ctx.font = F.clock;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(hh, left(), 78);
+    var hw = ctx.measureText(hh).width;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.fillText(":", left() + hw + 2, 76);
+    var cw = ctx.measureText(":").width;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+    ctx.fillText(mm, left() + hw + cw + 4, 78);
+
+    ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "#8e9ab0";
+    var days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+    var mons = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+    var dateStr = days[now.getDay()] + " · " + mons[now.getMonth()] + " " + now.getDate();
+    ctx.fillText(dateStr, left() + 2, 98);
 
     // Top-Right Glass Capsule Status Pill
-    var pillW = 144, pillH = 30, pillX = W - left() - pillW, pillY = 50;
+    var pillW = 132, pillH = 26, pillX = W - left() - pillW, pillY = 54;
     ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
-    roundRect(pillX, pillY, pillW, pillH, 15);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-    roundRect(pillX - 0.5, pillY - 0.5, pillW + 1, pillH + 1, 15.5);
-    ctx.fill();
-    ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
-    roundRect(pillX, pillY, pillW, pillH, 15);
+    roundRect(pillX, pillY, pillW, pillH, 13);
     ctx.fill();
 
-    var dotColor = S.online ? "#22c55e" : (S.hello ? "#f59e0b" : "#ef4444");
-    var dotGlow = S.online ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = 1;
+    roundRect(pillX, pillY, pillW, pillH, 13);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(pillX + 13, pillY + 1);
+    ctx.lineTo(pillX + pillW - 13, pillY + 1);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    var dotColor = S.online ? "#10b981" : (S.hello ? "#f59e0b" : "#ef4444");
+    var dotGlow = S.online ? "rgba(16, 185, 129, 0.28)" : "rgba(239, 68, 68, 0.28)";
+
     ctx.fillStyle = dotGlow;
     ctx.beginPath();
-    ctx.arc(pillX + 16, pillY + pillH / 2, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = dotColor;
-    ctx.beginPath();
-    ctx.arc(pillX + 16, pillY + pillH / 2, 3.5, 0, Math.PI * 2);
+    ctx.arc(pillX + 14, pillY + pillH / 2, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.font = "600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillStyle = S.online ? "#e2e8f0" : "#94a3b8";
-    ctx.fillText(S.online ? "ALVIDAA · LIVE" : (S.hello ? "RECONNECTING" : "OFFLINE"), pillX + 28, pillY + pillH / 2 + 4);
+    ctx.fillStyle = dotColor;
+    ctx.beginPath();
+    ctx.arc(pillX + 14, pillY + pillH / 2, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = "600 10px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = S.online ? "rgba(255, 255, 255, 0.85)" : "rgba(148, 163, 184, 0.8)";
+    ctx.fillText(S.online ? "ALVIDAA · LIVE" : (S.hello ? "RECONNECTING" : "OFFLINE"), pillX + 26, pillY + pillH / 2 + 3.5);
 
     drawRow(0, 168, "INPUTS & SOURCES");
     drawRow(1, 298, "APPS & CHANNELS");
 
+    // Floating Glass HUD for Auto-switch countdown & toasts
     var nowMs = Date.now();
     if (S.autoSwitchAt > nowMs && S.autoSwitchId) {
       var rem = Math.max(1, Math.ceil((S.autoSwitchAt - nowMs) / 1000));
       var msg = "Switching to " + S.autoSwitchName + " in " + rem + "s… (press any key to stay)";
-      ctx.font = F.mid;
+      ctx.font = "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       var mw = ctx.measureText(msg).width;
-      var bx = (W - mw) / 2 - 20, by = H - 36, bw = mw + 40, bh = 28;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      var bx = (W - mw) / 2 - 20, by = H - 42, bw = mw + 40, bh = 28;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      roundRect(bx, by + 3, bw, bh, 14);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(18, 22, 32, 0.94)";
       roundRect(bx, by, bw, bh, 14);
       ctx.fill();
-      ctx.fillStyle = "rgba(56, 189, 248, 0.25)";
-      roundRect(bx - 1, by - 1, bw + 2, bh + 2, 15);
-      ctx.fill();
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+      ctx.lineWidth = 1;
+      roundRect(bx, by, bw, bh, 14);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(bx + 14, by + 1);
+      ctx.lineTo(bx + bw - 14, by + 1);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
       ctx.fillStyle = "#38bdf8";
       ctx.textAlign = "center";
-      ctx.fillText(msg, W / 2, H - 17);
+      ctx.fillText(msg, W / 2, by + 18);
       ctx.textAlign = "left";
     } else if (nowMs < S.toastUntil && S.toast) {
       var tmsg = S.toast === "…" ? "working…" : S.toast;
-      ctx.font = F.mid;
+      ctx.font = "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       var tmw = ctx.measureText(tmsg).width;
-      var tbx = (W - tmw) / 2 - 20, tby = H - 36, tbw = tmw + 40, tbh = 28;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      var tbx = (W - tmw) / 2 - 20, tby = H - 42, tbw = tmw + 40, tbh = 28;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      roundRect(tbx, tby + 3, tbw, tbh, 14);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(18, 22, 32, 0.94)";
       roundRect(tbx, tby, tbw, tbh, 14);
       ctx.fill();
-      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-      roundRect(tbx - 1, tby - 1, tbw + 2, tbh + 2, 15);
-      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 1;
+      roundRect(tbx, tby, tbw, tbh, 14);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(tbx + 14, tby + 1);
+      ctx.lineTo(tbx + tbw - 14, tby + 1);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
       ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "center";
-      ctx.fillText(tmsg, W / 2, H - 17);
+      ctx.fillText(tmsg, W / 2, tby + 18);
       ctx.textAlign = "left";
     }
   }

@@ -1,5 +1,9 @@
 # The root chain — from a web page to a root shell on 2024+ VIDAA
 
+> **This page is the 50A51HUV / MTK9602 / 09.01O.P0813 chain.** For
+> model-specific step-by-step guides, see [docs/models/](models/) (HE40 and
+> 100U7Q). Those chains are separate and do not transfer from this one.
+
 To our knowledge this is the first publicly documented root path for
 2024+ VIDAA firmware (everything published before is pre-2021; see
 [SECURITY.md](../SECURITY.md) for the disclosure stance). It was

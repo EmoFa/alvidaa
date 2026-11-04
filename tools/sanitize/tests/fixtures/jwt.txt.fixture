@@ -1,0 +1,2 @@
+# Synthetic canary: fake JWT-shaped value.
+token=eyJEXAMPLEONLYHEADER.eyJEXAMPLEONLYPAYLOAD.eyJEXAMPLEONLYSIGNATURE

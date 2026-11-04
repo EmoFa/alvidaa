@@ -11,8 +11,10 @@ import socket
 import sys
 import time
 
-HOST = os.environ.get("TV_HOST", "192.168.0.11")   # override when the TV moves
+HOST = os.environ.get("TV_HOST")
 PORT = 2323
+if not HOST:
+    sys.exit("set TV_HOST=<tv-ip> (the TV's LAN address)")
 QUIET = 0.8      # seconds of silence before a command's output is considered done
 MAXWAIT = 12.0
 

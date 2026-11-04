@@ -1,0 +1,4 @@
+# Synthetic canary: fake absolute paths.
+HOME=/home/exampleuser/projects/tv
+MAC_HOME=/Users/exampleuser/projects/tv
+WORKSPACE=/workspace/example-checkout

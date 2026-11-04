@@ -159,27 +159,24 @@
       "id": "V0100.01.00A.N0410",
       "model": "HE40E5600FFWTS",
       "region": "? (EU, German-language docs)",
-      "soc": "MTK5863-class (MT53xx, armv7 Cortex-A53)",
+      "soc": "MT53xx / MT5863 class (armv7 Cortex-A53)",
       "vidaa_os": "pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit)",
       "transport_protocol": "untested (vector did not use MQTT)",
-      "browser": "hisenseUI (Chromium 59.0.3071.115/V8 5.9, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security)",
+      "browser": "hisenseUI (Chromium 59.0.3071.115, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security)",
       "build_date": "?",
       "tested_by": [
-        {
-          "name": "xXLucyNyuXx (angryzero/hisense-root)",
-          "url": "https://github.com/xXLucyNyuXx"
-        }
+        "gh:oOHiyoriOo"
       ],
       "capabilities": {
         "pairing": "untested",
-        "launcher": "custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI)",
+        "launcher": "custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI); not verified end-to-end",
         "file_bridge_traversal": "open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp)",
         "file_bridge_write": "open (File.write text-only EINVAL for binary; binaries via File.download/curl)",
         "identity_gate": "n-a",
         "euladpp_untar": "n-a (generation lacks the package)",
         "devtools_forge": "n-a (UI process DevTools 9223 + browser 9224 already exposed)",
-        "root": "achieved (boot persistence verified across multiple reboots)",
-        "notes": "Root and key-only Dropbear SSH persist across multiple reboots via the HamService boot wrapper. Detailed chain and dead ends are documented in the author's vidaa repository."
+        "root": "achieved (root + key-only SSH; boot persistence owner-verified across multiple reboots, 2026-11-04)",
+        "notes": "Model guide: docs/models/HE40E5600FFWTS/V0100.01.00A.N0410/. Browser runs as uid 0; ext4 dangling-symlink bypass; libtvsysinfo shadow with DT_INIT; root loop; key-only Dropbear SSH; HamService boot wrapper. No vendor binaries or keys are shipped."
       }
     },
     {
@@ -192,10 +189,7 @@
       "browser": "untested",
       "build_date": "?",
       "tested_by": [
-        {
-          "name": "xXLucyNyuXx (angryzero/vidaa)",
-          "url": "https://github.com/xXLucyNyuXx"
-        }
+        "gh:oOHiyoriOo"
       ],
       "capabilities": {
         "pairing": "working",
@@ -206,7 +200,7 @@
         "euladpp_untar": "untested",
         "devtools_forge": "untested",
         "root": "achieved (SSH and PTY verified; manual re-trigger after reboot)",
-        "notes": "Root SSH was verified on this exact model and firmware. No automatic daemon start after reboot was established. This is a separate, model-specific result; do not infer compatibility with the HE40 or 09.01 chains."
+        "notes": "Model guide: docs/models/100U7Q/V0000.09.60I.Q0813/. Root SSH was verified on this exact model and firmware. No automatic daemon start after reboot was established. This is a separate, model-specific result; do not infer compatibility with the HE40 or 09.01 chains."
       }
     },
     {

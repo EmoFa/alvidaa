@@ -1,0 +1,35 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>vidaa root trigger</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">START</pre>
+<script>
+/* Re-arm root ssh after a reboot.
+   The installer IPK is already installed, so its postinst will not run again.
+   We send uninstall (83) then install (82) to the superwatch daemon; the
+   install re-runs postinst, which restarts dropbear. */
+var O = document.getElementById('o');
+function log(m){ O.textContent += "\n" + m; return m; }
+function post(t){ try{ var x=new XMLHttpRequest(); x.open("POST","/recon",false);
+  x.setRequestHeader("Content-Type","text/plain"); x.send(t); }catch(e){} }
+
+setTimeout(function(){
+  var out = [];
+  var body = {list:[
+    "70:83:70;re.installer",
+    "71:82:71;/APPS/installer.ipk;re.installer;"
+  ]};
+  try{
+    var x = new XMLHttpRequest();
+    x.open("POST", "https://localhost:9888/function/system/fetch/sw2", false);
+    x.setRequestHeader("identifier", "");
+    x.send(JSON.stringify(body));
+    out.push("trigger -> " + String(x.responseText||"").slice(0,300));
+  }catch(e){ out.push("trigger EXC " + e.name + ": " + e.message); }
+
+  try{
+    var p = vowOS.service.syncExecute("hiutils", {api:"fileRead", args:{mode:6, path:".re_sshd/dropbear.pid"}});
+    out.push("pid=" + (p.ret ? p.msg.trim() : "ERR"));
+  }catch(e){ out.push("pid EXC " + e.message); }
+
+  post("TRIGGER\n" + out.join("\n"));
+  log(out.join("\n"));
+}, 1200);
+</script></body></html>

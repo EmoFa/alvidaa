@@ -1,0 +1,165 @@
+# Secret/PII rules for sanitize/scan.py.
+#
+# Each [[rules]] entry has:
+#   id         stable identifier used in reports and tests
+#   category   secret | credential | pii | network | path | token
+#   severity   critical | high | medium | low | info
+#   regex      Python regular expression, applied per line (or to the path)
+#   allow_if   optional regex; if it matches the same line, the finding is
+#              suppressed (use for documented examples)
+#   paths      optional list of globs; the rule only applies to matching paths
+#   target     "content" (default) or "path"
+#   ignore_case optional boolean
+#
+# Add ``# sanitize:allow`` to a line that must contain a trigger literal for
+# documentation or for a rule definition itself.
+#
+# Values are never printed. Never add a real secret to this file.
+
+version = 1
+
+[[rules]]
+id = "private_key_block"
+category = "secret"
+severity = "critical"
+description = "PEM private key header."
+regex = '-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----'  # sanitize:allow
+
+[[rules]]
+id = "certificate_block"
+category = "secret"
+severity = "critical"
+description = "PEM certificate header."
+regex = '-----BEGIN CERTIFICATE-----'  # sanitize:allow
+
+[[rules]]
+id = "ssh_public_key"
+category = "secret"
+severity = "high"
+description = "OpenSSH public key material."
+regex = '\b(?:ssh-(?:rsa|ed25519|dss)|ecdsa-sha2-nistp(?:256|384|521)|sk-ssh-ed25519@openssh\.com)\s+AAAA[A-Za-z0-9+/]{20,}={0,3}'
+
+[[rules]]
+id = "ssh_fingerprint"
+category = "secret"
+severity = "high"
+description = "SHA256 host/user key fingerprint."
+regex = '\bSHA256:[A-Za-z0-9+/]{30,}={0,2}'
+
+[[rules]]
+id = "mac_address"
+category = "pii"
+severity = "medium"
+description = "MAC address in colon or hyphen notation."
+regex = '\b(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\b'
+
+[[rules]]
+id = "private_ipv4"
+category = "network"
+severity = "high"
+description = "RFC 1918 private IPv4 address."
+regex = '\b(?:(?:10)\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'
+
+[[rules]]
+id = "private_ipv6"
+category = "network"
+severity = "medium"
+description = "IPv6 unique-local or link-local address."
+regex = '\b(?:f[cd][0-9a-f]{2}:|fe[89ab][0-9a-f]:)[0-9a-f:]{4,}\b'
+ignore_case = true
+
+[[rules]]
+id = "mdns_hostname"
+category = "network"
+severity = "low"
+description = "mDNS .local hostname."
+regex = '\b[a-z0-9][a-z0-9-]{0,62}\.local\b'
+ignore_case = true
+# `rc.local` is a SysV init filename, not an mDNS host.
+allow_if = '(?i)example\.local|rc\.local'
+
+[[rules]]
+id = "serial_label"
+category = "pii"
+severity = "critical"
+description = "Serial number, ESN, device id or device serial label with a value."
+regex = '(?i)\b(?:serial(?:_?(?:number|no))?|s/n|sn|esn|device[_-]?id|deviceid|devserial|dev_serial|dvcrsv)\b\s*[:=]\s*["\x27]?([A-Za-z0-9][A-Za-z0-9._:-]{5,})'
+
+[[rules]]
+id = "netflix_esn"
+category = "pii"
+severity = "critical"
+description = "Netflix ESN with the vendor prefix."
+regex = '\bHISETV[A-Z0-9]{4,}\b'
+
+[[rules]]
+id = "credential_assignment"
+category = "credential"
+severity = "critical"
+description = "appKey/appSecret/token/client id/dev flag/feature code assignment."
+regex = '(?i)\b(?:app[_-]?key|app[_-]?secret|access[_-]?token|refresh[_-]?token|auth[_-]?token|client[_-]?id|client[_-]?secret|dev[_-]?flag|feature[_-]?code|api[_-]?key)\b\s*[:=]\s*["\x27]?([A-Za-z0-9._~+/=-]{6,})'
+
+[[rules]]
+id = "jwt_token"
+category = "credential"
+severity = "high"
+description = "JWT-shaped token."
+regex = '\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b'
+
+[[rules]]
+id = "long_hex_token"
+category = "token"
+severity = "low"
+description = "Long hexadecimal token; checksums are allowed by context."
+regex = '\b[0-9a-fA-F]{32,}\b'
+allow_if = '(?i)sha256|sha-256|checksum|digest'
+
+[[rules]]
+id = "long_base64_secret"
+category = "credential"
+severity = "high"
+description = "Long base64 value assigned to a secret-like key."
+regex = '(?i)\b(?:secret|token|password|passwd|key)\b\s*[:=]\s*["\x27]?([A-Za-z0-9+/]{40,}={0,2})'
+
+[[rules]]
+id = "password_hash"
+category = "credential"
+severity = "critical"
+description = "Crypt(3)-style password hash."
+regex = '(?:\$2[aby]\$\d{2}\$[./A-Za-z0-9]{20,}|\$[156]\$[./A-Za-z0-9]{8}\$[./A-Za-z0-9]{20,})'
+
+[[rules]]
+id = "home_path"
+category = "path"
+severity = "medium"
+description = "Absolute macOS or Linux home path."
+regex = '(?<![\w.-])/(?:home|Users)/[A-Za-z0-9._-]+'
+
+[[rules]]
+id = "workspace_path"
+category = "path"
+severity = "low"
+description = "Absolute workspace path."
+regex = '(?<![\w.-])/workspace(?:/|\b)'  # sanitize:allow
+
+[[rules]]
+id = "cookie_header"
+category = "credential"
+severity = "high"
+description = "Authorization or Cookie header with a value."
+regex = '(?i)\b(?:authorization|cookie)\s*:\s*(?!\$\{|<)[^\n]{8,}'
+
+[[rules]]
+id = "cloud_key"
+category = "credential"
+severity = "high"
+description = "Cloud or forge access key shape."
+regex = '\b(?:AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})\b'
+
+[[rules]]
+id = "password_material_file"
+category = "credential"
+severity = "critical"
+description = "Password hash or wordlist file by path."
+target = "path"
+regex = '(?i)(?:^|/)(?:root\.hash|.*wordlist.*|.*\.hash|vidaa_defaults\.txt)$'

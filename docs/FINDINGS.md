@@ -1,7 +1,8 @@
 # alvidaa — FINDINGS (index)
 
 The lab notebook. Every discovery gets written down the moment it happens;
-the blog and [STORY.md](STORY.md) draw from these files. Split into modules:
+the blog and [STORY.md](STORY.md) draw from these files. For model-specific
+root and modding guides, see [models/](models/). Split into modules:
 
 For a method-by-method index with evidence and tested devices, see the
 generated [exploit and method inventory](EXPLOITS.md).

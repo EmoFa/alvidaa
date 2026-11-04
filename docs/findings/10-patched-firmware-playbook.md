@@ -15,8 +15,8 @@
 | 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | [u/Wing-Tsit-Chong](https://reddit.com/user/Wing-Tsit-Chong) |
 | 09.60V.Q0612 (build date unconfirmed) (?, ?) | MTK9603 | closed | untested | untested | untested | untested | [u/____dls](https://reddit.com/user/____dls) |
 | V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) |
-| V0100.01.00A.N0410 (HE40E5600FFWTS, ? (EU, German-language docs)) | MTK5863-class (MT53xx, armv7 Cortex-A53) | open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp) | open (File.write text-only EINVAL for binary; binaries via File.download/curl) | n-a | n-a (generation lacks the package) | achieved (boot persistence verified across multiple reboots) | [xXLucyNyuXx (angryzero/hisense-root)](https://github.com/xXLucyNyuXx) |
-| V0000.09.60I.Q0813 (100U7Q (100U70QEVS), EU_A) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [xXLucyNyuXx (angryzero/vidaa)](https://github.com/xXLucyNyuXx) |
+| V0100.01.00A.N0410 (HE40E5600FFWTS, ? (EU, German-language docs)) | MT53xx / MT5863 class (armv7 Cortex-A53) | open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp) | open (File.write text-only EINVAL for binary; binaries via File.download/curl) | n-a | n-a (generation lacks the package) | achieved (root + key-only SSH; boot persistence owner-verified across multiple reboots, 2026-11-04) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
+| V0000.09.60I.Q0813 (100U7Q (100U70QEVS), EU_A) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | 09.60W.Q0612 (EU_A) (43E7DS (43Q60SEVS_02, serial type 43E7SE), EU_A (DEU)) | MTK9603 | closed | gated | working | untested | untested | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 <!-- INVENTORY:END -->
 
@@ -26,21 +26,29 @@ reported a root shell using an IPK post-install path; the `/var/local` write
 they initially investigated was not used in that chain. The report does not
 establish that the same method works on the EU_A unit.
 
-## Third and fourth roots (Nov 3)
+## Model-specific roots (Nov 3–4)
 
-The matrix now carries four generations, three of them rooted:
+The matrix now carries several generations, four of them rooted:
 
 - **MTK9618 / 09.60X.Q0609 (possibly_matt):** root achieved via the IPK
   channel's post-install script — the rc.local `otaTest.sh` hook is absent
   on that build, so the blind-exec door is generation-specific. Write-up
   pending; sharing privately first (patch-risk concern).
-- **HE40E5600FFWTS / V0100.01.00A.N0410 (xXLucyNyuXx, pre-9 Opera era):**
-  a fundamentally different chain on a fundamentally different generation —
-  the *browser itself runs as root* (uid 0, full CapEff, no seccomp), a
-  dangling ext4 symlink (`tvi`) bypasses the `IsSubDentry` whitelist for
-  binary delivery, and a `LD_LIBRARY_PATH` shadow lib with an appended
-  `DT_INIT` payload executes as root at load. Full repo:
-  git.hanime.zip/angryzero/hisense-root (dead ends documented).
+- **HE40E5600FFWTS / V0100.01.00A.N0410 ([@oOHiyoriOo](https://github.com/oOHiyoriOo),
+  pre-9 Opera era):** a fundamentally different chain on a fundamentally
+  different generation — the *browser itself runs as root* (uid 0, full
+  CapEff, no seccomp), a dangling ext4 symlink (`tvi`) bypasses the
+  `IsSubDentry` whitelist for binary delivery, and a `LD_LIBRARY_PATH` shadow
+  lib with an appended `DT_INIT` payload executes when the browser next
+  starts. Boot persistence comes from a `HamService` wrapper. Model guide:
+  [HE40E5600FFWTS / V0100.01.00A.N0410](../models/HE40E5600FFWTS/V0100.01.00A.N0410/README.md);
+  tools: [tools/he40/](../../tools/he40/).
+- **100U7Q / V0000.09.60I.Q0813 ([@oOHiyoriOo](https://github.com/oOHiyoriOo)):**
+  root via the `fetcher` FaaS write and the superwatch socket's IPK
+  `postinst`, then a patched key-only Dropbear on 8008. There is no automatic
+  boot persistence on this build; re-arm after reboot. Model guide:
+  [100U7Q / V0000.09.60I.Q0813](../models/100U7Q/V0000.09.60I.Q0813/README.md);
+  tools: [tools/u7q/](../../tools/u7q/).
 
 ## Observations and candidate primitives
 

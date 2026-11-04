@@ -1,8 +1,10 @@
 # Tested models & how to report yours
 
 The README carries the generated matrix; this file explains where every field
-comes from. To report by PR, add an entry to `docs/inventory.json` and run
-`scripts/gen-inventory.py` to update the README and playbook tables.
+comes from. A full step-by-step guide, when one exists for the exact model and
+firmware, lives under [models/](models/). To report by PR, add an entry to
+`docs/inventory.json` and run `scripts/gen-inventory.py` to update the README
+and playbook tables.
 For a method-specific result, also add an observation to `docs/exploits.json`
 and run `scripts/gen-exploits.py`; the generated [method inventory](EXPLOITS.md)
 separates reported results, verified results, and failed tests.

@@ -1,0 +1,4 @@
+# Synthetic canary: fake serial, device id and Netflix ESN.
+serial: EXAMPLEONLYSERIAL0001
+device_id: EXAMPLEONLYDEVICEID0001
+ESN: HISETVEXAMPLEONLY0001

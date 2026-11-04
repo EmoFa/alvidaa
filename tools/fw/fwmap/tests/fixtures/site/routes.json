@@ -1,0 +1,71 @@
+{
+  "https://www.hisense.es/robots.txt": {
+    "status": 200,
+    "file": "robots.txt",
+    "headers": {"Content-Type": "text/plain"}
+  },
+  "https://www.hisense.es/wp-json/wp/v2/media?per_page=100&page=1&_fields=id,date,slug,source_url,mime_type,media_details": {
+    "status": 200,
+    "file": "media_page1.json",
+    "headers": {"Content-Type": "application/json", "X-WP-TotalPages": "2"}
+  },
+  "https://www.hisense.es/wp-json/wp/v2/media?per_page=100&page=2&_fields=id,date,slug,source_url,mime_type,media_details": {
+    "status": 200,
+    "file": "media_page2.json",
+    "headers": {"Content-Type": "application/json", "X-WP-TotalPages": "2"}
+  },
+  "https://www.hisense.es/wp-sitemap.xml": {
+    "status": 200,
+    "file": "sitemap_index.xml",
+    "headers": {"Content-Type": "application/xml"}
+  },
+  "https://www.hisense.es/sitemap_index.xml": {
+    "status": 404,
+    "body": ""
+  },
+  "https://www.hisense.es/wp-sitemap-pages.xml": {
+    "status": 200,
+    "file": "sitemap_pages.xml",
+    "headers": {"Content-Type": "application/xml"}
+  },
+  "https://www.hisense.es/wp-sitemap-posts.xml": {
+    "status": 200,
+    "file": "sitemap_posts.xml",
+    "headers": {"Content-Type": "application/xml"}
+  },
+  "https://www.hisense.es/descargas-firmware/": {
+    "status": 200,
+    "file": "page_index.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  },
+  "https://www.hisense.es/descargas-firmware/page/2/": {
+    "status": 200,
+    "file": "page_index_p2.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  },
+  "https://www.hisense.es/descarga-firmware/": {
+    "status": 200,
+    "file": "page_index.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  },
+  "https://www.hisense.es/descarga-firmware/page/2/": {
+    "status": 200,
+    "file": "page_index_p2.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  },
+  "https://www.hisense.es/descargas-firmware/m7000/": {
+    "status": 200,
+    "file": "page_m7000.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  },
+  "https://www.hisense.es/descargas-firmware/100u7q/": {
+    "status": 200,
+    "file": "page_100u7q.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  },
+  "https://www.hisense.es/descargas-firmware/does-not-exist/": {
+    "status": 404,
+    "file": "not_found.html",
+    "headers": {"Content-Type": "text/html; charset=utf-8"}
+  }
+}

@@ -1,0 +1,2 @@
+# Synthetic canary: fake long base64 secret.
+secret=EXAMPLEONLYBASE64VALUEABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/

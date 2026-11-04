@@ -1,0 +1,2 @@
+# Synthetic canary: fake cloud access key shape.
+aws_access_key_id=AKIAEXAMPLEONLY12345

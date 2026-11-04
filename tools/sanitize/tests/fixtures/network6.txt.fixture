@@ -1,0 +1,2 @@
+# Synthetic canary: fake IPv6 unique-local address.
+ULA=fd12:3456:789a::1

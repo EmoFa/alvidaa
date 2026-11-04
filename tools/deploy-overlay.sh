@@ -17,13 +17,15 @@
 #
 # Batch = 1 TV write + 1 cache clear + 1 reboot (write-minimization law).
 #
-# Usage: tools/deploy-overlay.sh [tv-ip] [bridge-url]
-#        tv-ip default 192.168.0.11; bridge default http://192.168.0.85:8770
+# Usage: tools/deploy-overlay.sh <tv-ip> <bridge-url>
+#        or set TV_HOST and BRIDGE_URL in the environment.
 set -euo pipefail
 
-TV="${1:-192.168.0.11}"
+TV="${1:-${TV_HOST:-}}"
 KEY="$(cd "$(dirname "$0")" && pwd)/../server/keys/tv_root_ed25519"
-BRIDGE="${2:-http://192.168.0.85:8770}"
+BRIDGE="${2:-${BRIDGE_URL:-}}"
+[ -n "$TV" ] || { echo "ERROR: pass <tv-ip> or set TV_HOST"; exit 1; }
+[ -n "$BRIDGE" ] || { echo "ERROR: pass <bridge-url> or set BRIDGE_URL"; exit 1; }
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

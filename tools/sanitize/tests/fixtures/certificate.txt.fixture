@@ -1,0 +1,4 @@
+# Synthetic canary: fake certificate header, no certificate body.
+-----BEGIN CERTIFICATE-----
+EXAMPLE_ONLY_NOT_A_CERTIFICATE
+-----END CERTIFICATE-----

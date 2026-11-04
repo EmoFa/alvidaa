@@ -26,16 +26,16 @@ ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" \
   'cat /APPS/channelA/hisenseUI/index.html.alvidaa-bak' > "$WORK/orig.html"
 echo "    original: $(wc -c < "$WORK/orig.html") bytes"
 
-echo "==> 2/4 build final (head style + self-healing bootstrap)"
-python3 - "$WORK/orig.html" "$HERE/../launcher/bootstrap.snippet.html" "$WORK/final.html" "$BRIDGE" <<'PYEOF'
+echo "==> 2/4 build final (head style + plain script tag — the known-good)"
+python3 - "$WORK/orig.html" "$WORK/final.html" "$BRIDGE" <<'PYEOF'
 import hashlib, sys
-orig, snippet, out, bridge = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+orig, out, bridge = sys.argv[1], sys.argv[2], sys.argv[3]
 s = open(orig).read()
 assert "</head>" in s and "</html>" in s, "unexpected original structure"
 s = s.replace("</head>",
   '<style id="alvidaa-head-style">#app{display:none!important}'
   'html,body{background:#0a0d12!important}</style></head>')
-s += open(snippet).read().replace("__BRIDGE__", bridge)
+s += '<script src="' + bridge + '/alvidaa-remote.js"></script>\n'
 open(out, "w").write(s)
 print("    built:", len(s.encode()), "bytes, md5", hashlib.md5(s.encode()).hexdigest())
 PYEOF

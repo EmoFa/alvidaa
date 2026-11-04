@@ -88,6 +88,32 @@ sc.onload = function () { show("S7-SCRIPT-OK PROBE=" + window.PROBE, "ok"); };
 sc.onerror = function () { show("S7-SCRIPT-FAIL", "fail"); };
 document.body.appendChild(sc);
 
+// S11: layout engine probes (measured, not guessed)
+try {
+  var flex = document.createElement("div");
+  flex.style.cssText = "display:flex;gap:12px;position:absolute;top:0;left:0;width:400px;height:40px;visibility:hidden";
+  var a = document.createElement("div"); a.style.cssText = "flex:0 0 100px;height:20px";
+  var b = document.createElement("div"); b.style.cssText = "flex:0 0 100px;height:20px";
+  flex.appendChild(a); flex.appendChild(b);
+  document.body.appendChild(flex);
+  var gapWorks = (b.offsetLeft === 112);  // 100 + 12 gap
+  var aLeft = a.offsetLeft;
+  document.body.removeChild(flex);
+  show("S11-FLEX offsetLeft(b)=" + b.offsetLeft + " -> gap " + (gapWorks ? "SUPPORTED" : "NOT SUPPORTED"), "info");
+
+  var fx = document.createElement("div");
+  fx.style.cssText = "position:fixed;top:10px;left:10px;width:200px;height:30px;visibility:hidden";
+  fx.textContent = "x";
+  document.body.appendChild(fx);
+  var fxTop = fx.offsetTop, fxH = fx.offsetHeight, fxW = fx.offsetWidth;
+  document.body.removeChild(fx);
+  show("S11-FIXED top=" + fxTop + " w=" + fxW + " h=" + fxH +
+       (fxH > 0 && fxW > 0 ? " (rendered)" : " (COLLAPSED!)"), fxH > 0 ? "ok" : "fail");
+} catch (e) { show("S11-LAYOUT-THROW: " + e, "fail"); }
+
+// S12: viewport + font render
+show("S12-VIEWPORT " + window.innerWidth + "x" + window.innerHeight, "info");
+
 setTimeout(function () { show("S10-ALIVE-AFTER-6S", "ok"); }, 6000);
 </script>
 </body></html>

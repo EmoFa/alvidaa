@@ -23,6 +23,8 @@ PAGES = {
     "/": "install.html",
     "/install.html": "install.html",
     "/trigger.html": "trigger.html",
+    "/probe.html": "probe.html",
+    "/check.html": "check.html",
 }
 
 

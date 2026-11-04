@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>vidaa faas probe</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">START</pre>
+<script>
+/* Probe the FaaS layout on 75UR9S / 09.60W.
+   Reads the FaaS runtime source (module resolution logic) and candidate
+   package paths via hiutils.fileRead (base /APPS/). */
+var O = document.getElementById('o');
+function log(m){ O.textContent += "\n" + m; }
+function post(t){ try{ var x=new XMLHttpRequest(); x.open("POST","/recon",false);
+  x.setRequestHeader("Content-Type","text/plain"); x.send(t); }catch(e){} }
+function fr(p){
+  try{
+    var r = vowOS.service.syncExecute("hiutils", {api:"fileRead", args:{mode:6, path:p}});
+    var m = r.msg;
+    if (m != null && typeof m !== "string") { try { m = JSON.stringify(m); } catch(e) { m = String(m); } }
+    return { ret: r.ret, msg: (m==null?"":String(m)) };
+  }catch(e){ return { ret:false, msg:"EXC "+e.message }; }
+}
+var PATHS = [
+  "pkgs/tv.vidaa.jsservice.basic/CHA/functions/",
+  "pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/",
+  "pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/fetchfile.js",
+  "pkgs/tv.vidaa.jsservice.basic/CHA/control",
+  "pkgs/tv.vidaa.jsservice.system/current/control",
+  "pkgs/tv.vidaa.jsservice.system/current/manifest.json",
+  "pkgs/tv.vidaa.jsservice.system/current/package.json",
+  "pkgs/tv.vidaa.jsservice.system/current/faas.json",
+  "pkgs/tv.vidaa.jsservice.system/current/functions.json",
+  "pkgs/tv.vidaa.jsservice.system/current/main.js",
+  "pkgs/tv.vidaa.jsservice.system/current/index.js",
+  "pkgs/tv.vidaa.jsservice.system/current/lib/",
+  "pkgs/tv.vidaa.jsservice.system/current/src/"
+];
+setTimeout(function(){
+  var out = [];
+  for (var i=0;i<PATHS.length;i++){
+    var r = fr(PATHS[i]);
+    var body = r.msg;
+    var cap = 2500;
+    if (body.length > cap) body = body.slice(0,cap) + " ...[trunc "+r.msg.length+"]";
+    out.push("### " + PATHS[i] + " ret=" + r.ret + "\n" + body);
+  }
+  post("PROBE3\n" + out.join("\n"));
+  log(out.join("\n"));
+}, 1000);
+</script></body></html>

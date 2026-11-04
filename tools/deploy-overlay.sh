@@ -17,12 +17,13 @@
 #
 # Batch = 1 TV write + 1 cache clear + 1 reboot (write-minimization law).
 #
-# Usage: tools/deploy-overlay.sh [tv-ip]   (default 192.168.0.11)
+# Usage: tools/deploy-overlay.sh [tv-ip] [bridge-url]
+#        tv-ip default 192.168.0.11; bridge default http://192.168.0.85:8770
 set -euo pipefail
 
 TV="${1:-192.168.0.11}"
 KEY="$(cd "$(dirname "$0")" && pwd)/../server/keys/tv_root_ed25519"
-BRIDGE="http://192.168.0.85:8770"
+BRIDGE="${2:-http://192.168.0.85:8770}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT

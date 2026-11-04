@@ -388,3 +388,19 @@ Final architecture (all validated):
 - stock UI hidden via CSS; ads never render; the `ads` service never called
 - UI updates = edit `alvidaa-remote.js` on the Pi, zero TV writes
 - HOME from any app returns to the overlay (key_priority 25000 routing)
+
+### Cobalt XHR deadlock (probe finding, 2026-11-03 — loader constraint)
+
+The capability probe isolated why the "self-healing" bootstrap froze the
+home engine: **Cobalt's XHR deadlocks the page after a CORS preflight.**
+Evidence: the probe's stages stop exactly at the first XHR — the preflight
+(OPTIONS) reaches the server and returns 200 with correct ACAO headers, but
+the actual POST is never sent and the page never executes another line
+(no WS, no img, no later stages). The plain `<script src>` loader has no
+preflight and is the only reliable data-free load path; all control data
+must flow over the WebSocket (no preflight) — XHR is banned in the overlay.
+
+Consequence recorded for the record: the self-healing bootstrap variant
+(boot div + retrying script loader) also reproducibly froze the engine, so
+the deploy tool ships the plain script tag only. Do not reintroduce XHR
+into any page that runs in the home engine.

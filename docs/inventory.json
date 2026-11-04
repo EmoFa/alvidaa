@@ -21,7 +21,7 @@
       "browser": "Chromium 111 \"odin\"",
       "build_date": "2025-08-13",
       "tested_by": [
-        "carteakey"
+        "gh:carteakey"
       ],
       "capabilities": {
         "pairing": "working",
@@ -45,7 +45,7 @@
       "browser": "?",
       "build_date": "possibly 2026-06",
       "tested_by": [
-        "possibly_matt"
+        "reddit:possibly_matt"
       ],
       "capabilities": {
         "pairing": "untested",
@@ -69,7 +69,7 @@
       "browser": "Chromium 111.5563.5.1",
       "build_date": "2026-07-27",
       "tested_by": [
-        "Affectionate-End-601"
+        "reddit:Affectionate-End-601"
       ],
       "capabilities": {
         "pairing": "working",
@@ -93,7 +93,7 @@
       "browser": "Chromium 111 \"Odin\" (111.5563.x)",
       "build_date": "2026-07-27",
       "tested_by": [
-        "Wing-Tsit-Chong"
+        "reddit:Wing-Tsit-Chong"
       ],
       "capabilities": {
         "pairing": "working",
@@ -117,7 +117,7 @@
       "browser": "?",
       "build_date": "possibly 2026-07",
       "tested_by": [
-        "____dls"
+        "reddit:____dls"
       ],
       "capabilities": {
         "pairing": "working",
@@ -141,7 +141,7 @@
       "browser": "Chromium 88 Odin",
       "build_date": "?",
       "tested_by": [
-        "pavanjadhaw"
+        "reddit:pavanjadhaw"
       ],
       "capabilities": {
         "pairing": "working",
@@ -165,7 +165,10 @@
       "browser": "hisenseUI (Chromium 59.0.3071.115/V8 5.9, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security)",
       "build_date": "?",
       "tested_by": [
-        "xXLucyNyuXx (angryzero/hisense-root)"
+        {
+          "name": "xXLucyNyuXx (angryzero/hisense-root)",
+          "url": "https://github.com/xXLucyNyuXx"
+        }
       ],
       "capabilities": {
         "pairing": "untested",
@@ -189,7 +192,10 @@
       "browser": "untested",
       "build_date": "?",
       "tested_by": [
-        "xXLucyNyuXx (angryzero/vidaa)"
+        {
+          "name": "xXLucyNyuXx (angryzero/vidaa)",
+          "url": "https://github.com/xXLucyNyuXx"
+        }
       ],
       "capabilities": {
         "pairing": "working",
@@ -213,7 +219,7 @@
       "browser": "Chromium 111 \"odin\"",
       "build_date": "? (W letter; newer than the 09.60V EU_A units)",
       "tested_by": [
-        "ryjr2ddznn-lab"
+        "gh:ryjr2ddznn-lab"
       ],
       "capabilities": {
         "pairing": "working",

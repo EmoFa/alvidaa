@@ -18,12 +18,41 @@ PLAYBOOK = os.path.join(ROOT, "docs", "findings", "10-patched-firmware-playbook.
 
 MARK = ("<!-- INVENTORY:START -->", "<!-- INVENTORY:END -->")
 
-def attribution(f):
-    names = f.get("tested_by", [])
-    return ", ".join("@" + esc(u) for u in names) if names else "community report (name pending)"
-
 def esc(s):
     return str(s).replace("|", "\\|")
+
+def format_contributor(u):
+    if isinstance(u, dict):
+        name = u.get("name", "")
+        url = u.get("url")
+        if not url:
+            if "github" in u:
+                url = f"https://github.com/{u['github']}"
+                name = name or f"@{u['github']}"
+            elif "reddit" in u:
+                url = f"https://reddit.com/user/{u['reddit']}"
+                name = name or f"u/{u['reddit']}"
+        if url and name:
+            return f"[{esc(name)}]({url})"
+        return esc(name or url or "")
+
+    s = str(u).strip()
+    if s.startswith(("gh:", "github:")):
+        h = s.split(":", 1)[1].strip()
+        return f"[@{esc(h)}](https://github.com/{h})"
+    if s.startswith(("reddit:", "u/")):
+        h = s.split(":", 1)[1].strip() if ":" in s else s[2:].strip()
+        return f"[u/{esc(h)}](https://reddit.com/user/{h})"
+    if s.startswith("@"):
+        h = s[1:].strip()
+        return f"[@{esc(h)}](https://github.com/{h})"
+    if s.startswith("http://") or s.startswith("https://"):
+        return f"[{esc(s)}]({s})"
+    return f"@{esc(s)}"
+
+def attribution(f):
+    names = f.get("tested_by", [])
+    return ", ".join(format_contributor(u) for u in names) if names else "community report (name pending)"
 
 def readme_table(fw):
     cols = "| Model | Region | SoC | VIDAA OS | Firmware | `transport_protocol` | Browser | Launcher | Root chain | Tested by |"

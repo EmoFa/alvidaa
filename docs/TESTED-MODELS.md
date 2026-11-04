@@ -28,6 +28,7 @@ separates reported results, verified results, and failed tests.
 | Browser | UA string from any page the TV browser opens | rendering constraints (Chrome 77 vs Chromium 111) |
 | Launcher ✅/❌ | pairing → install → watcher | generation-dependent only |
 | Root chain ✅/❌ | recon → hook → SSH | SoC-specific |
+| Tested by / Source | Platform handle in `tested_by` | provenance and attribution without ghost-mentions |
 
 ## Getting the numbers
 
@@ -42,11 +43,15 @@ separates reported results, verified results, and failed tests.
 - **Root chain fields**: only after reading
   [ROOT.md](ROOT.md) and [SECURITY.md](../SECURITY.md). The recon page
   alone is read-only and safe.
+- **Attribution format** in `docs/inventory.json` (`tested_by` array):
+  - GitHub: `"gh:username"` (renders `[@username](https://github.com/username)`)
+  - Reddit: `"reddit:username"` or `"u/username"` (renders `[u/username](https://reddit.com/user/username)`)
+  - Custom link: `{"name": "...", "url": "https://..."}`
 
 ## Template row
 
 ```markdown
-| 55U8N | EU | MT9602 | U09.01 | V0000.09.01N.N0704 | 3290 | Chromium 111 | ✅ | ✅ | @you |
+| 55U8N | EU | MT9602 | U09.01 | V0000.09.01N.N0704 | 3290 | Chromium 111 | ✅ | ✅ | [@you](https://github.com/you) |
 ```
 
 The launcher column depends only on the firmware generation; the root

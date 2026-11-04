@@ -28,6 +28,11 @@ is what tells the next owner where to dig.
    `tested_by`). Status vocabulary per capability, exactly:
    `working | gated | closed | open | armed | achieved | blocked | untested | n-a`.
    Keep `notes` to facts with evidence pointers.
+   Format `tested_by` entries using platform prefixes or objects to generate
+   direct links without ghost-mentions:
+   - GitHub: `"gh:username"` (renders `[@username](https://github.com/username)`)
+   - Reddit: `"reddit:username"` or `"u/username"` (renders `[u/username](https://reddit.com/user/username)`)
+   - Custom: `{"name": "...", "url": "https://..."}`
 
    Example entry (abridged):
 
@@ -39,7 +44,7 @@ is what tells the next owner where to dig.
      "transport_protocol": "3290",
      "browser": "Chromium 111.5563.5.1",
      "build_date": "2026-07-27",
-     "tested_by": ["handle"],
+     "tested_by": ["reddit:handle"],
      "capabilities": {
        "pairing": "working",
        "file_bridge_traversal": "closed",

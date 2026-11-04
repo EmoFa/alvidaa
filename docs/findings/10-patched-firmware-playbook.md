@@ -9,15 +9,15 @@
 <!-- INVENTORY:START -->
 | Generation | SoC | Traversal (`../`) | `fileWrite` | Identity gate | euladpp | Root | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 09.01O.P0813 (50A51HUV, US/CAN) | MTK9602 | open | open | n-a | armed | achieved | @carteakey |
-| 09.60X.Q0609 (2026-06) (? (MTK9618 unit), ?) | MTK9618 | untested | untested | untested | untested | achieved | @possibly_matt |
-| 09.60V.Q0612 (2026-07 EU_A) (55A60LEVS, EU_A) | MTK9603 | closed | gated | working | armed | blocked-at-fileWrite | @Affectionate-End-601 |
-| 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | @Wing-Tsit-Chong |
-| 09.60V.Q0612 (build date unconfirmed) (?, ?) | MTK9603 | closed | untested | untested | untested | untested | @____dls |
-| V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | @pavanjadhaw |
-| V0100.01.00A.N0410 (HE40E5600FFWTS, ? (EU, German-language docs)) | MTK5863-class (MT53xx, armv7 Cortex-A53) | open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp) | open (File.write text-only EINVAL for binary; binaries via File.download/curl) | n-a | n-a (generation lacks the package) | achieved (boot persistence verified across multiple reboots) | @xXLucyNyuXx (angryzero/hisense-root) |
-| V0000.09.60I.Q0813 (100U7Q (100U70QEVS), EU_A) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | @xXLucyNyuXx (angryzero/vidaa) |
-| 09.60W.Q0612 (EU_A) (43E7DS (43Q60SEVS_02, serial type 43E7SE), EU_A (DEU)) | MTK9603 | closed | gated | working | untested | untested | @ryjr2ddznn-lab |
+| 09.01O.P0813 (50A51HUV, US/CAN) | MTK9602 | open | open | n-a | armed | achieved | [@carteakey](https://github.com/carteakey) |
+| 09.60X.Q0609 (2026-06) (? (MTK9618 unit), ?) | MTK9618 | untested | untested | untested | untested | achieved | [u/possibly_matt](https://reddit.com/user/possibly_matt) |
+| 09.60V.Q0612 (2026-07 EU_A) (55A60LEVS, EU_A) | MTK9603 | closed | gated | working | armed | blocked-at-fileWrite | [u/Affectionate-End-601](https://reddit.com/user/Affectionate-End-601) |
+| 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | [u/Wing-Tsit-Chong](https://reddit.com/user/Wing-Tsit-Chong) |
+| 09.60V.Q0612 (build date unconfirmed) (?, ?) | MTK9603 | closed | untested | untested | untested | untested | [u/____dls](https://reddit.com/user/____dls) |
+| V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) |
+| V0100.01.00A.N0410 (HE40E5600FFWTS, ? (EU, German-language docs)) | MTK5863-class (MT53xx, armv7 Cortex-A53) | open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp) | open (File.write text-only EINVAL for binary; binaries via File.download/curl) | n-a | n-a (generation lacks the package) | achieved (boot persistence verified across multiple reboots) | [xXLucyNyuXx (angryzero/hisense-root)](https://github.com/xXLucyNyuXx) |
+| V0000.09.60I.Q0813 (100U7Q (100U70QEVS), EU_A) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [xXLucyNyuXx (angryzero/vidaa)](https://github.com/xXLucyNyuXx) |
+| 09.60W.Q0612 (EU_A) (43E7DS (43Q60SEVS_02, serial type 43E7SE), EU_A (DEU)) | MTK9603 | closed | gated | working | untested | untested | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 <!-- INVENTORY:END -->
 
 **Read of the table:** the July EU_A reporter observed `fileWrite` rejected

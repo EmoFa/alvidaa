@@ -413,11 +413,22 @@ func (b *Bridge) maybeBounceHome() {
 func (b *Bridge) launchHome(name string) map[string]any {
 	apps := b.appsList()
 	var app map[string]any
+	// The bridge serves the launcher itself: prefer the loopback URL so a
+	// stale external-server entry carrying the same port can never win.
 	for _, a := range apps {
 		u, _ := a["url"].(string)
-		if strings.Contains(u, fmt.Sprintf(":%d/", b.port)) {
+		if strings.Contains(u, fmt.Sprintf("127.0.0.1:%d/", b.port)) {
 			app = a
 			break
+		}
+	}
+	if app == nil {
+		for _, a := range apps {
+			u, _ := a["url"].(string)
+			if strings.Contains(u, fmt.Sprintf(":%d/", b.port)) {
+				app = a
+				break
+			}
 		}
 	}
 	if app == nil {

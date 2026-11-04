@@ -129,6 +129,16 @@ The daemon runs on loopback `127.0.0.1:8770`, binds only to loopback for securit
 and connects to the TV's mosquitto broker on `127.0.0.1:36669`. The Pi server
 retires to a development / remote management tool.
 
+**R4b — screen-render pivot (2026-11-04):** the Cobalt home engine on this
+firmware ships **no `HTMLCanvasElement`** (probe-verified — findings 12 §7),
+so the planned in-engine canvas overlay (this document's original R4 goal)
+is impossible. The native-port screen path is instead: **on-TV bridge →
+watcher bounce → installed web app → odin renders the launcher from
+`127.0.0.1:8770`**. Same UX as Lane 1 with zero external hardware; the
+`hisenseUI` shell stays pristine. `launchHome` prefers the loopback URL, the
+framework's app-list cache needs a reboot after re-pointing, and the
+compiled-JS cache is stale-by-URL (cache clear + reboot on every deploy).
+
 ### R5 — stock home suppressed at the source
 
 Once R2 answers where boot/home selection lives: point the boot/home slot at

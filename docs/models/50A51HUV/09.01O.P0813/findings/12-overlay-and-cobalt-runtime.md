@@ -102,3 +102,62 @@ Discovered 2026-11-04 during the gray/black-screen hunt on the overlay.
 engine from a root context; treat any storage-file recreation as a
 data-loss event for both the overlay cache and the stock-home layout;
 never keep the only copy of user-visible state in this storage.
+
+## 7. The home engine has no canvas — the canvas-overlay path is impossible (2026-11-04)
+
+Probe-verified on 09.01O.P0813 (MTK9602), after a clean boot with a cleared
+`cobalt_home` cache:
+
+- `typeof HTMLCanvasElement === "undefined"` — the global does not exist.
+- `document.createElement("canvas")` returns a **generic element**: its
+  prototype chain carries only `HTMLElement` members (`dir`, `dataset`,
+  `tabIndex`, `style`, `on*` handlers) — no `width`/`height`,
+  no `getContext`, no `toDataURL`.
+- `typeof cv.getContext === "undefined"` → the string
+  `"cv.getContext is not a function"` is the death point of every
+  canvas-overlay script, in the home engine **and** in every web app that
+  loads the shared `hisenseUI` shell.
+- `<iframe>` is unsupported too (`contentDocument` is undefined) — no clean
+  realm escape hatch.
+- The stock page itself contains **zero** `<canvas>` elements (probe count
+  includes only our injected one). Starboard on this build is DOM-only.
+
+**Attribution correction**: the Nov 3 "framebuffer-verified overlay" was the
+**odin browser** rendering the launcher page via the watcher bounce (the
+watcher was enabled on Nov 3) — not a Cobalt canvas overlay. Every Cobalt
+overlay attempt, before and since, died at the same missing-`getContext`
+line. Chromium-based odin has full canvas; the standalone launcher page
+renders fine there.
+
+**Consequences**:
+
+1. Canvas-in-home-engine overlays are **impossible on this model/firmware**.
+   The launcher's screen path is the browser: on-TV bridge → watcher bounce
+   → installed web app → odin renders from `127.0.0.1:8770`. Re-probe before
+   ever designing around home-engine canvas on a new firmware.
+2. The injected overlay script must stay **out of the shared shell**: with
+   `#app` hidden by the injected style and the script dead, home and apps go
+   dark and unresponsive until reboot. Pristine `index.html` + `.alvidaa-bak`
+   restore is the recovery.
+3. **Compiled-JS cache is stale-by-URL**: Cobalt serves scripts from
+   `cobalt_home` without re-validating content — a re-push under the same
+   filename runs the OLD code (observed: fresh markers absent, identical
+   timestamps across three "new" builds). Every script deploy needs
+   `rm -rf /var/local/hisenseUI/cobalt_home/*` **plus a reboot** — this is
+   why `tools/deploy-overlay.sh` clears the cache in the same batch.
+
+**Diagnostic techniques that worked here** (for the next hunt):
+
+- Per-stage `localStorage` markers (`alvidaa_p_*`, one key per step) — the
+  only crash recorder the engine has; storage flushes within ~10 ms but a
+  wedge loses everything after the last flush.
+- `window.onerror` fires but Cobalt masks file:// script errors as
+  `"Script error. @0:0"` — no line/column. Wrap the whole body in a
+  try/catch: caught errors carry real messages and stacks.
+- Plain `console.log` does **not** reach `/var/log/log.txt` (the stock UI's
+  `jsplugins print()` lines come from an SDK logger, not the console).
+- Zero-visual-impact probing (1px canvas at 1% opacity, tiny style rule)
+  names the killer op without black-screening the TV.
+
+Hands-off reminder (cross-ref findings 03): never write to `/OAD` — the
+fileOperation service reaches it (mode 7) and it holds update staging.

@@ -17,8 +17,8 @@ in `docs/models/50A51HUV/09.01O.P0813/findings/` and LAUNCHER_V2.md.
 | Bridge host | Pi / Mac / PC (`server/vidaa_server.py`) | on-TV Go daemon (`bridge/` → `alvidaa-bridge`) |
 | MQTT link | LAN TLS to `tv:36669`, paired identity | loopback `127.0.0.1:36669` |
 | HTTP/WS endpoint | `http://<server>:8770` | `127.0.0.1:8770` (hook passes `-addr 0.0.0.0:8770`) |
-| Screen takeover | installed "Home" web app → Chromium "odin" browser loads the server page | `<script>` appended to stock `hisenseUI/index.html` → Cobalt Starboard canvas overlay |
-| Home mechanism | **watcher enabled** — polls `statetype == remote_launcher`, bounces the TV browser to the server | **watcher disabled** — overlay lives inside the stock home engine itself |
+| Screen takeover | installed "Home" web app → Chromium "odin" browser loads the server page | same mechanism — installed web app → odin renders from `127.0.0.1:8770` |
+| Home mechanism | **watcher enabled** (on the external server) — polls `statetype == remote_launcher`, bounces the TV browser to the server | **watcher enabled** (inside the on-TV bridge) — bounces to the web app pointing at the TV's own loopback |
 | External dependency | the server box must be up, forever | none — TV is a standalone appliance |
 | Reversibility | uninstall the web app / stop the server | `hook.off` kill-switch; overlay is append-only, pristine HTML kept in `.alvidaa-bak` |
 
@@ -47,29 +47,42 @@ keys at `/var/local/alvidaa/keys/`, assets at `/var/local/alvidaa/launcher/`,
 log at `/var/local/alvidaa/bridge.log`. Full API parity with the Python
 server (`/api/health`, `/api/state`, `/api/launch`, `/api/source`, `/api/open`).
 
-The screen path never touches the browser: `tools/deploy-overlay.sh` fetches
-the pristine `hisenseUI/index.html` (kept in `.alvidaa-bak`), appends a head
-flash-kill style plus `<script src="./alvidaa-remote.js"></script>` **before
-`</body>`**, and bundles `alvidaa-remote.js` to local flash
-(`/APPS/channelA/hisenseUI/`, mode 644 `UhisApp:UGhisApp`) so a cold boot has
-no network dependency (findings 12 §5). The stock home engine
-(process `UIMainWebModule`) keeps running underneath; the overlay paints a
-canvas over it and talks to the bridge on loopback.
+The screen path is the **browser** (odin), not the home engine: this Cobalt
+build ships no `HTMLCanvasElement` at all (findings 12 §7), so canvas
+overlays inside `hisenseUI` are impossible on this model. The shell
+(`/APPS/channelA/hisenseUI/index.html`) must stay **pristine** (pristine
+copy kept in `index.html.alvidaa-bak`) — any injected script there runs in
+every web context and, once dead, darkens home and all apps until reboot.
+`tools/deploy-overlay.sh` remains as a recovery/retired tool.
 
-`watcher.enabled: false` in `/var/local/alvidaa/config.json` is **required**
-in this lane: with the watcher on, the bridge bounces the TV into the old
-installed web app, and if the external server is gone that is a dead URL in
-odin — the "gray screen" failure mode. (Watcher code: `bridge/state.go`,
-`watcherLoop`.)
+Takeover works like Lane 1, hosted entirely on the TV: the installed web
+app ("Home", appId `vidaa-home`, registered in `/APPS/websdk/Appinfo.json`)
+points at `http://127.0.0.1:8770/`; the bridge's watcher (enabled) sees
+`statetype == remote_launcher` and launches that app, so odin lands on the
+launcher. `bridge/state.go launchHome` prefers the loopback URL explicitly,
+so a stale external-server entry carrying the same port can never win.
+Note the TV framework caches its app list across installs — an
+`INSTALL AS APP` re-point only takes effect after a reboot.
+
+`watcher.enabled: true` in `/var/local/alvidaa/config.json` is **required**
+in this lane. The 2026-11-04 "gray screen" incident was the old Pi-pointed
+entry winning the launch after the external server died; the loopback-pref
+matcher plus a re-pointed web app is the fix.
 
 ## Shared asset: `launcher/alvidaa-remote.js`
 
-One script powers both lanes (standalone page in the browser, overlay in the
-home engine). A change must land in **three** places to take effect on the TV:
+One script powers the launcher page in both lanes (external server or on-TV
+bridge — the page is identical). A change must land in **two** places to
+take effect on the TV:
 
 1. repo `launcher/alvidaa-remote.js` (source of truth, commit + push),
-2. `/APPS/channelA/hisenseUI/alvidaa-remote.js` (overlay, `UhisApp:UGhisApp 644`),
-3. `/var/local/alvidaa/launcher/alvidaa-remote.js` (standalone assets).
+2. `/var/local/alvidaa/launcher/alvidaa-remote.js` (on-TV bridge assets).
+
+Nothing goes into the `hisenseUI` shell anymore (see findings 12 §7). And
+because the Cobalt compiled-JS cache is stale-by-URL, any script change on
+the TV needs `rm -rf /var/local/hisenseUI/cobalt_home/*` + reboot — even
+though the launcher itself renders in odin, the home engine also compiles
+what it loads.
 
 Bridge constraint: **XHR is banned** in any home-engine page (Cobalt deadlocks
 after a CORS preflight — findings 12 §3); all control data flows over the

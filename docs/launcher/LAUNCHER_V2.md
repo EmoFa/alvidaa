@@ -103,28 +103,27 @@ plus a written "writable, read-only, do-not-touch" inventory.
 - AdGuard Home per-client rules (LAN layer) stay as defense-in-depth; with the
   kernel layer in place they become redundancy, not the only line.
 
-### R4 — alvidaa on the TV (the port)
+### R4 — alvidaa on the TV (the native port — ACHIEVED)
 
-Run the bridge + page server on the TV itself under the `phoenix` Node
-runtime; the Pi retires to a fallback.
+Rather than relying on the uncertain and unpinned `phoenix` Node runtime, the
+bridge and static server were ported directly to a **standalone, statically linked
+Go binary (`bridge/` -> `alvidaa-bridge-armv7`)** cross-compiled for Linux `armv7l`.
+Zero libc dependencies, zero external npm packages, instant startup (<10MB RSS),
+launchable directly from `/var/local/otaTest.sh` at boot.
 
-Port inventory (what `server/vidaa_server.py` does today → Node equivalents):
+Port architecture (`bridge/`):
 
-| Python piece | Node port |
-|---|---|
-| paho-mqtt TLS client, client cert, dynamic/token auth, exact-topic subs | `mqtt.js` (verify availability on phoenix; else raw MQTT 3.1.1 over net is feasible — we already speak the protocol) |
-| token refresh (`gettoken`) | same flow, timer + on-reject recovery |
-| ThreadingHTTPServer static + `no-store` | plain http server, `Cache-Control` headers kept |
-| hand-rolled WebSocket (`/ws`), push listeners | `ws` lib if present; hand-rolled again if not (the protocol code is ours already) |
-| `/icon/<appId>` proxy with disk cache (`iconcache/`) | same, cache to a rw dir; the TV fetching `img.vidaahub.com` directly is fine too but the proxy keeps one origin |
-| home watcher (gettvstate poll → launchapp by content) | unchanged; on-TV it can also react faster (loopback MQTT) |
-| config.json (only/hidden/rename/inputs/watcher) | same file, rw location on TV |
+| Component | Implementation | Notes |
+|---|---|---|
+| MQTT TLS Client | Standard library `crypto/tls` + net connection | Exact-topic subs, client cert TLS, auto-token refresh on rejection (`rc=5`) |
+| Loopback HTTP Server | Go `net/http` on `127.0.0.1:8770` | Serves overlay assets from `-assets`, `Cache-Control: no-store`, CORS `*` |
+| WebSocket Bridge (`/ws`) | Hand-rolled RFC 6455 framing | Translates Cobalt client messages (`launch`, `source`) to MQTT commands |
+| Icon Proxy (`/icon/*`) | Streaming HTTP proxy + disk cache | Caches app icons locally under `-assets/iconcache/` |
+| Health & State API | `/api/health`, `/api/state`, `/api/launch`, `/api/source`, `/api/open` | Full parity with `server/vidaa_server.py` |
 
-Open items for the port: where phoenix apps live and how they're registered
-(R2), whether outbound TLS with our client cert works from node on-TV, storage
-path for `keys/` (tokens.json, certs) and `iconcache/`, and how the service
-survives the boot order (MQTT broker on 36669 comes up later than the boot
-listeners — the server must retry, our reconnect logic already does).
+The daemon runs on loopback `127.0.0.1:8770`, binds only to loopback for security,
+and connects to the TV's mosquitto broker on `127.0.0.1:36669`. The Pi server
+retires to a development / remote management tool.
 
 ### R5 — stock home suppressed at the source
 
@@ -208,8 +207,8 @@ We follow a phased hybrid roadmap so every step is reversible (`index.html.alvid
      - Stub out ad-slot fetchers (`layout-ui-eu.vidaahub.com`, `recommend-ui.vidaahub.com`) and promo-video autoplayers (`file-dl-test.../promovod/`) in `sdk.js`.
      - Strip sponsored app row injection and forced telemetry beacons (`hi_logreport_service` / `127.0.0.1:1969`) while preserving native HDMI/settings hooks.
      - Keep `security-dac-partition-apps.sh` ownership (`UhisApp:UGhisApp`, `chmod 750`) intact and freeze OTA in `otaTest.sh` (`R0`) so `deploy.sh` never wipes `/APPS/channelA`.
-3. **Stage 3 — Self-Contained On-TV Daemon (`R4`, retiring the Pi):**
-   - Run the MQTT/WebSocket bridge directly on the TV (`127.0.0.1:8770`) under the bundled `phoenix` Node.js runtime (or a static helper started from `/var/local/otaTest.sh`), reading credentials and `config.json` from `/var/local/alvidaa/`.
+3. **Stage 3 — Self-Contained On-TV Daemon (`R4`, retiring the Pi — BUILT):**
+   - Run the MQTT/WebSocket bridge directly on the TV (`127.0.0.1:8770`) via the static Go daemon (`bridge/dist/alvidaa-bridge-armv7`) started from `/var/local/otaTest.sh`, reading credentials from `/var/local/alvidaa/keys/` and `config.json` from `/var/local/alvidaa/config.json`. Zero external dependencies.
 
 ## R2b — the native service gateway (2026-10-30, from sdk.js analysis)
 

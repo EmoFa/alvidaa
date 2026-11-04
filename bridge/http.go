@@ -137,6 +137,15 @@ func mustJSON(v any) []byte {
 }
 
 func (h *Handler) serveIcon(w http.ResponseWriter, r *http.Request, appID string) {
+	// Cache first: pre-staged icons (tools/push-icons.sh) must serve even when
+	// the applist entry has no httpIcon URL at all (e.g. vidaa-recon).
+	if data, ctype, err := h.cachedIcon(appID); err == nil {
+		h.cors(w)
+		w.Header().Set("Content-Type", ctype)
+		w.Header().Set("Cache-Control", "max-age=604800")
+		w.Write(data)
+		return
+	}
 	var url string
 	for _, a := range h.b.appsList() {
 		if toStr(a["appId"]) == appID {
@@ -159,7 +168,8 @@ func (h *Handler) serveIcon(w http.ResponseWriter, r *http.Request, appID string
 	w.Write(data)
 }
 
-func (h *Handler) iconBytes(appID, url string) ([]byte, string, error) {
+// safeAppID mirrors the cache filename transform: alphanumerics only.
+func safeAppID(appID string) string {
 	safe := strings.Map(func(r rune) rune {
 		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
 			return r
@@ -169,13 +179,30 @@ func (h *Handler) iconBytes(appID, url string) ([]byte, string, error) {
 	if safe == "" {
 		safe = "x"
 	}
+	return safe
+}
+
+// cachedIcon reads a pre-staged icon from the cache directory.
+func (h *Handler) cachedIcon(appID string) ([]byte, string, error) {
+	safe := safeAppID(appID)
+	data, err := os.ReadFile(filepath.Join(h.iconDir, safe+".img"))
+	if err != nil {
+		return nil, "", err
+	}
+	t, err := os.ReadFile(filepath.Join(h.iconDir, safe+".type"))
+	if err != nil {
+		return nil, "", err
+	}
+	return data, strings.TrimSpace(string(t)), nil
+}
+
+func (h *Handler) iconBytes(appID, url string) ([]byte, string, error) {
+	if data, ctype, err := h.cachedIcon(appID); err == nil {
+		return data, ctype, nil
+	}
+	safe := safeAppID(appID)
 	dataPath := filepath.Join(h.iconDir, safe+".img")
 	typePath := filepath.Join(h.iconDir, safe+".type")
-	if data, err := os.ReadFile(dataPath); err == nil {
-		if t, err := os.ReadFile(typePath); err == nil {
-			return data, strings.TrimSpace(string(t)), nil
-		}
-	}
 	client := &http.Client{Timeout: 8 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {

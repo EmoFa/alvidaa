@@ -13,13 +13,13 @@ exact model and firmware they were written for.
 
 ## Provenance
 
-The tool tree is ported and adapted from the author's `vidaa` research tree at
-commit `b893f1b`, by [@oOHiyoriOo](https://github.com/oOHiyoriOo). The HE40 and
-100U7Q source subtrees carry MIT licenses; the published copies here are
-released under this repository's MIT license, and the device-independent `fw/`
-scripts are the author's own tooling. Paths were reorganized for this
-repository and the documentation was rewritten; the original scripts and their
-model-specific constants are preserved where they are still useful.
+The tool tree is ported and adapted from the author's private research tree,
+by [@oOHiyoriOo](https://github.com/oOHiyoriOo). The HE40 and 100U7Q source
+subtrees carry MIT licenses; the published copies here are released under this
+repository's MIT license, and the device-independent `fw/` scripts are the
+author's own tooling. Paths were reorganized for this repository and the
+documentation was rewritten; the original scripts and their model-specific
+constants are preserved where they are still useful.
 
 The `alvidaa` launcher and the original code in this tree are MIT. Third-party
 components keep their own licenses. See [../LICENSE](../LICENSE) and the build

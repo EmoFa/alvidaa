@@ -10,7 +10,7 @@ are **UNVERIFIED**. This is a separate chain from [the 50A51HUV / MTK9602 guide]
 > writable paths are properties of this build. Another firmware, panel size or
 > board revision is untested; nothing here is a generic VIDAA exploit.
 
-> Source citations prefixed `vidaa/he40/...` are line references into the
+> Source citations prefixed `record:he40/...` are line references into the
 > author's private research record, not files in this repository. See
 > [EVIDENCE.md](EVIDENCE.md) for the claim matrix; the guide itself is
 > self-contained.
@@ -240,7 +240,7 @@ the size and hash before going on; do not reboot on an unverified write.
 **Correction to older wording:** the shadow library is loaded when
 `hisense_browser` **next starts**. The browser is *not* started at boot — it is
 launched on demand when the TV browser tile is opened
-(`vidaa/he40/modding/02-boot.md:177`). A reboot alone therefore does not execute the
+(`record:he40/modding/02-boot.md:177`). A reboot alone therefore does not execute the
 payload.
 
 Recorded procedure: reboot the TV, then **open the TV browser once**. That
@@ -492,7 +492,8 @@ Build them, or use your own static ARM builds.
 ## Attribution
 
 Research and the original HE40 record: [@oOHiyoriOo](https://github.com/oOHiyoriOo).
-Source: the author's vidaa research repository, commit `b893f1b` (a private
-record, cited here rather than linked). This page is original English text
-under the repository's MIT license — see [LICENSE](../../../../LICENSE) and
-[SECURITY.md](../../../../SECURITY.md) for scope and disclosure.
+Source: the author's private research record for this model and firmware (line
+labels only; the record is not part of this repository). This page is original
+English text under the repository's MIT license — see
+[LICENSE](../../../../LICENSE) and [SECURITY.md](../../../../SECURITY.md) for
+scope and disclosure.

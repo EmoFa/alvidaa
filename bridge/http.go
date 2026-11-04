@@ -238,6 +238,11 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, err := os.Stat(full)
+	if err == nil && st.IsDir() {
+		// Directory URLs (e.g. /next/) serve that directory's index.html.
+		full = filepath.Join(full, "index.html")
+		st, err = os.Stat(full)
+	}
 	if err != nil || st.IsDir() {
 		http.NotFound(w, r)
 		return
@@ -248,7 +253,16 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request) {
 	}
 	h.cors(w)
 	w.Header().Set("Content-Type", ctype)
-	http.ServeFile(w, r, full)
+	// ServeContent instead of ServeFile: ServeFile redirects any request
+	// whose path ends in /index.html to "./", which 404s because the
+	// directory itself has no handler (broke /next/index.html staging).
+	f, err := os.Open(full)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close()
+	http.ServeContent(w, r, filepath.Base(full), st.ModTime(), f)
 }
 
 func (h *Handler) recon(w http.ResponseWriter, r *http.Request) {

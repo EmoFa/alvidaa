@@ -1,11 +1,14 @@
-# alvidaa — FINDINGS (index)
+# 50A51HUV / 09.01O.P0813 — FINDINGS (index)
 
-The lab notebook. Every discovery gets written down the moment it happens;
-the blog and [STORY.md](STORY.md) draw from these files. For model-specific
-root and modding guides, see [models/](models/). Split into modules:
+**Research and original write-up:** [@carteakey](https://github.com/carteakey).
+
+The lab notebook for the 50A51HUV / MTK9602 chain. Every discovery gets written
+down the moment it happens; the blog and
+[STORY.md](../../../project/STORY.md) draw from these files. For the other
+model guides, see the [model index](../../README.md). Split into modules:
 
 For a method-by-method index with evidence and tested devices, see the
-generated [exploit and method inventory](EXPLOITS.md).
+generated [exploit and method inventory](../../../research/EXPLOITS.md).
 
 | Module | Contents |
 | --- | --- |
@@ -18,7 +21,7 @@ generated [exploit and method inventory](EXPLOITS.md).
 | [07-root-summary.md](findings/07-root-summary.md) | The kill chain end-to-end, working state (`server/tv`), eMMC map, teardown path. |
 | [08-image-exploration.md](findings/08-image-exploration.md) | Loewe chassis bones, the multi-brand ODM platform (CVTE/Cultraview), CVTE factory remount scripts, DEV build marker. |
 | [09-endpoints.md](findings/09-endpoints.md) | The complete vidaahub.com service map, telemetry API surface, `/data` silos. Live tiers in `firmware/ENDPOINTS.md` (gitignored working copy). |
-| [10-patched-firmware-playbook.md](findings/10-patched-firmware-playbook.md) | The consolidated lane map for 09.60V/MTK9603-class firmware (traversal closed): generation status table, primitives, candidate chains ranked, open questions. Community-maintained — PR your probe results. |
+| [10-patched-firmware-playbook.md](../../../research/10-patched-firmware-playbook.md) | The consolidated lane map for 09.60V/MTK9603-class firmware (traversal closed): generation status table, primitives, candidate chains ranked, open questions. Community-maintained — PR your probe results. |
 | [11-firmware-notes.md](findings/11-firmware-notes.md) | Firmware notes: the dynamic domain map (evt/jrnl/ads endpoints, DoH evasion via dns.google), on-box tooling, JS service inventory, package-manager metadata, the euladpp consent plane, loose ends. |
 | [12-overlay-and-cobalt-runtime.md](findings/12-overlay-and-cobalt-runtime.md) | Cobalt runtime and overlay traps: `sdk.js` is load-bearing (append-only mods only), Starboard drops tags after `</html>`, XHR CORS-preflight deadlock (WebSocket-only), the Dropbear reboot hang, and the boot-time network race. |
 
@@ -81,7 +84,7 @@ generated [exploit and method inventory](EXPLOITS.md).
    can even be opened on the TV via `/api/open`.
 6. **GitHub publish — done.** Repo public (github.com/carteakey/alvidaa),
    README carries the tested-models matrix with PR-based reporting, agent
-   onboarding (AGENTS.md + docs/HACK-YOUR-OWN.md) shipped.
+   onboarding (AGENTS.md + docs/project/HACK-YOUR-OWN.md) shipped.
 
 ## Forgejo seed (internal, Oct 30)
 

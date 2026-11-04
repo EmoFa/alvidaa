@@ -132,7 +132,7 @@ Other hypotheses, including app-install behavior and the raw API on newer
 firmware, require model-specific confirmation. The 09.60 EU_A reporter
 observed `fileWrite` denied even for in-sandbox paths, so a reachable base
 alone does not establish an install or write path. See
-[the patched-firmware playbook](10-patched-firmware-playbook.md).
+[the patched-firmware playbook](../../../../research/10-patched-firmware-playbook.md).
 
 **Tar-slip verdict (live-tested Oct 30):** GNU tar 1.17 on this firmware
 refuses BOTH classic vectors — symlink members are created but unlinked

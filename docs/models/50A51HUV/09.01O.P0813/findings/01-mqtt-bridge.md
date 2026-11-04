@@ -147,7 +147,7 @@ not browse the open web on the TV.)
 
 ## 7. The VIDAA browser (Chromium 111 "odin" vs. legacy Chrome 77 notes)
 
-- Older community guides assume Chrome 77 (`ES2018` max); on 2024+ firmware (`V0000.09.01O.P0813`), the web-app browser (`odin`) actually reports **Chromium 111** (`armv7l`), while the stock home (`bin/hisenseUI`) runs in an embedded Cobalt engine (see [03-bridge-internals.md](03-bridge-internals.md) §10.1 and [LAUNCHER_V2.md](../LAUNCHER_V2.md)).
+- Older community guides assume Chrome 77 (`ES2018` max); on 2024+ firmware (`V0000.09.01O.P0813`), the web-app browser (`odin`) actually reports **Chromium 111** (`armv7l`), while the stock home (`bin/hisenseUI`) runs in an embedded Cobalt engine (see [03-bridge-internals.md](03-bridge-internals.md) §10.1 and [LAUNCHER_V2.md](../../../../launcher/LAUNCHER_V2.md)).
 - One canvas at 960×540 (720p-class) upscaled by the TV renders predictably and keeps repaints cheap.
 - Shipping ES2018-compatible JS (avoiding optional chaining / nullish coalescing) keeps pages portable across older VIDAA builds.
 - **The D-pad moves an on-screen pointer** and OK emits a **click** — keyboard

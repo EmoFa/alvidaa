@@ -146,7 +146,7 @@ invasive rw-space edit in the plan.
   this document, the v1 wiki pages.
 - Root/firmware lane (other session): FINDINGS.md recon sections, hook
   versions, binaries/Ghidra, endpoint mapping, telemetry inventory.
-- Shared: `docs/FINDINGS.md` — recon sections are the other lane's; launcher
+- Shared: `docs/models/50A51HUV/09.01O.P0813/FINDINGS.md` — recon sections are the other lane's; launcher
   sections (this file, v1 sections) are ours. Don't reformat across lanes.
 - Never commit: `server/keys/` (certs, tokens), `server/iconcache/`.
 

@@ -132,4 +132,4 @@ verified on 09.60. The 09.60 EU_A report found a separate API-level write
 gate, including on in-sandbox paths. The mode list alone does not bypass it.
 Whether the debug-code behavior carries over is also untested; an accepted
 code on the older TV does not establish root on a newer one. See
-[the community playbook](10-patched-firmware-playbook.md).
+[the community playbook](../../../../research/10-patched-firmware-playbook.md).

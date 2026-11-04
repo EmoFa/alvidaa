@@ -1,7 +1,7 @@
 # AGENTS.md — working on alvidaa with an AI session
 
 This repo is routinely driven by AI coding sessions (the whole project was
-built that way — see [STORY.md](docs/STORY.md)). If you are an agent (or a
+built that way — see [STORY.md](docs/project/STORY.md)). If you are an agent (or a
 human driving one), this file is your briefing.
 
 ## What this repo is
@@ -12,7 +12,7 @@ Two lanes share one TV:
    VIDAA TVs — one canvas page + a Python/Pi server speaking the TV's
    RemoteNow MQTT channel. Safe, reversible, the 90% use case.
 2. **The research** (root lane): how root was gained on 2024+ firmware and
-   what it unlocked. Own-TV-only, documented in `docs/findings/`.
+   what it unlocked. Own-TV-only, documented in `docs/models/50A51HUV/09.01O.P0813/findings/`.
 
 ## Ground rules (non-negotiable)
 
@@ -28,7 +28,7 @@ Two lanes share one TV:
 - **Keys and tokens never leave `server/keys/`** (gitignored). LAN IPs in
   code are fine.
 - **FINDINGS discipline**: every discovery — bug, trap, errno — goes into
-  `docs/findings/` the same hour it happens. That discipline is why the
+  `docs/models/50A51HUV/09.01O.P0813/findings/` the same hour it happens. That discipline is why the
   root chain worked.
 
 ## Map
@@ -40,7 +40,10 @@ Two lanes share one TV:
 | `server/tv` | root one-shot/interactive wrapper over dropbear (PATH-fixed) |
 | `launcher/recon.html` | the probe page pattern (v1–v8 in git history) |
 | `launcher/hookinstall.html`, `hookcheck.html` | remote hook install/verify |
-| `docs/findings/01…12` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints, patched firmware playbook, firmware notes, cobalt runtime & overlay traps |
+| `docs/models/50A51HUV/09.01O.P0813/findings/01…09,11–12` and `docs/research/10-patched-firmware-playbook.md` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints, patched firmware playbook, firmware notes, cobalt runtime & overlay traps |
+| `docs/launcher/` | launcher deployment and the on-TV launcher v2 roadmap |
+| `docs/project/` | the project story, AI prompt ladder and blog draft |
+| `docs/research/` | cross-model inventory, method catalogue, tested-models guide and playbook |
 | `scripts/check.sh` | read-only health check: generated tables vs JSON, python/shell syntax, relative doc links |
 | `firmware/ENDPOINTS.md` | live endpoint/kill-list working copy (gitignored) |
 

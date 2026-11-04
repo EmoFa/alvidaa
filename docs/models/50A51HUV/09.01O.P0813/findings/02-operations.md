@@ -20,6 +20,6 @@
 - ~~Boot-time takeover via `Appinfo.json` "preset" slot~~ — superseded by R2:
   `hisense_stage0.sh` and `startgui.sh` launch the stock home webpack SPA from
   `/APPS/channelA/hisenseUI/index.html`, which is the cleaner native-home shim
-  target (see [LAUNCHER_V2.md](../LAUNCHER_V2.md)).
+  target (see [LAUNCHER_V2.md](../../../../launcher/LAUNCHER_V2.md)).
 - Whether `HiUtils_createRequest` survives future firmware updates (freezing OTA
   via `iptables` in R0 is the planned guardrail).

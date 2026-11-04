@@ -3,14 +3,14 @@
 The whole project took a weekend, two AI sessions, a Raspberry Pi, and zero
 screwdrivers. This is the ladder to run on **your** TV with **your** agent —
 the actual prompts that worked, staged so each phase gates the next. Full
-context: [STORY.md](STORY.md) and [findings/](findings/).
+context: [STORY.md](STORY.md) and [50A51HUV findings](../models/50A51HUV/09.01O.P0813/findings).
 
 **Before you start**
 
 - A TV you own, on your LAN. An always-on host (Pi or similar). An AI coding
   agent that can run shell commands and read files (this was built on GLM-5.3
   Flash in Z Code; any capable agent works — point it at this repo so it
-  reads [AGENTS.md](../AGENTS.md) first).
+  reads [AGENTS.md](../../AGENTS.md) first).
 - Know the shape: the **launcher** (Phase 1) is safe and reversible. The
   **root** phases (3+) modify your TV's runtime state — reversible, but you
   are disabling safety rails on your own hardware. Firmware-generation facts
@@ -28,7 +28,7 @@ Point the agent at the repo and start here:
 > transport_protocol, firmware version, and SoC."
 
 Add your row to the [README tested-models
-matrix](../README.md#tested-models) by PR — that table is how the
+matrix](../../README.md#tested-models) by PR — that table is how the
 next owner knows whether your hardware matches theirs.
 
 ## Phase 1 — the launcher (a day, fully reversible)
@@ -41,7 +41,7 @@ MAC and timestamp. Then the pairing dance — trigger the PIN dialog **once**
 (re-triggering rotates the code), subscribe to *exact* MQTT topics
 (wildcards are silently denied), and treat list payloads as JSON arrays.
 
-> "write the server and pairing CLI per docs/findings/01-mqtt-bridge.md,
+> "write the server and pairing CLI per docs/models/50A51HUV/09.01O.P0813/findings/01-mqtt-bridge.md,
 > then build the launcher page: a clock, my HDMI inputs, my real apps.
 > Functional over fancy."
 
@@ -98,8 +98,8 @@ Only after Phases 0–2 are green, and only on hardware you own:
 Wiretap (`iptables` LOG on every outbound SYN), endpoint map from the
 firmware images, ad/recommendation domains blocked in-kernel, the launcher
 server moving onto the TV's own Node runtime, and the stock home retired.
-See [findings/09-endpoints.md](findings/09-endpoints.md) for the map and
-[LAUNCHER_V2.md](LAUNCHER_V2.md) for the roadmap.
+See [09-endpoints.md](../models/50A51HUV/09.01O.P0813/findings/09-endpoints.md) for the map and
+[LAUNCHER_V2.md](../launcher/LAUNCHER_V2.md) for the roadmap.
 
 ---
 

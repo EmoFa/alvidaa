@@ -26,7 +26,7 @@ ssh pi 'cd ~/alvidaa/server && python3 -m venv venv && ./venv/bin/pip install pa
   survives your laptop.
 - Prefer launching by URL match over by name: the watcher launches the
   app entry whose URL carries this server's port, so a stale duplicate
-  can never win (see [findings/02-operations.md](findings/02-operations.md)).
+  can never win (see [02-operations.md](../models/50A51HUV/09.01O.P0813/findings/02-operations.md)).
 
 ## Watching it work
 

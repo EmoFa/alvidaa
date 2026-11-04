@@ -15,7 +15,7 @@ Two projects in one repo, one weekend, one TV:
 Everything runs on a TV you own, through the TV's own APIs, and every
 step is designed to be undone. Built with — and designed for — AI coding
 sessions: point your agent at [AGENTS.md](AGENTS.md); the prompt ladder
-that worked is in [docs/HACK-YOUR-OWN.md](docs/HACK-YOUR-OWN.md).
+that worked is in [the prompt ladder](docs/project/HACK-YOUR-OWN.md).
 
 ## The two lanes
 
@@ -27,7 +27,7 @@ LANE 1 — the launcher (no root needed)
 │ canvas page │  JSON pushes   │ config + watcher │  RemoteNow control │ TV      │
 └─────────────┘                └──────────────────┘                    └─────────┘
 
-LANE 2 — the root chain (see docs/ROOT.md)
+LANE 2 — the root chain (see the 50A51HUV guide)
 
 cert-gated MQTT ─► browser file bridge ─► ../ escape ─► unauth local API
     ─► rc.local boot hook ─► root at every boot ─► key-only SSH
@@ -36,12 +36,12 @@ cert-gated MQTT ─► browser file bridge ─► ../ escape ─► unauth local
 Lane 1 has been tested on the model below; compatibility with other models
 and firmware remains to be established. Lane 2 is **model-specific** (SoC and
 partition layout bite there) and is documented
-stage by stage in [docs/ROOT.md](docs/ROOT.md).
+stage by stage in [the 50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md).
 
 ## Quickstart — the launcher
 
 ```sh
-# 1. the 2024 client cert (the full story: docs/findings/01-mqtt-bridge.md)
+# 1. the 2024 client cert (the full story: docs/models/50A51HUV/09.01O.P0813/findings/01-mqtt-bridge.md)
 #    unzip res/raw/client_mobile_android.p12 from the VIDAA Smart TV APK, then
 openssl pkcs12 -legacy -in client_mobile_android.p12 \
   -passin pass:186e990688070325a1c4b0ce275d2388 \
@@ -62,11 +62,11 @@ TV_MAC=<tv-wifi-mac> ./venv/bin/python pair.py <tv-ip>
 ```
 
 Harden `server/config.json` (hide preset apps, rename tiles, set `"autoSwitch": true` to auto-jump to a single active HDMI input on boot, or toggle the watcher) — it is read live. The launcher renders at 1080p (`?540p` fallback), caches tiles in `localStorage` for instant cold paint, auto-focuses active HDMI signals, and binds remote keys `1`–`9` as tile hotkeys. Production deployment on an always-on box:
-[docs/DEPLOY.md](docs/DEPLOY.md). Roadmap for shimming and modifying the native stock launcher (`/APPS/channelA/hisenseUI/`) directly on rooted TVs: [docs/LAUNCHER_V2.md](docs/LAUNCHER_V2.md). One server per TV — the paired MQTT identity is exclusive.
+[DEPLOY.md](docs/launcher/DEPLOY.md). Roadmap for shimming and modifying the native stock launcher (`/APPS/channelA/hisenseUI/`) directly on rooted TVs: [LAUNCHER_V2.md](docs/launcher/LAUNCHER_V2.md). One server per TV — the paired MQTT identity is exclusive.
 
 ## Quickstart — root
 
-Read [docs/ROOT.md](docs/ROOT.md) end to end first, and
+Read [the 50A51HUV / MTK9602 guide](docs/models/50A51HUV/09.01O.P0813/README.md) end to end first, and
 [SECURITY.md](SECURITY.md) for the disclosure stance. **If your TV is a
 HE40E5600FFWTS or a 100U7Q, start at [docs/models/](docs/models/) instead** —
 those guides are model- and firmware-specific and do not use the MTK9602
@@ -82,18 +82,33 @@ use. Installing the hook changes your TV's boot behavior.
 
 | Doc | What it is |
 | --- | --- |
-| [docs/models/](docs/models/) | **Model- and firmware-specific root guides** — HE40 and 100U7Q; start here if your exact model/firmware matches |
-| [docs/ROOT.md](docs/ROOT.md) | **The root chain, stage by stage** — the 50A51HUV / MTK9602 / 09.01 chain |
-| [docs/findings/](docs/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |
-| [docs/EXPLOITS.md](docs/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |
-| [docs/HACK-YOUR-OWN.md](docs/HACK-YOUR-OWN.md) | The staged prompt ladder for running this with your own AI agent |
-| [docs/LAUNCHER_V2.md](docs/LAUNCHER_V2.md) | The on-TV launcher port plan (root-era roadmap, R0–R6) |
-| [docs/DOOM.md](docs/DOOM.md) | DOOM at 1080p on the TV's framebuffer — the full recipe |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | Pi deployment, single-instance rule, cutover notes |
-| [docs/TESTED-MODELS.md](docs/TESTED-MODELS.md) | How to report your TV (fields, where to find them) |
-| [docs/STORY.md](docs/STORY.md) | The whole story, full detail — the human version of the findings |
+| [docs/](docs/README.md) | Documentation map — models, research, launcher, project |
+| [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40 and 100U7Q |
+| [50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md) | The original MTK9602 root chain, stage by stage |
+| [50A51HUV findings](docs/models/50A51HUV/09.01O.P0813/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |
+| [EXPLOITS.md](docs/research/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |
+| [HACK-YOUR-OWN.md](docs/project/HACK-YOUR-OWN.md) | The staged prompt ladder for running this with your own AI agent |
+| [LAUNCHER_V2.md](docs/launcher/LAUNCHER_V2.md) | The on-TV launcher port plan (root-era roadmap, R0–R6) |
+| [DOOM.md](docs/models/50A51HUV/09.01O.P0813/DOOM.md) | DOOM at 1080p on the TV's framebuffer — the full recipe |
+| [DEPLOY.md](docs/launcher/DEPLOY.md) | Pi deployment, single-instance rule, cutover notes |
+| [TESTED-MODELS.md](docs/research/TESTED-MODELS.md) | How to report your TV (fields, where to find them) |
+| [STORY.md](docs/project/STORY.md) | The whole story, full detail — the human version of the findings |
 | [AGENTS.md](AGENTS.md) | Briefing for AI sessions working in this repo |
 | [SECURITY.md](SECURITY.md) | Disclosure status and reasoning |
+
+## Repo layout
+
+The repository root is the launcher product; the root research is filed by
+model and firmware.
+
+| Path | What |
+| --- | --- |
+| `launcher/`, `server/` | the launcher (the default, no-root lane) |
+| `docs/models/<Model>/<FW>/` | per-model root guides, evidence and modding |
+| `docs/research/` | cross-model inventory, method catalogue, tested-models guide, patched-firmware playbook |
+| `docs/launcher/` | launcher deployment and v2 roadmap |
+| `docs/project/` | story, AI prompt ladder, blog draft |
+| `tools/` | scripts used by the guides |
 
 ## Tested models
 
@@ -111,7 +126,7 @@ use. Installing the hook changes your TV's boot behavior.
 | 43E7DS (43Q60SEVS_02, serial type 43E7SE) | EU_A (DEU) | MTK9603 | 9.0 | 09.60W.Q0612 (EU_A) | ? | Chromium 111 "odin" | working | untested | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 <!-- INVENTORY:END -->
 
-**Report yours by PR, not issue** — add a firmware entry to [docs/inventory.json](docs/inventory.json) (single source of truth; fields and where to find them: [docs/TESTED-MODELS.md](docs/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.
+**Report yours by PR, not issue** — add a firmware entry to [inventory.json](docs/research/inventory.json) (single source of truth; fields and where to find them: [TESTED-MODELS.md](docs/research/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.
 
 ## Credits & safety
 

@@ -1,16 +1,19 @@
-# The root chain — from a web page to a root shell on 2024+ VIDAA
+# 50A51HUV / 09.01O.P0813 — the root chain, from a web page to a root shell
 
-> **This page is the 50A51HUV / MTK9602 / 09.01O.P0813 chain.** For
-> model-specific step-by-step guides, see [docs/models/](models/) (HE40 and
-> 100U7Q). Those chains are separate and do not transfer from this one.
+**Research and original write-up:** [@carteakey](https://github.com/carteakey).
+
+> **Applies only to the `50A51HUV` running `09.01O.P0813` (VIDAA `U09.01`,
+> US/CAN).** For the other model guides, see the [model index](../../README.md)
+> (HE40 and 100U7Q). Those chains are separate and do not transfer from this
+> one.
 
 To our knowledge this is the first publicly documented root path for
 2024+ VIDAA firmware (everything published before is pre-2021; see
-[SECURITY.md](../SECURITY.md) for the disclosure stance). It was
+[SECURITY.md](../../../../SECURITY.md) for the disclosure stance). It was
 developed live on one TV — a 2024+ MTK9602 set — so **treat every stage
-as model-specific** and read [docs/findings/](findings/) for the details
-before running anything. Read [AGENTS.md](../AGENTS.md) if an AI session
-is doing the walking.
+as model-specific** and read [the findings/ directory](findings/) for the
+details before running anything. Read [AGENTS.md](../../../../AGENTS.md) if an
+AI session is doing the walking.
 
 The chain, one line:
 
@@ -131,7 +134,7 @@ Details: [findings/06-ssh-gauntlet.md](findings/06-ssh-gauntlet.md)
   and an iptables LOG wiretap for a few honest days of data.
   [findings/09-endpoints.md](findings/09-endpoints.md)
 - **The launcher goes native** (roadmap):
-  [LAUNCHER_V2.md](LAUNCHER_V2.md)
+  [LAUNCHER_V2.md](../../../launcher/LAUNCHER_V2.md)
 - **The rite of passage**: DOOM at 1080p on the framebuffer.
   [DOOM.md](DOOM.md)
 

@@ -3,7 +3,7 @@
 **Status:** root SSH (uid 0, full capabilities, PTY, key-only) was recorded on
 this exact model and firmware. There is **no automatic boot persistence** on
 this build: re-arm after every reboot. This chain is unrelated to the HE40
-chain and to [docs/ROOT.md](../../../ROOT.md); do not mix them.
+chain and to [the 50A51HUV / MTK9602 guide](../../50A51HUV/09.01O.P0813/README.md); do not mix them.
 
 > **Applies only to `100U7Q` (`100U70QEVS`, SerialType `100U7QE`) running
 > `V0000.09.60I.Q0813` (VIDAA `U09.60`, region EU_A).**
@@ -420,9 +420,9 @@ build patches are documented above; supply your own build.
   `hiutils.fileRead` conflation).
 - [MODDING.md](MODDING.md) — mounts, boot constraints, launcher/UI surface,
   persistence candidates and the verified/unverified split.
-- [docs/EXPLOITS.md](../../../EXPLOITS.md) and
-  [docs/FINDINGS.md](../../../FINDINGS.md) — method inventory and lab notebook.
-- [docs/inventory.json](../../../inventory.json) — the machine-readable row.
+- [method inventory](../../../research/EXPLOITS.md) and
+  [50A51HUV findings](../../50A51HUV/09.01O.P0813/FINDINGS.md) — method inventory and lab notebook.
+- [inventory](../../../research/inventory.json) — the machine-readable row.
 
 ## Attribution
 

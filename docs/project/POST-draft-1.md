@@ -60,7 +60,7 @@ The last mile was the good part. The classic install door (`hisense://debug`, a 
 
 > "woah. i installed and it shows up and works. how can we make this the default app and there is so much to do now… lets branch this whole thing out as a separate repo… and document findings so far like the cert thing and what not. so so much work hahaa lets"
 
-So it became a repo — **alvidaa**. *Alvida*, goodbye. VIDAA. Alongside the code went the project's real deliverable: `docs/FINDINGS.md`, a lab notebook where every discovery gets written down the moment it happens. Every bug, every trap, every errno. That discipline is the only reason what happened next was possible.
+So it became a repo — **alvidaa**. *Alvida*, goodbye. VIDAA. Alongside the code went the project's real deliverable: `docs/models/50A51HUV/09.01O.P0813/FINDINGS.md`, a lab notebook where every discovery gets written down the moment it happens. Every bug, every trap, every errno. That discipline is the only reason what happened next was possible.
 
 The polish era compressed to one paragraph: a watcher that relaunches Home whenever the stock UI appears (~1 second of stock screen is the honest ceiling without root — VIDAA has no default-launcher setting), a config-driven allowlist that hides the apps I never asked for, real app logos proxied and cached from the TV's own CDN, generated wallpapers, and the whole thing deployed to the always-on Raspberry Pi as a systemd service. It became an appliance.
 

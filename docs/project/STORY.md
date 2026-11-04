@@ -1,6 +1,6 @@
 # alvidaa: the full story of taking my TV back
 
-*Draft 2 — full detail. A build log turned blog post; everything technical has its canonical record in [FINDINGS.md](FINDINGS.md) and the two-day commit history. Photo slots marked [📷].*
+*Draft 2 — full detail. A build log turned blog post; everything technical has its canonical record in [FINDINGS.md](../models/50A51HUV/09.01O.P0813/FINDINGS.md) and the two-day commit history. Photo slots marked [📷].*
 
 > "bruv. that is insane. … dump the firmware then mod it remove ads fix the
 > launcher to be native … check what sort of telemetry games they are up to
@@ -310,7 +310,7 @@ The spin-out came with a name I'm still proud of:
 `vidaa-home` and was renamed `alvidaa` within minutes (the installed app
 entry deliberately keeps its original `vidaa-home` Id — changing it would
 install a duplicate). Alongside `server/` and `launcher/`, the third
-commit created the project's real deliverable: **`docs/FINDINGS.md`**, a
+commit created the project's real deliverable: **`docs/models/50A51HUV/09.01O.P0813/FINDINGS.md`**, a
 lab notebook where every discovery gets written down the moment it
 happens — the cert gate, the credential math, the exact-topic trap, the
 PIN race, the install-API generations, the Chrome 77 constraints, the
@@ -966,7 +966,7 @@ on the writable partitions (`/APPS` even holds the stock home's own code:
 `HI_UI_HOME=/APPS/channelA|channelB`). The cage is real; everything
 valuable was stored outside it.
 
-**The road ahead** — now written up as [LAUNCHER_V2.md](LAUNCHER_V2.md),
+**The road ahead** — now written up as [LAUNCHER_V2.md](../launcher/LAUNCHER_V2.md),
 phased so nothing bricks the party:
 
 - **R0 — guardrails first (Done).** Frozen OTA/update endpoints with iptables

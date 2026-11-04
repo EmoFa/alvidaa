@@ -196,7 +196,7 @@ the 09.60 EU_A findings above.
 ## Evidence
 
 - 09.01 decode: modules 03/04 (this repo), live-verified.
-- [09.60 EU_A preflight](https://raw.githubusercontent.com/dsu851/alvidaa/refs/heads/main/docs/findings/10-owner-tv-preflight.md): Affectionate-End-601's fork; setup-wizard permissions remain unverified.
+- [09.60 EU_A preflight](https://raw.githubusercontent.com/dsu851/alvidaa/refs/heads/main/docs/models/50A51HUV/09.01O.P0813/findings/10-owner-tv-preflight.md): Affectionate-End-601's fork; setup-wizard permissions remain unverified.
 - [09.60 pairing port](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19rx89p6gsqyq/): Wing-Tsit-Chong's community report.
 - [MTK9618 root-shell report](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19s1t59bjad1d/): possibly_matt reports a telnet root shell after an IPK post-install path; detailed write-up and persistence are pending.
 - 65U7H U6: community report attributed to `pavanjadhaw`; public source pending. The report describes a different WebSDK bridge, successful pairing with silent actions, and a disabled `otaTest.sh` hook. Independent confirmation is pending.

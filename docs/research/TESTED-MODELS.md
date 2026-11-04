@@ -2,10 +2,10 @@
 
 The README carries the generated matrix; this file explains where every field
 comes from. A full step-by-step guide, when one exists for the exact model and
-firmware, lives under [models/](models/). To report by PR, add an entry to
-`docs/inventory.json` and run `scripts/gen-inventory.py` to update the README
+firmware, lives under [models/](../models). To report by PR, add an entry to
+`inventory.json` and run `scripts/gen-inventory.py` to update the README
 and playbook tables.
-For a method-specific result, also add an observation to `docs/exploits.json`
+For a method-specific result, also add an observation to `exploits.json`
 and run `scripts/gen-exploits.py`; the generated [method inventory](EXPLOITS.md)
 separates reported results, verified results, and failed tests.
 
@@ -37,15 +37,15 @@ separates reported results, verified results, and failed tests.
 - **SSDP**: M-SEARCH `ssdp:all` finds the TV as a DLNA MediaRenderer; the
   device descriptor's `modelDescription` leaks `mac=`, `region=`,
   `brand=`, `vidaa_support=`, `transport_protocol=`.
-  See [findings/01-mqtt-bridge.md](findings/01-mqtt-bridge.md) §1.
+  See [01-mqtt-bridge.md](../models/50A51HUV/09.01O.P0813/findings/01-mqtt-bridge.md) §1.
 - **From the TV browser**: open any page (e.g. the launcher URL) and call
   the bridge functions via the console, or run
-  [launcher/recon.html](../launcher/recon.html) — its report includes
+  [launcher/recon.html](../../launcher/recon.html) — its report includes
   chip, firmware, browser, and the whole bridge surface.
 - **Root chain fields**: only after reading
-  [ROOT.md](ROOT.md) and [SECURITY.md](../SECURITY.md). The recon page
+  [the 50A51HUV / MTK9602 guide](../models/50A51HUV/09.01O.P0813/README.md) and [SECURITY.md](../../SECURITY.md). The recon page
   alone is read-only and safe.
-- **Attribution format** in `docs/inventory.json` (`tested_by` array):
+- **Attribution format** in `inventory.json` (`tested_by` array):
   - GitHub: `"gh:username"` (renders `[@username](https://github.com/username)`)
   - Reddit: `"reddit:username"` or `"u/username"` (renders `[u/username](https://reddit.com/user/username)`)
   - Custom link: `{"name": "...", "url": "https://..."}`

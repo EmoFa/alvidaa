@@ -2,7 +2,7 @@
 
 **Status:** root and key-only SSH were recorded live on this exact model and
 firmware; boot persistence is owner-verified (2026-11-04). The modding recipes
-are **UNVERIFIED**. This is a separate chain from [docs/ROOT.md](../../../ROOT.md)
+are **UNVERIFIED**. This is a separate chain from [the 50A51HUV / MTK9602 guide](../../50A51HUV/09.01O.P0813/README.md)
 (the MTK9602 / 09.01 walkthrough) and must not be mixed with it.
 
 > **Applies only to `HE40E5600FFWTS` running `V0100.01.00A.N0410`.**
@@ -477,11 +477,11 @@ Build them, or use your own static ARM builds.
   only documented, sanitization and corrections.
 - [MODDING.md](MODDING.md) — system layout, boot hooks, UI/launcher surface and
   the verified/unverified split.
-- [docs/ROOT.md](../../../ROOT.md) — the *other*, unrelated chain
+- [the 50A51HUV / MTK9602 guide](../../50A51HUV/09.01O.P0813/README.md) — the *other*, unrelated chain
   (50A51HUV / MTK9602 / 09.01).
-- [docs/EXPLOITS.md](../../../EXPLOITS.md) and
-  [docs/FINDINGS.md](../../../FINDINGS.md) — method inventory and lab notebook.
-- [docs/inventory.json](../../../inventory.json) — the machine-readable row for
+- [method inventory](../../../research/EXPLOITS.md) and
+  [50A51HUV findings](../../50A51HUV/09.01O.P0813/FINDINGS.md) — method inventory and lab notebook.
+- [inventory](../../../research/inventory.json) — the machine-readable row for
   this model.
 
 ## Attribution

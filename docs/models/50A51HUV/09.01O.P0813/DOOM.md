@@ -46,7 +46,7 @@ md5 /tmp/usr/share/games/doom/doom1.wad
 ## 2. The framebuffer backend
 
 `doomgeneric` ports by implementing five functions. Save as
-`doomgen/doomgeneric/doomgeneric_fb.c` (the shipped version lives at [tools/doomgeneric_fb.c](../tools/doomgeneric_fb.c) — it includes the remote-input mapping below):
+`doomgen/doomgeneric/doomgeneric_fb.c` (the shipped version lives at [tools/doomgeneric_fb.c](../../../../tools/doomgeneric_fb.c) — it includes the remote-input mapping below):
 
 ```c
 // doomgeneric framebuffer backend for Hisense VIDAA (MStar FB0, 32bpp)

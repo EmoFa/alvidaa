@@ -1,0 +1,39 @@
+# alvidaa — AdGuard Home per-client blocklist for the VIDAA TV
+# Paste these as DNS rules for the TV's client (or add as a custom
+# filtering list). Evidence source: /APPS/domain/domain_list.json
+# (p41 image, ReleaseDate 2026-07-06) + findings 11.
+#
+# TIER 1 — telemetry/event sinks (block always)
+|evt-na.vidaahub.com^
+|ter-jrnl-na.vidaahub.com^
+|exc-jrnl-na.vidaahub.com^
+|policy-jrnl-na.vidaahub.com^
+|dvcstatus-dataretrv.vidaahub.com^
+|file-ul.vidaahub.com^
+#
+# TIER 2 — ads/recommendations (block; safe with alvidaa as home)
+|rsc-ads.vidaahub.com^
+|recommend-ui.vidaahub.com^
+|home-ui.vidaahub.com^
+|layout-ui.vidaahub.com^
+|layout-ui-eu.vidaahub.com^
+|topic-ui.vidaahub.com^
+|abtest-tv.vidaahub.com^
+|sport-vidaa.vidaahub.com^
+#
+# TIER 3 — DoH evasion countermeasures (the TV resolves vidaahub.com
+# via dns.google/dns-query by design — block the bootstrap so it
+# falls back to this resolver, where the rules above apply)
+|dns.google^
+#
+# KEEP ALLOWED (breaks real function):
+#   ota-tv.vidaahub.com        (firmware updates)
+#   vidaa-base-auth{,-eu}      (auth/session)
+#   geo-bas-na / bas-na / time-bas-na
+#   img.vidaahub.com           (launcher icon proxy source)
+#   appstore/odinstore         (if you want the store)
+#   voice/* + amazon-voice     (if you use Alexa/voice)
+#
+# NOTE: DoH means this list only binds AFTER the dns.google bootstrap
+# is blocked (AdGuard rule above, plus router-side 8.8.8.8:443 block
+# for the TV client if supported).

@@ -1,0 +1,22 @@
+# /var/local/tvfw — alvidaa firewall policy (sourced by the boot hook)
+# Tier 0: DoH evasion countermeasure — force vidaahub lookups back to the
+#         LAN resolver (AdGuard), where the domain rules apply.
+# Tier 1: telemetry/event sinks (evidence: domain_list.json + wiretap).
+# Domain-derived IPs are resolved at boot; CDN rotation means the resolver
+# layer (AdGuard) is the durable kill — these are the in-kernel backstop.
+
+# --- Tier 0: DoH bootstrap (dns.google + hardcoded fallbacks) ---
+for ip in 8.8.8.8 8.8.4.4; do
+    iptables -C OUTPUT -d $ip -p tcp --dport 443 -j REJECT 2>/dev/null || iptables -I OUTPUT 1 -d $ip -p tcp --dport 443 -j REJECT
+    iptables -C OUTPUT -d $ip -p udp --dport 443 -j REJECT 2>/dev/null || iptables -I OUTPUT 1 -d $ip -p udp --dport 443 -j REJECT
+done
+
+# --- Tier 1: telemetry + ads (resolved at boot from the domain map) ---
+for host in evt-na.vidaahub.com ter-jrnl-na.vidaahub.com exc-jrnl-na.vidaahub.com policy-jrnl-na.vidaahub.com dvcstatus-dataretrv.vidaahub.com file-ul.vidaahub.com rsc-ads.vidaahub.com; do
+    for ip in $(nslookup $host 2>/dev/null | awk '/^Address/{print $2}' | /usr/local/bin/busybox grep -v ':'); do
+        iptables -C OUTPUT -d $ip -j REJECT 2>/dev/null || iptables -I OUTPUT 1 -d $ip -j REJECT
+    done
+done
+
+# --- Wiretap: keep the LOG rules collecting (see tvrc) ---
+# (tvrc owns TVOUT/TVDNS logging and the hourly harvest)

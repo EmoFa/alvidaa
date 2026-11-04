@@ -175,8 +175,32 @@
         "identity_gate": "n-a",
         "euladpp_untar": "n-a (generation lacks the package)",
         "devtools_forge": "n-a (UI process DevTools 9223 + browser 9224 already exposed)",
-        "root": "achieved",
-        "notes": "chain: USB ext4 dangling-symlink (tvi) bypasses IsSubDentry whitelist -> File.download plants libtvsysinfo.so shadow (direct NEEDED, LD_LIBRARY_PATH index 17 = /3rd_rw/loglevel/lib, writable+free) with appended DT_INIT payload (RX segment extended) -> root at load, self-unlink, root_loop channel; dropbear 2022.83 key-only + OpenSSH sftp-server + HamService-wrapper persistence; dead ends documented (factory/AM injection, V8, liblogLevel shadow, FAT32). Repo: git.hanime.zip/angryzero/hisense-root"
+        "root": "achieved (boot persistence verified across multiple reboots)",
+        "notes": "Root and key-only Dropbear SSH persist across multiple reboots via the HamService boot wrapper. Detailed chain and dead ends are documented in the author's vidaa repository."
+      }
+    },
+    {
+      "id": "V0000.09.60I.Q0813",
+      "model": "100U7Q (100U70QEVS)",
+      "region": "EU_A",
+      "soc": "MT9655 (32-bit ARM userland)",
+      "vidaa_os": "U09.60",
+      "transport_protocol": "untested",
+      "browser": "untested",
+      "build_date": "?",
+      "tested_by": [
+        "xXLucyNyuXx (angryzero/vidaa)"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "untested",
+        "file_bridge_traversal": "untested",
+        "file_bridge_write": "untested",
+        "identity_gate": "untested",
+        "euladpp_untar": "untested",
+        "devtools_forge": "untested",
+        "root": "achieved (SSH and PTY verified; manual re-trigger after reboot)",
+        "notes": "Root SSH was verified on this exact model and firmware. No automatic daemon start after reboot was established. This is a separate, model-specific result; do not infer compatibility with the HE40 or 09.01 chains."
       }
     },
     {

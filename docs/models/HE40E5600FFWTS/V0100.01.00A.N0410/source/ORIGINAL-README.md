@@ -5,86 +5,86 @@
 > (`authorized_keys`, host-key fingerprint). Paths in the listings below are
 > kept for documentation — recreate the artefacts from your own device.
 
-**Ein Ordner, zwei Abteilungen, kein Suchen mehr.**
+**One folder, two sections, no more searching.**
 **TV:** Hisense HE40E5600FFWTS, FW `V0100.01.00A.N0410`, LAN `192.0.2.94`
-**Host:** Linux, Python 3, `arm-linux-gnueabihf-*`; Host-IP im Beispiel `192.0.2.150`
-**Stand:** 2026-10-26 — Root + Dropbear-SSH (key-only) + PTY live bestätigt; Boot-Persistenz installiert (Reboot-Test offen). SFTP optional (statischer OpenSSH-sftp-server + gepatchter Dropbear).
+**Host:** Linux, Python 3, `arm-linux-gnueabihf-*`; host IP in the example `192.0.2.150`
+**Status:** 2026-10-26 — root + Dropbear SSH (key-only) + PTY confirmed live; boot persistence installed (reboot test pending). SFTP optional (static OpenSSH sftp-server + patched Dropbear).
 
 ---
 
-## Die drei Fragen in 30 Sekunden
+## The three questions in 30 seconds
 
-### Welches Linux?
-**Hisense/MediaTek Embedded Linux**, kein Standard-Distro:
-- Linux **3.18.25**, ARMv7 (Cortex-A53, NEON/VFPv4), MediaTek **MT53xx/MT5863**-Klasse (`mt53xx-emmc`, `mt5863_sa_768_linux`)
-- **glibc 2.18**, **BusyBox 1.18.5**, SysV-Init (`inittab`/`rcS`/`rc.local`), **kein systemd**
-- Kein `/etc/os-release`; Firmware `V0100.01.00A.N0410`
+### Which Linux?
+**Hisense/MediaTek Embedded Linux**, not a standard distro:
+- Linux **3.18.25**, ARMv7 (Cortex-A53, NEON/VFPv4), MediaTek **MT53xx/MT5863** class (`mt53xx-emmc`, `mt5863_sa_768_linux`)
+- **glibc 2.18**, **BusyBox 1.18.5**, SysV init (`inittab`/`rcS`/`rc.local`), **no systemd**
+- No `/etc/os-release`; firmware `V0100.01.00A.N0410`
 - **squashfs-ro**: `/` (38.8 MB, 100 %), `/3rd` (141 MB, 100 %)
 - **ext4-rw**: `/3rd_rw` (1.1 GB, 56 %), `/data` (1.9 GB), `/perm` (3.9 MB); `/spdata` ro
-- **Kein overlayfs** → Modding über rw-Partitionen + `mount --bind`
+- **No overlayfs** → modding via rw partitions + `mount --bind`
 
-### Gibt es einen Package Manager?
-**Nein.** Kein `apt`, `dpkg`, `opkg`, `ipkg`, `rpm`, `apk`, `yum`, `pacman`; keine `/etc/opkg`/`/var/lib/dpkg`.  
-**Konsequenz:** statische ARM-Binaries/Shell-Skripte bauen, per `File.download`/SSH/`base64`/`tar` nach `/3rd_rw` bringen. Kein `opkg install`.
+### Is there a package manager?
+**No.** No `apt`, `dpkg`, `opkg`, `ipkg`, `rpm`, `apk`, `yum`, `pacman`; no `/etc/opkg`/`/var/lib/dpkg`.  
+**Consequence:** build static ARM binaries/shell scripts and get them to `/3rd_rw` via `File.download`/SSH/`base64`/`tar`. No `opkg install`.
 
-### Wo ist das UI und wie läuft es?
-TV-UI = Web-UI im **`hisenseUI`-Browser** (root, GLES):
+### Where is the UI and how does it run?
+TV UI = web UI in the **`hisenseUI` browser** (root, GLES):
 
 ```
-/basic/autorun.sh (Zeile 168)
+/basic/autorun.sh (line 168)
   → /3rd/opera4x/hisenseUI/start-UI.sh
     → ./bin/hisenseUI --hw-gles --jsplugins-dir=/3rd/UI_jsplugins \
          --disable-web-security ... -u /3rd_rw/UI/index.html
 ```
 
-- **UI:** `/3rd_rw/UI/index.html` (PIXI), UI-Prozess `hisenseUI` (z. B. PID 589), DevTools **9223**
-- **Launcher/Apps:** `/3rd_rw/appdata/launcher/` mit `preset.txt` (26 vorinstallierte Tiles), `Appinfo.json` (User-Apps), `deletedPresetApp.txt` (ausgeblendet), `data/Category*.xml`, `PicInfo.xml`, `res/`
-- **LauncherService:** `/3rd/launcherservice/bin/LauncherService` (via `startLS.sh` aus `delayrun.sh`)
-- **Native Apps / AM:** `/basic/app_man -c /basic/am_config -s /basic/am_start.ini`; `dtv_svc`, `netflix`, `dialserver`, `samba`, `browser_base`, `securetime`, …; Steuerung `:am,<app>,:<verb>=<val>`
-- **Web-Browser (nicht das TV-UI):** `hisense_browser` (z. B. PID 1320), `run-Browser.sh`, `--hw-dfb`, `--allow-file-access-from-files`, DevTools **9224**; hier läuft die Recon-Seite.
+- **UI:** `/3rd_rw/UI/index.html` (PIXI), UI process `hisenseUI` (e.g. PID 589), DevTools **9223**
+- **Launcher/apps:** `/3rd_rw/appdata/launcher/` with `preset.txt` (26 preinstalled tiles), `Appinfo.json` (user apps), `deletedPresetApp.txt` (hidden), `data/Category*.xml`, `PicInfo.xml`, `res/`
+- **LauncherService:** `/3rd/launcherservice/bin/LauncherService` (via `startLS.sh` from `delayrun.sh`)
+- **Native apps / AM:** `/basic/app_man -c /basic/am_config -s /basic/am_start.ini`; `dtv_svc`, `netflix`, `dialserver`, `samba`, `browser_base`, `securetime`, …; control is `:am,<app>,:<verb>=<val>`
+- **Web browser (not the TV UI):** `hisense_browser` (e.g. PID 1320), `run-Browser.sh`, `--hw-dfb`, `--allow-file-access-from-files`, DevTools **9224**; the recon page runs here.
 
-**UI ≠ Browser:** `hisenseUI` (TV-UI) und `hisense_browser` (Web-Browser) sind getrennte Prozesse mit eigenen Startskripten, Renderern, JS-Plugins und Debug-Ports.
+**UI ≠ browser:** `hisenseUI` (TV UI) and `hisense_browser` (web browser) are separate processes with their own start scripts, renderers, JS plugins and debug ports.
 
 ---
 
-## Ordnerstruktur
+## Folder structure
 
 ```
 <repo-root>/
-├── README.md                         # diese Datei
-├── dead-ends.md                      # kurze Liste der Sackgassen
+├── README.md                         # this file
+├── dead-ends.md                      # short list of dead ends
 ├── SHA256SUMS
-├── root/                             # ABTEILUNG 1: Root
-│   ├── ROOT-GUIDE.md                 # kompletter Weg (manuell + Skripte)
-│   ├── README.md                     # kurzer Index
+├── root/                             # SECTION 1: Root
+│   ├── ROOT-GUIDE.md                 # complete path (manual + scripts)
+│   ├── README.md                     # short index
 │   ├── tools/
-│   │   ├── server.py                 # Host: Recon + /pub + /cmd + /recon + /dump
-│   │   ├── recon.html                # TV-Seite (fileXHR/listDir/HiBrowser-Hook)
-│   │   ├── live_cmd.txt              # optionaler Live-Kanal (leer)
-│   │   └── pub/                      # ausgelieferte Dateien
-│   │       ├── libtvsysinfo.so       # finaler Root-Payload
-│   │       ├── dropbear/dropbearkey  # statischer ARM-Dropbear 2022.83
-│   │       ├── dropbear-sftp         # Dropbear mit SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server
-│   │       ├── sftp-server           # statischer OpenSSH-9.9p1-sftp-server
-│   │       ├── authorized_keys       # dein Public Key
-│   │       ├── start_sshd.sh         # Dropbear + passwd/PTY-Bindmounts
-│   │       ├── root_loop.sh          # Root-Kommandokanal
-│   │       ├── hamservice-wrapper.sh # Boot-Hook
-│   │       ├── deploy_sshd.sh        # Installation als root
+│   │   ├── server.py                 # host: recon + /pub + /cmd + /recon + /dump
+│   │   ├── recon.html                # TV page (fileXHR/listDir/HiBrowser hook)
+│   │   ├── live_cmd.txt              # optional live channel (empty)
+│   │   └── pub/                      # served files
+│   │       ├── libtvsysinfo.so       # final root payload
+│   │       ├── dropbear/dropbearkey  # static ARM Dropbear 2022.83
+│   │       ├── dropbear-sftp         # Dropbear with SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server
+│   │       ├── sftp-server           # static OpenSSH-9.9p1-sftp-server
+│   │       ├── authorized_keys       # your public key
+│   │       ├── start_sshd.sh         # Dropbear + passwd/PTY bind mounts
+│   │       ├── root_loop.sh          # root command channel
+│   │       ├── hamservice-wrapper.sh # boot hook
+│   │       ├── deploy_sshd.sh        # installation as root
 │   │       ├── verify.sh / rollback.sh
 │   ├── scripts/
 │   │   ├── host/
-│   │   │   ├── prepare_usb.sh        # ext4/MBR-Stick + tvi-Symlink
-│   │   │   ├── start_http.sh         # Server auf :9000
-│   │   │   ├── plant_payload.js      # Payload durch tvi schreiben
-│   │   │   ├── upload_to_appdata.js  # Dropbear/Deploy nach appdata
+│   │   │   ├── prepare_usb.sh        # ext4/MBR stick + tvi symlink
+│   │   │   ├── start_http.sh         # server on :9000
+│   │   │   ├── plant_payload.js      # write payload through tvi
+│   │   │   ├── upload_to_appdata.js  # Dropbear/deploy to appdata
 │   │   │   ├── run_root_cmd.js       # root_cmd/root_out
-│   │   │   ├── build_payload.sh      # Payload reproduzieren
-│   │   │   ├── build_tvi_payload.py  # Builder (deterministisch)
-│   │   │   ├── build_dropbear.sh     # Dropbear aus sources/ bauen
-│   │   │   ├── build_sftp_server.sh  # statischen sftp-server bauen
-│   │   │   ├── patch_dropbear_sftp.py # Dropbear-SFTP-Pfad patchen
-│   │   │   └── install_sftp.sh       # SFTP installieren/testen/auf 22 tauschen
+│   │   │   ├── build_payload.sh      # reproduce payload
+│   │   │   ├── build_tvi_payload.py  # builder (deterministic)
+│   │   │   ├── build_dropbear.sh     # build Dropbear from sources/
+│   │   │   ├── build_sftp_server.sh  # build static sftp-server
+│   │   │   ├── patch_dropbear_sftp.py # patch Dropbear SFTP path
+│   │   │   └── install_sftp.sh       # install/test SFTP and swap to 22
 │   │   └── tv/
 │   │       ├── start_sshd.sh
 │   │       ├── root_loop.sh
@@ -92,108 +92,111 @@ TV-UI = Web-UI im **`hisenseUI`-Browser** (root, GLES):
 │   │       ├── deploy_sshd.sh
 │   │       ├── verify.sh
 │   │       ├── rollback.sh
-│   │       ├── install_sftp_stage.sh # sftp-server + Test-Dropbear auf 2222
-│   │       ├── enable_sftp.sh        # Tausch auf 22 planen
-│   │       └── swap_sftp.sh          # Tausch detached ausführen
+│   │       ├── install_sftp_stage.sh # sftp-server + test Dropbear on 2222
+│   │       ├── enable_sftp.sh        # schedule the swap to 22
+│   │       └── swap_sftp.sh          # perform the swap detached
 │   └── artifacts/
-│       ├── tvi_original.so           # Original-Lib (33.220 B)
+│       ├── tvi_original.so           # original library (33.220 B)
 │       └── keys/{authorized_keys,host-key-fingerprint.txt}
-├── modding/                          # ABTEILUNG 2: Modding
-│   ├── README.md                     # Modding-Index/TL;DR
-│   ├── 01-system-linux.md            # Linux/SoC/Userland/PackageManager/Storage
-│   ├── 02-boot.md                    # Boot, autorun, developer.sh, Services
-│   ├── 03-ui.md                      # hisenseUI vs hisense_browser, UI-Daten, AM
-│   ├── 04-modding.md                 # Rezepte: eigene App/UI/Services/Bloat
-│   ├── 05-bloat.md                   # 26 Preset-Apps, Service-Matrix, Deaktivieren
-│   ├── 06-toolchain-deploy.md        # statisch ARM bauen/deployen, SSH/PTY
-│   ├── 07-evidence-unknowns.md       # Belege, Status, bekannte Unknowns
+├── modding/                          # SECTION 2: Modding
+│   ├── README.md                     # modding index/TL;DR
+│   ├── 01-system-linux.md            # Linux/SoC/userland/package manager/storage
+│   ├── 02-boot.md                    # boot, autorun, developer.sh, services
+│   ├── 03-ui.md                      # hisenseUI vs hisense_browser, UI data, AM
+│   ├── 04-modding.md                 # recipes: custom app/UI/services/bloat
+│   ├── 05-bloat.md                   # 26 preset apps, service matrix, disabling
+│   ├── 06-toolchain-deploy.md        # build/deploy static ARM, SSH/PTY
+│   ├── 07-evidence-unknowns.md       # evidence, status, known unknowns
 │   └── templates/
-│       ├── developer.sh              # früher Root-Boot-Hook
-│       ├── custom-app.json           # Appinfo-Tile
+│       ├── developer.sh              # earlier root boot hook
+│       ├── custom-app.json           # Appinfo tile
 │       ├── hide-preset.json          # deletedPresetApp.txt
-│       ├── custom-ui.html            # minimale Custom-UI
-│       ├── start-UI-custom.sh        # start-UI.sh mit custom.html
+│       ├── custom-ui.html            # minimal custom UI
+│       ├── start-UI-custom.sh        # start-UI.sh with custom.html
 │       └── README.md
 └── sources/
-    ├── dropbear-2022.83.tar.bz2      # Offline-Buildquelle
-    └── openssh-9.9p1.tar.gz          # Offline-Buildquelle für sftp-server
+    ├── dropbear-2022.83.tar.bz2      # offline build source
+    └── openssh-9.9p1.tar.gz          # offline build source for sftp-server
 ```
 
 ---
 
-## In 11 Schritten replizieren
+## Replicate in 11 steps
 
 ```bash
-# 1) Host: Stick (DESTRUKTIV)
+# 1) Host: stick (DESTRUCTIVE)
 sudo root/scripts/host/prepare_usb.sh /dev/sdX
-# 2) Host: Server
+# 2) Host: server
 root/scripts/host/start_http.sh
-# 3) TV: http://<host-ip>:9000/recon.html öffnen
-# 4) TV-Konsole: USB-Dev anpassen, plant_payload.js ausführen
+# 3) TV: open http://<host-ip>:9000/recon.html
+# 4) TV console: adjust USB dev, run plant_payload.js
 #    -> /3rd_rw/loglevel/lib/libtvsysinfo.so (33500 B, SHA 37b13f…)
-# 5) TV rebooten
-# 6) Root prüfen: /3rd_rw/root_proof.txt = ROOT_EXEC_TVI
-# 7) TV-Konsole: upload_to_appdata.js
-# 8) TV-Konsole: run_root_cmd.js (deploy_sshd.sh)
+# 5) Reboot the TV
+# 6) Verify root: /3rd_rw/root_proof.txt = ROOT_EXEC_TVI
+# 7) TV console: upload_to_appdata.js
+# 8) TV console: run_root_cmd.js (deploy_sshd.sh)
 # 9) ssh root@192.0.2.94
 #10) Rollback: /bin/sh /3rd_rw/appdata/rollback.sh
 #11) SFTP optional: root/scripts/host/install_sftp.sh
-#    danach: sftp root@192.0.2.94
+#    afterwards: sftp root@192.0.2.94
 ```
 
-**Vollständig:** [`root/ROOT-GUIDE.md`](root/ROOT-GUIDE.md)  
+**Complete:** [`root/ROOT-GUIDE.md`](root/ROOT-GUIDE.md)  
 **Modding:** [`modding/README.md`](modding/README.md)  
-**Sackgassen:** [`dead-ends.md`](dead-ends.md)  
-**Integrität:** `sha256sum -c SHA256SUMS`
+**Dead ends:** [`dead-ends.md`](dead-ends.md)  
+**Integrity:** `sha256sum -c SHA256SUMS`
 
 ---
 
-## Was der Root-Weg macht (Kurz)
+## What the root path does (brief)
 
-1. **Browser ist root:** `hisense_browser` UID/GID 0, `CapEff` voll, Single-Process, kein Seccomp.
-2. **USB-Schreibprimitive:** dangling Symlink `tvi` auf ext4 → `IsSubDentry`-Bypass → neue Root-Datei.
-3. **Loader-Shadow:** `libtvsysinfo.so` ist direktes `NEEDED`; `LD_LIBRARY_PATH`-Index 17 ist `/3rd_rw/loglevel/lib`; dort liegt die Shadow-Lib.
-4. **DT_INIT-Payload:** appended Code am Dateiende, RX `p_filesz/memsz` erweitert, `DT_INIT=0x81c4`; unlink self, Proof, fork/exec `root_loop.sh`, Original-Init.
-5. **Root-Loop:** `root_cmd.sh` → `root_out.txt`.
-6. **SSH:** Dropbear 2022.83 statisch, key-only, `/etc/passwd`-Bind (Root-Home `/3rd_rw/sshd/home`), devpts auf `/dev/shm/pts` → bind `/dev/pts` (PTY), `HamService`-Wrapper für Boot-Persistenz.
-7. **SFTP (optional):** Dropbear hat keinen eigenen sftp-server; statischer OpenSSH-9.9p1-sftp-server + Dropbear mit `SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server`. Installation testet Port 2222, dann Tausch auf 22; danach `sftp root@…`.
-
----
-
-## Sicherheit / Spielregeln
-
-- **Kein Flash, kein `.pkg`, kein Bootloader.** Rootfs/`/3rd` sind squashfs-ro; Änderungen nur in `/3rd_rw`, `/data`, `/perm`, Bind-Mounts.
-- **SSH ist key-only root im LAN.** Kein Passwort; privaten Key schützen; nicht ins Internet exponieren.
-- **SFTP ist optional und root-equivalent.** Key-only wie SSH; Installation testet zuerst 2222, Backup `/3rd_rw/sshd/dropbear.nosftp`, Rollback im Root-Guide.
-- **Der Root-Loop ist root-equivalent.** Wer `root_cmd.sh` schreiben kann (Browser root), kann Root-Befehle ausführen.
-- **Backup vor UI-/AM-/Launcher-Eingriffen.** Besonders `/3rd_rw/UI/index.html`, `/3rd_rw/appdata/launcher/*`, `/basic/am_config`/`am_start.ini`.
-- **SSH/Root als Rettungsweg behalten.** Kaputte UI = schwarzer Bildschirm; `hisenseUI` per SSH/root-Loop killen/neu starten, Seite aus Backup zurückholen.
-- **`developer.sh` ist ein früher Root-Hook** (vor `ms_service`/UI/`app_man`/`delayrun`); Fehler dort können den Boot/UI beeinflussen.
-- **`/3rd_rw/patch/opera4x` ist ein full bind mount** über `/3rd/opera4x`; nur mit vollständiger Kopie/Symlink-Baum; für einzelne Dateien lieber Datei-Bind-Mount via `developer.sh`.
-- **Keine Secrets im Ordner:** kein Root-Hash, kein privater SSH-Key; nur Public Key + Host-Fingerprint.
-- **Nicht alles ist getestet:** Root/SSH/PTY live; die Modding-Rezepte sind aus statischen/live Daten abgeleitet; Status in `modding/07-evidence-unknowns.md`.
+1. **Browser is root:** `hisense_browser` UID/GID 0, full `CapEff`, single process, no seccomp.
+2. **USB write primitive:** dangling symlink `tvi` on ext4 → `IsSubDentry` bypass → new root-owned file.
+3. **Loader shadow:** `libtvsysinfo.so` is a direct `NEEDED`; `LD_LIBRARY_PATH` index 17 is `/3rd_rw/loglevel/lib`; the shadow library sits there.
+4. **DT_INIT payload:** appended code at the end of the file, RX `p_filesz/memsz` extended, `DT_INIT=0x81c4`; unlink self, proof, fork/exec `root_loop.sh`, original init.
+5. **Root loop:** `root_cmd.sh` → `root_out.txt`.
+6. **SSH:** Dropbear 2022.83 static, key-only, `/etc/passwd` bind (root home `/3rd_rw/sshd/home`), devpts on `/dev/shm/pts` → bind `/dev/pts` (PTY), `HamService` wrapper for boot persistence.
+7. **SFTP (optional):** Dropbear has no sftp-server of its own; static OpenSSH-9.9p1-sftp-server + Dropbear with `SFTPSERVER_PATH=/3rd_rw/sshd/sftp-server`. Installation tests port 2222, then swaps to 22; afterwards `sftp root@…`.
 
 ---
 
-## Verifikationsstatus (Auszug)
+## Security / ground rules
 
-| Punkt | Status |
+- **No flash, no `.pkg`, no bootloader.** Rootfs/`/3rd` are squashfs-ro; changes only in `/3rd_rw`, `/data`, `/perm`, bind mounts.
+- **SSH is key-only root on the LAN.** No password; protect the private key; do not expose it to the internet.
+- **SFTP is optional and root-equivalent.** Key-only like SSH; installation first tests 2222, backup `/3rd_rw/sshd/dropbear.nosftp`, rollback in the root guide.
+- **The root loop is root-equivalent.** Anyone who can write `root_cmd.sh` (browser root) can run root commands.
+- **Back up before UI/AM/launcher changes.** Especially `/3rd_rw/UI/index.html`, `/3rd_rw/appdata/launcher/*`, `/basic/am_config`/`am_start.ini`.
+- **Keep SSH/root as a rescue path.** A broken UI means a black screen; kill and restart `hisenseUI` via SSH/root loop, restore the page from backup.
+- **`developer.sh` is an early root hook** (before `ms_service`/UI/`app_man`/`delayrun`); errors there can affect boot/UI.
+- **`/3rd_rw/patch/opera4x` is a full bind mount** over `/3rd/opera4x`; only with a complete copy/symlink tree; for single files prefer a file bind mount via `developer.sh`.
+- **No secrets in the folder:** no root hash, no private SSH key; only the public key + host fingerprint.
+- **Not everything is tested:** root/SSH/PTY live; the modding recipes are derived from static/live data; status in `modding/07-evidence-unknowns.md`.
+
+---
+
+## Verification status (excerpt)
+
+| Item | Status |
 |---|---|
-| Browser root / CapEff voll | **CONFIRMED live** |
-| USB-ext4-Symlink-Bypass | **CONFIRMED live** |
-| `libtvsysinfo`-Shadow / DT_INIT | **CONFIRMED live** (`ROOT_EXEC_TVI`, Self-Unlink) |
-| Root-Loop / Kommandokanal | **CONFIRMED live** (`uid=0`, `root_out.txt`) |
-| Dropbear-SSH / Port 22 / Pubkey root | **CONFIRMED live** |
-| PTY / interaktive Shell | **CONFIRMED live** (pts/0) |
-| SFTP (optional) | statischer sftp-server + gepatchter Dropbear; Installer testet 2222 vor 22; **TV-Test nach Install** |
-| HamService-Boot-Persistenz | eingerichtet; Reboot-Test im Root-Guide |
-| Modding-Rezepte / Custom UI / Bloat | **UNVERIFIED** (static/live abgeleitet, noch nicht alle ausgeführt) |
+| Browser root / full CapEff | **CONFIRMED live** |
+| USB ext4 symlink bypass | **CONFIRMED live** |
+| `libtvsysinfo` shadow / DT_INIT | **CONFIRMED live** (`ROOT_EXEC_TVI`, self-unlink) |
+| Root loop / command channel | **CONFIRMED live** (`uid=0`, `root_out.txt`) |
+| Dropbear SSH / port 22 / pubkey root | **CONFIRMED live** |
+| PTY / interactive shell | **CONFIRMED live** (pts/0) |
+| SFTP (optional) | static sftp-server + patched Dropbear; installer tests 2222 before 22; **TV test after install** |
+| HamService boot persistence | configured; reboot test in the root guide |
+| Modding recipes / custom UI / bloat | **UNVERIFIED** (derived from static/live data, not all executed yet) |
 
-**Host-Key (SSH):** `<host-key-fingerprint>`  
-**Dein Key:** `<your-public-key>` (Fingerprint `<host-key-fingerprint>`)
+**Host key (SSH):** `<host-key-fingerprint>`  
+**Your key:** `<your-public-key>` (fingerprint `<host-key-fingerprint>`)
 
 ---
 
-## Provenienz
+## Provenance
 
-Der frühere Run-Ordner `the earlier run archive (not part of this repository)` (im alten Projekt) bleibt als **Evidence/History** erhalten. Für die Replikation und das Modding brauchst du ihn nicht: dieser Ordner enthält den finalen Stand, die Binaries, die Skripte und die Doku. Die alten Experimente/Dead Ends sind in `dead-ends.md` kurz zusammengefasst.
+The earlier run archive (not part of this repository; in the old project) is
+kept as **evidence/history**. You do not need it for replication or modding:
+the original research folder contained the final state, binaries, scripts and
+docs. The old experiments/dead ends are summarised briefly in `dead-ends.md`.

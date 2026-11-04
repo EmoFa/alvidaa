@@ -1,17 +1,17 @@
-# 05 — Bloat: 26 Preset-Apps, Native-Apps/Services, was weg kann
+# 05 — Bloat: 26 Preset Apps, Native Apps/Services, What Can Be Removed
 
-**Ziel:** „Pre-loaded Müll“ ausblenden/abschalten, ohne die TV-/UI-Funktionen zu zerstören.  
-**Status:** App-/Service-Listen **CONFIRMED**; die **Wirkung** einzelner Deaktivierungen ist teils `UNVERIFIED` (testen, backupen, rollback).
+**Goal:** hide/switch off "pre-loaded junk" without destroying TV/UI functions.  
+**Status:** app/service lists **CONFIRMED**; the **effect** of individual deactivations is partly `UNVERIFIED` (test, back up, roll back).
 
 ---
 
-## 1. Die 26 Preset-Tiles (UI)
+## 1. The 26 preset tiles (UI)
 
-Quelle: `/3rd_rw/appdata/launcher/preset.txt` (live). Die Tiles werden über `Appinfo.json`/`deletedPresetApp.txt`/`Category*.xml` gesteuert.
+Source: `/3rd_rw/appdata/launcher/preset.txt` (live). The tiles are controlled via `Appinfo.json`/`deletedPresetApp.txt`/`Category*.xml`.
 
-| # | App | StartCommand / URL | Typ | Boot/On-demand |
+| # | App | StartCommand / URL | Type | Boot/On-demand |
 |---:|---|---|---|---|
-| 1 | Netflix | `netflix` | native (AM) | `am_start.ini` (Boot) |
+| 1 | Netflix | `netflix` | native (AM) | `am_start.ini` (boot) |
 | 2 | Prime Video | `amazon` | native (AM) | on-demand |
 | 3 | Disney+ | `https://cd-dmgz.bamgrid.com/bbd/hisense_tv/index.html` | Web | on-demand |
 | 4 | maxdome | `http://8577004de253-ott-tv.maxdome.de` | Web | on-demand |
@@ -34,19 +34,19 @@ Quelle: `/3rd_rw/appdata/launcher/preset.txt` (live). Die Tiles werden über `Ap
 | 21 | Sports | `...?category=sport` | Store | on-demand |
 | 22 | Search | `...?category=search` | Store | on-demand |
 | 23 | Game Center | `http://apps.tvgam.es/tv_games/hisense_portal/production/portal/index.html` | Web | on-demand |
-| 24 | TV Browser | `browser` | native (Web-Browser) | on-demand |
+| 24 | TV Browser | `browser` | native (web browser) | on-demand |
 | 25 | VIDAA tv | `vidaa-plus` | native/Store | on-demand |
 | 26 | VidaaRecon | `http://192.0.2.150:9000/recon.html` | User/Web (`UrlType 36`) | on-demand |
 
-- **Unser `VidaaRecon`** ist die Recon-/Debug-App; im finalen Setup darf sie bleiben oder entfernt werden.
-- **`TV Browser`** ist der Web-Browser (`hisense_browser`); **nicht** die TV-UI.
-- **Store-/Foxxum-URLs** (`2897431816.fxm3751860294.com`) sind die App-Store-Kategorien.
-- **`PreInstall:true`** bei den Presets; `UrlType 37` (Start Web App); unser Recon `36`.
+- **Our `VidaaRecon`** is the recon/debug app; in the final setup it may stay or be removed.
+- **`TV Browser`** is the web browser (`hisense_browser`); **not** the TV UI.
+- **Store/Foxxum URLs** (`2897431816.fxm3751860294.com`) are the app store categories.
+- **`PreInstall:true`** on the presets; `UrlType 37` (start web app); our recon `36`.
 
-### 1.1 Tiles ausblenden: `deletedPresetApp.txt`
+### 1.1 Hiding tiles: `deletedPresetApp.txt`
 
-Datei: `/3rd_rw/appdata/launcher/deletedPresetApp.txt` — JSON-Array von URLs/IDs.  
-Beispiel: `templates/hide-preset.json`.
+File: `/3rd_rw/appdata/launcher/deletedPresetApp.txt` — JSON array of URLs/IDs.  
+Example: `templates/hide-preset.json`.
 
 ```json
 [
@@ -75,187 +75,187 @@ Beispiel: `templates/hide-preset.json`.
 ]
 ```
 
-- **IDs** (`netflix`, `amazon`, `youtube`, `browser`, `vidaa-plus`, `accuweather`) für native Apps; **URLs** für Web/Store.
-- **`preset.txt` ist nur Cache:** die Hide-Liste ist der persistente Hebel. Die UI/`ldi.js` filtert damit.
-- **Stand 2026-10-26:** Die alten Probe-Einträge (data:, javascript:, 127.0.0.1;cd…) wurden beim Cleanup entfernt; die Datei ist jetzt `[]`. Zum Ausblenden die obige Liste (oder eine Teilmenge) eintragen.
+- **IDs** (`netflix`, `amazon`, `youtube`, `browser`, `vidaa-plus`, `accuweather`) for native apps; **URLs** for web/store.
+- **`preset.txt` is only a cache:** the hide list is the persistent lever. The UI/`ldi.js` filters with it.
+- **As of 2026-10-26:** the old probe entries (data:, javascript:, 127.0.0.1;cd…) were removed during cleanup; the file is now `[]`. To hide apps, add the list above (or a subset).
 - **Backup:** `cp deletedPresetApp.txt /3rd_rw/backup/`.
-- **Wirkung:** UI/Launcher neu starten; reboot wirkt sicher.
+- **Effect:** restart the UI/launcher; a reboot definitely takes effect.
 
-### 1.2 User-App entfernen
+### 1.2 Removing a user app
 
-`/3rd_rw/appdata/launcher/Appinfo.json` → `VidaaRecon`-Eintrag entfernen; UI neu starten.  
-Oder `preset.txt`-Eintrag (Cache) entfernen; der `Appinfo`-Eintrag ist die eigentliche User-App.
+`/3rd_rw/appdata/launcher/Appinfo.json` → remove the `VidaaRecon` entry; restart the UI.  
+Or remove the `preset.txt` entry (cache); the `Appinfo` entry is the actual user app.
 
 ### 1.3 `preset.txt` / `Category*.xml` / `serviceUpdate.xml`
 
-- **`preset.txt`:** Cache; kann von der UI/`allAppsWriteToFileForUse` neu geschrieben werden.
-- **`Category_1001_*.xml`/`Category_57_*.xml`/`CategoryIndex.xml`/`CategoryList_*.xml`/`PicInfo.xml`:** die Store-/Launcher-Quelle; Änderungen nur mit Backup (der `LauncherService` kann sie aktualisieren).
-- **`serviceUpdate.xml`:** Land/Timestamp; entscheidet `launcher/data` (aktiv) vs. `UI/data` (Default). Wenn du eigene Kategorien willst, halte Land/Timestamp konsistent oder bearbeite `UI/data/` als Fallback.
+- **`preset.txt`:** cache; can be rewritten by the UI/`allAppsWriteToFileForUse`.
+- **`Category_1001_*.xml`/`Category_57_*.xml`/`CategoryIndex.xml`/`CategoryList_*.xml`/`PicInfo.xml`:** the store/launcher source; change only with a backup (the `LauncherService` can update them).
+- **`serviceUpdate.xml`:** country/timestamp; decides `launcher/data` (active) vs. `UI/data` (default). If you want your own categories, keep country/timestamp consistent or edit `UI/data/` as a fallback.
 - **Icons:** `res/`; `cache/index.json`; `Image`/`IconURL`/`Thumb`/`Icon_96`.
 
-### 1.4 „Platz sparen“?
+### 1.4 "Saving space"?
 
-**Nein, nicht durch Löschen der Presets.** `/3rd` ist ein **ro squashfs (100 % voll)**; die Apps liegen dort. Tiles ausblenden/AM-Sektionen deaktivieren spart **Runtime**, nicht Flash-Speicher.  
-- `/3rd_rw`: 489 MB frei; `/data`: 1.9 GB frei.  
-- Um `/3rd` zu verkleinern, müsste man das squashfs neu packen/flashen → **nicht** Teil dieses Wegs.
+**No, not by deleting the presets.** `/3rd` is a **ro squashfs (100% full)**; the apps live there. Hiding tiles/deactivating AM sections saves **runtime**, not flash storage.  
+- `/3rd_rw`: 489 MB free; `/data`: 1.9 GB free.  
+- To shrink `/3rd`, you would have to repack/reflash the squashfs → **not** part of this path.
 
 ---
 
-## 2. Native Apps / Services — Matrix
+## 2. Native apps / services — matrix
 
-### 2.1 Boot-Apps (`am_start.ini`)
+### 2.1 Boot apps (`am_start.ini`)
 
-| App/Section | Exec | Rolle | Empfehlung |
+| App/Section | Exec | Role | Recommendation |
 |---|---|---|---|
-| `dtv_app_mtk` | `/basic/dtv_svc` | TV-Kern (Tuner/DTV/Navigator) | **behalten** |
-| `securetime` | `/3rd/playready/securetime` | PlayReady Secure Time | behalten, wenn DRM/Netflix; sonst optional |
-| `netflix` | `/3rd/netflix/nrd-app/netflix` | Netflix | optional (aus, wenn nicht genutzt) |
+| `dtv_app_mtk` | `/basic/dtv_svc` | TV core (tuner/DTV/navigator) | **keep** |
+| `securetime` | `/3rd/playready/securetime` | PlayReady Secure Time | keep if DRM/Netflix; otherwise optional |
+| `netflix` | `/3rd/netflix/nrd-app/netflix` | Netflix | optional (off if unused) |
 | `dialserver` | `/3rd/dialserver/dialserver` | DIAL/CAST | optional |
-| `samba_relay_agent` | `/3rd/samba/samba-relay-agent` | Samba-Relay (9090) | optional |
-| `browser_base` | `/3rd/internet_browser/browser -x bws_background` | Hintergrund-Browser | optional |
+| `samba_relay_agent` | `/3rd/samba/samba-relay-agent` | Samba relay (9090) | optional |
+| `browser_base` | `/3rd/internet_browser/browser -x bws_background` | background browser | optional |
 
 ### 2.2 On-demand / `am_config`
 
-| App | Exec | Rolle | Empfehlung |
+| App | Exec | Role | Recommendation |
 |---|---|---|---|
-| `opera4x` | `/3rd/opera4x/browser/run-Browser.sh` | Web-Browser (`hisense_browser`) | behalten (TV Browser/Recon) |
-| `opera_browser` | `/3rd/internet_browser/browser` | Internet-Browser-Variante | optional |
+| `opera4x` | `/3rd/opera4x/browser/run-Browser.sh` | web browser (`hisense_browser`) | keep (TV Browser/Recon) |
+| `opera_browser` | `/3rd/internet_browser/browser` | internet browser variant | optional |
 | `opera_tv_store` | `/3rd/internet_browser/browser` | TV Store | optional |
-| `youtube` | Internet-Browser (`youtube.com/tv`) | YouTube Web | optional |
-| `youtube_kids`/`youtube_tv` | `/3rd/cobalt/cobalt` | Cobalt-YouTube | optional |
+| `youtube` | internet browser (`youtube.com/tv`) | YouTube Web | optional |
+| `youtube_kids`/`youtube_tv` | `/3rd/cobalt/cobalt` | Cobalt YouTube | optional |
 | `cobalt` | `/3rd/cobalt/cobalt` | Cobalt | optional |
 | `amazon_ignition` | `/3rd/amazon/bin/ignition` | Amazon | optional |
-| `factory_lite` | `/3rd/his_factory/factory_lite` | Factory-Menü | behalten (Service-Menü) oder optional |
-| `huluplus`, `hotlist`, `generic_osd` | Internet-Browser | Legacy/Store | optional |
-| `vudu` (referenziert) | — | Store/Region | optional |
-| `diskcache` | `/3rd/netflix/diskCache` | Netflix-Cache | nur mit Netflix |
+| `factory_lite` | `/3rd/his_factory/factory_lite` | factory menu | keep (service menu) or optional |
+| `huluplus`, `hotlist`, `generic_osd` | internet browser | legacy/store | optional |
+| `vudu` (referenced) | — | store/region | optional |
+| `diskcache` | `/3rd/netflix/diskCache` | Netflix cache | only with Netflix |
 
-### 2.3 Späte Services (`delayrun.sh`)
+### 2.3 Late services (`delayrun.sh`)
 
-| Service | Pfad | Rolle | Empfehlung |
+| Service | Path | Role | Recommendation |
 |---|---|---|---|
-| `swrc-server` | `/3rd/swrc-server/swrc-server` | Software-Remote-Control | optional (Remote-App) |
-| `runlogservice` | `/3rd/his_runlog/runlogservice.sh` | Run-/Logging | optional (Logs) |
-| `LauncherService` | `/3rd/launcherservice/bin/LauncherService` | Launcher-/App-Daten/UI | **behalten** (UI-Daten) |
-| `Seriallog` | `/3rd/Serial_log/Seriallog` | serielles Logging | optional |
-| `HamService` | `/3rd/hamservice/HamService` | ACR/Hisense | **Wrapper behalten** (SSH/Root-Loop); echtes HamService optional |
-| `swap` | `mmcblk0p34` | Swap | optional (Performance) |
+| `swrc-server` | `/3rd/swrc-server/swrc-server` | software remote control | optional (remote app) |
+| `runlogservice` | `/3rd/his_runlog/runlogservice.sh` | run/logging | optional (logs) |
+| `LauncherService` | `/3rd/launcherservice/bin/LauncherService` | launcher/app data/UI | **keep** (UI data) |
+| `Seriallog` | `/3rd/Serial_log/Seriallog` | serial logging | optional |
+| `HamService` | `/3rd/hamservice/HamService` | ACR/Hisense | **keep wrapper** (SSH/root loop); real HamService optional |
+| `swap` | `mmcblk0p34` | swap | optional (performance) |
 
 ### 2.4 `ms_service` / UI / AM
 
-| Komponente | Pfad | Rolle | Empfehlung |
+| Component | Path | Role | Recommendation |
 |---|---|---|---|
-| `ms_service` | `/3rd/ms-screen/ms_service` | DLNA/MediaServer | optional (nur mit DLNA) |
-| `hisenseUI` | `/3rd/opera4x/hisenseUI/bin/hisenseUI` | TV-UI (GLES) | **behalten** (UI) |
-| `app_man` | `/basic/app_man` | AM/native Apps | **behalten** (TV/Apps) |
-| `dtv_svc` | `/basic/dtv_svc` | TV-Kern | **behalten** |
-| `browser_base` | `/3rd/internet_browser/browser` | Hintergrund-Browser | optional |
-| `LauncherService` | siehe oben | UI-Daten | **behalten** |
-| `HamService` | siehe oben | ACR | Wrapper behalten; echtes optional |
+| `ms_service` | `/3rd/ms-screen/ms_service` | DLNA/MediaServer | optional (only with DLNA) |
+| `hisenseUI` | `/3rd/opera4x/hisenseUI/bin/hisenseUI` | TV UI (GLES) | **keep** (UI) |
+| `app_man` | `/basic/app_man` | AM/native apps | **keep** (TV/apps) |
+| `dtv_svc` | `/basic/dtv_svc` | TV core | **keep** |
+| `browser_base` | `/3rd/internet_browser/browser` | background browser | optional |
+| `LauncherService` | see above | UI data | **keep** |
+| `HamService` | see above | ACR | keep wrapper; real one optional |
 
-### 2.5 Was **nicht** deaktivieren
+### 2.5 What **not** to disable
 
-- **`dtv_app_mtk`/`dtv_svc`**: TV/Tuner/Navigator; sonst kein TV/Bild.
-- **`app_man`**: native Apps/AM; sonst starten Netflix/YouTube/TV etc. nicht. Für eine reine Custom-UI könnte man ihn stubben, aber das ist riskant (Remote/TV/Apps).
-- **`hisenseUI`**: die UI; ohne sie schwarzer Bildschirm (es sei denn, du startest eine eigene UI).
-- **`LauncherService`**: die UI-App-Daten; ohne ihn ggf. leere/fehlende Tiles.
-- **SSH/Root-Loop** (`HamService`-Wrapper): dein Rettungsweg.
-- **`securetime`**, wenn du DRM/Netflix nutzt.
+- **`dtv_app_mtk`/`dtv_svc`**: TV/tuner/navigator; otherwise no TV/picture.
+- **`app_man`**: native apps/AM; otherwise Netflix/YouTube/TV etc. will not start. For a pure custom UI you could stub it, but that is risky (remote/TV/apps).
+- **`hisenseUI`**: the UI; without it, a black screen (unless you start your own UI).
+- **`LauncherService`**: the UI app data; without it, possibly empty/missing tiles.
+- **SSH/root loop** (`HamService` wrapper): your rescue path.
+- **`securetime`**, if you use DRM/Netflix.
 
 ---
 
-## 3. Wie deaktivieren? (drei saubere Wege)
+## 3. How to disable? (three clean paths)
 
-### 3.1 UI-Tiles: `deletedPresetApp.txt`
+### 3.1 UI tiles: `deletedPresetApp.txt`
 
-- Einfachster, reversibler Weg; kein AM/Service-Eingriff.
-- Siehe 1.1; Backup; UI neu starten/reboot.
+- Simplest, reversible path; no AM/service intervention.
+- See 1.1; back up; restart the UI/reboot.
 
-### 3.2 Native AM-Apps: modifizierte `am_start.ini`/`am_config` per `developer.sh`
+### 3.2 Native AM apps: modified `am_start.ini`/`am_config` via `developer.sh`
 
-- Kopie nach `/3rd_rw/etc/`:
+- Copy to `/3rd_rw/etc/`:
   ```sh
   cp /basic/am_start.ini /3rd_rw/etc/am_start.ini
   cp /basic/am_config    /3rd_rw/etc/am_config
-  # Sektionen/App_sect entfernen (z. B. netflix, dialserver, samba, browser_base)
+  # remove sections/App_sect (e.g. netflix, dialserver, samba, browser_base)
   ```
-- In `/3rd_rw/developer.sh` (vor `app_man`, Zeile 177):
+- In `/3rd_rw/developer.sh` (before `app_man`, line 177):
   ```sh
   mount --bind /3rd_rw/etc/am_start.ini /basic/am_start.ini
   mount --bind /3rd_rw/etc/am_config    /basic/am_config
   ```
-- **Reboot**; `ps`/AM prüfen; Backup/Rollback per `umount`/reboot.
-- **Nicht** `dtv_app_mtk`/`dtv_svc`/`app_man` entfernen; `securetime` nur ohne DRM.
+- **Reboot**; check `ps`/AM; back up/roll back via `umount`/reboot.
+- **Do not** remove `dtv_app_mtk`/`dtv_svc`/`app_man`; `securetime` only without DRM.
 
-### 3.3 Späte Services: modifizierte `delayrun.sh` per `developer.sh`
+### 3.3 Late services: modified `delayrun.sh` via `developer.sh`
 
-- Kopie nach `/3rd_rw/etc/delayrun.sh`; unerwünschte Zeilen entfernen (`swrc`, `runlog`, `Seriallog`; `LauncherService`/`HamService` behalten).
+- Copy to `/3rd_rw/etc/delayrun.sh`; remove unwanted lines (`swrc`, `runlog`, `Seriallog`; keep `LauncherService`/`HamService`).
 - In `developer.sh`:
   ```sh
   mount --bind /3rd_rw/etc/delayrun.sh /basic/delayrun.sh
   ```
-- `LauncherService` (UI) und `HamService`-Wrapper (SSH/Root-Loop) **behalten**.
-- **`ms_service`** ist nicht in `delayrun`, sondern in `autorun.sh` (Zeile 162). Deaktivieren:
+- **Keep** `LauncherService` (UI) and the `HamService` wrapper (SSH/root loop).
+- **`ms_service`** is not in `delayrun`, but in `autorun.sh` (line 162). To disable:
   ```sh
-  # developer.sh, vor Zeile 162:
+  # developer.sh, before line 162:
   mkdir -p /3rd_rw/stubs
   printf '#!/bin/sh\nexit 0\n' > /3rd_rw/stubs/true
   chmod 755 /3rd_rw/stubs/true
   mount --bind /3rd_rw/stubs/true /3rd/ms-screen/ms_service
   ```
-- **`start-UI.sh`/`app_man`** stubben nur, wenn du eine eigene UI/keine nativen Apps willst; riskant.
+- **`start-UI.sh`/`app_man`** stub only if you want your own UI/no native apps; risky.
 
 ### 3.4 ACR/HamService
 
-- Der Wrapper `/3rd_rw/hamservice/HamService` startet Root-Loop + SSH und `exec`t das echte HamService.
-- **ACR aus, SSH/Loop an:** `exec /3rd/hamservice/HamService "$@"` durch `exit 0` ersetzen (oder HamService-Config deaktivieren, `UNVERIFIED`).
-- **HamService ganz aus:** Wrapper behalten (für SSH/Loop), echtes Service nicht starten; `startHam.sh` ruft nur den Wrapper. 
-- **Root-Loop/SSH nicht verlieren:** vor Änderung testen, dass du per SSH wieder rein kommst.
+- The wrapper `/3rd_rw/hamservice/HamService` starts the root loop + SSH and `exec`s the real HamService.
+- **ACR off, SSH/loop on:** replace `exec /3rd/hamservice/HamService "$@"` with `exit 0` (or disable the HamService config, `UNVERIFIED`).
+- **HamService completely off:** keep the wrapper (for SSH/loop), do not start the real service; `startHam.sh` only calls the wrapper. 
+- **Do not lose the root loop/SSH:** before changing anything, test that you can get back in via SSH.
 
 ---
 
-## 4. Platz / Runtime
+## 4. Space / runtime
 
-- **Runtime-Bloat** (Prozesse/RAM/CPU) lässt sich durch 3.1–3.4 reduzieren.
-- **Flash-Platz** wird **nicht** frei: `/3rd`/Rootfs sind ro squashfs (100 %). Löschen von Dateien in `/3rd` ist nicht möglich; nur ausblenden/stubben.
-- `/3rd_rw` 489 MB frei; `/data` 1.9 GB frei; `/perm` 3.5 MB frei.
-- **Kein Package Manager**, kein „Uninstall“ im Distro-Sinn.
+- **Runtime bloat** (processes/RAM/CPU) can be reduced via 3.1–3.4.
+- **Flash space** is **not** freed: `/3rd`/rootfs are ro squashfs (100%). Deleting files in `/3rd` is not possible; only hiding/stubbing.
+- `/3rd_rw` 489 MB free; `/data` 1.9 GB free; `/perm` 3.5 MB free.
+- **No package manager**, no "uninstall" in the distro sense.
 
 ---
 
-## 5. Risiko-/Rollback-Matrix
+## 5. Risk/rollback matrix
 
-| Änderung | Risiko | Rollback |
+| Change | Risk | Rollback |
 |---|---|---|
-| `deletedPresetApp.txt` | niedrig (Tiles weg) | Backup zurück; UI neu starten |
-| `Appinfo.json` | niedrig (User-App weg) | Backup zurück; UI neu starten |
-| `Category*.xml`/`preset` | mittel (leere/falsche Tiles) | Backup; `LauncherService`/UI neu starten |
-| `am_start.ini`/`am_config` | mittel–hoch (Apps/TV) | `umount`/Backup; reboot |
-| `delayrun.sh` | mittel (Services/Logs/UI) | `umount`/Backup; reboot |
-| `ms_service`-Stub | niedrig (DLNA weg) | `umount`; reboot |
-| `start-UI`-Stub/Custom-UI | hoch (schwarzer Bildschirm) | Backup `UI/index.html`; SSH/root-Loop; UI neu starten |
-| `app_man`/`dtv_svc` aus | hoch (TV/Apps) | `umount`/Backup; reboot |
-| `HamService`-Wrapper | mittel (SSH/Loop weg) | Original-Symlink; `/3rd_rw/sshd/start_sshd.sh`; reboot |
-| `patch/opera4x` full overlay | hoch (Browser/UI fehlt) | Patch-Ordner entfernen; reboot |
+| `deletedPresetApp.txt` | low (tiles gone) | restore backup; restart UI |
+| `Appinfo.json` | low (user app gone) | restore backup; restart UI |
+| `Category*.xml`/`preset` | medium (empty/wrong tiles) | backup; restart `LauncherService`/UI |
+| `am_start.ini`/`am_config` | medium–high (apps/TV) | `umount`/backup; reboot |
+| `delayrun.sh` | medium (services/logs/UI) | `umount`/backup; reboot |
+| `ms_service` stub | low (DLNA gone) | `umount`; reboot |
+| `start-UI` stub/custom UI | high (black screen) | backup `UI/index.html`; SSH/root loop; restart UI |
+| `app_man`/`dtv_svc` off | high (TV/apps) | `umount`/backup; reboot |
+| `HamService` wrapper | medium (SSH/loop gone) | original symlink; `/3rd_rw/sshd/start_sshd.sh`; reboot |
+| `patch/opera4x` full overlay | high (browser/UI missing) | remove patch folder; reboot |
 
-**Immer:** Backup nach `/3rd_rw/backup/`; SSH/Root-Loop testen; eine Änderung pro Test; kein Flash.
+**Always:** back up to `/3rd_rw/backup/`; test SSH/root loop; one change per test; no flashing.
 
 ---
 
-## 6. „Keep“-Liste (für ein stabiles, schlankes System)
+## 6. "Keep" list (for a stable, lean system)
 
-- **TV/UI:** `dtv_svc`/`dtv_app_mtk`, `hisenseUI`, `app_man`, `LauncherService`, `securetime` (bei DRM).
-- **Zugang:** `HamService`-Wrapper (SSH/Root-Loop), `/3rd_rw/sshd`, `root_loop.sh`.
-- **Web:** `opera4x`/`hisense_browser` (TV Browser/Recon), `browser_base` nur wenn nötig.
-- **Daten:** `/3rd_rw/appdata/launcher` (Tiles), `/3rd_rw/UI` (UI), `/3rd_rw/backup`.
-- **Optional aus:** Netflix, YouTube/Cobalt, Amazon, DIAL, Samba, `ms_service`, `swrc`, `runlog`, `Seriallog`, ACR/HamService (echt), Vudu/Hulu/Hotlist/GenericOSD, Diskcache.
+- **TV/UI:** `dtv_svc`/`dtv_app_mtk`, `hisenseUI`, `app_man`, `LauncherService`, `securetime` (with DRM).
+- **Access:** `HamService` wrapper (SSH/root loop), `/3rd_rw/sshd`, `root_loop.sh`.
+- **Web:** `opera4x`/`hisense_browser` (TV Browser/Recon), `browser_base` only if needed.
+- **Data:** `/3rd_rw/appdata/launcher` (tiles), `/3rd_rw/UI` (UI), `/3rd_rw/backup`.
+- **Optional off:** Netflix, YouTube/Cobalt, Amazon, DIAL, Samba, `ms_service`, `swrc`, `runlog`, `Seriallog`, ACR/HamService (real), Vudu/Hulu/Hotlist/GenericOSD, diskcache.
 
 ---
 
 ## 7. Unknowns
 
-- Exakte Folgen des Abschaltens von `ms_service`/`swrc`/`runlog`/`Seriallog`/`HamService`/`securetime`/`browser_base`/`app_man` (je nach UI/Store/DRM).
-- Ob `LauncherService`/`allAppsWriteToFileForUse` die `preset.txt`/`Category*.xml`/`deletedPresetApp.txt` bei jedem Start/Update neu schreibt (Hide-Liste ist der robuste Hebel).
-- Ob `preset.txt`/`Appinfo`/`Category`-Änderungen einen UI-/Launcher-Neustart oder Reboot brauchen (UI-Restart reicht meist; reboot sicher).
-- Ob die Store-/Foxxum-Daten (`serviceUpdate`/`Category*`) bei Netzwerk/Store-Update überschrieben werden.
-- Ob `VIDAAU2Launcher` auf diesem Modell aktiv ist (die aktive UI ist `/3rd_rw/UI`).
+- Exact consequences of switching off `ms_service`/`swrc`/`runlog`/`Seriallog`/`HamService`/`securetime`/`browser_base`/`app_man` (depending on UI/store/DRM).
+- Whether `LauncherService`/`allAppsWriteToFileForUse` rewrites `preset.txt`/`Category*.xml`/`deletedPresetApp.txt` on every start/update (the hide list is the robust lever).
+- Whether `preset.txt`/`Appinfo`/`Category` changes need a UI/launcher restart or a reboot (a UI restart is usually enough; a reboot is safe).
+- Whether the store/Foxxum data (`serviceUpdate`/`Category*`) is overwritten on a network/store update.
+- Whether `VIDAAU2Launcher` is active on this model (the active UI is `/3rd_rw/UI`).

@@ -1,28 +1,28 @@
-# 04 — Modding: Rezepte für eigene UI, Apps, Services, Bloat
+# 04 — Modding: recipes for your own UI, apps, services, bloat
 
-**Voraussetzung:** Root + SSH (siehe `../root/ROOT-GUIDE.md`).  
-**Spielregel:** Eine Änderung, dann testen, dann die nächste. Backup vorher. SSH/Root-Loop als Rettungsweg behalten. Kein Flash/`.pkg`.
+**Prerequisite:** Root + SSH (see `../root/ROOT-GUIDE.md`).  
+**Rule of the game:** One change, then test, then the next. Back up first. Keep SSH/root loop as a rescue path. No flash/`.pkg`.
 
-Die Rezepte sind nach Risiko sortiert:
+The recipes are sorted by risk:
 
-| Route | Ziel | Risiko | Reversibel |
+| Route | Goal | Risk | Reversible |
 |---|---|---|---|
-| **A** | Eigene App-Tile (Web-App im Browser) | niedrig | ja (Datei-Backup) |
-| **B** | Eigene UI-Seite (`/3rd_rw/UI/index.html`) | mittel | ja (Backup + UI-Restart) |
-| **C** | Launcher-Daten/Skin (Tiles, Kategorien, Icons) | niedrig–mittel | ja (Backup) |
-| **D** | Eigener Service/eigene Funktion (root) | mittel | ja (Skripte/Wrapper) |
-| **E** | Ro-Dateien per Bind-Mount/Overlay patchen | mittel–hoch | ja (Unmount/Reboot) |
-| **F** | Statische Tools/SSH/Deploy | niedrig | ja |
+| **A** | own app tile (web app in the browser) | low | yes (file backup) |
+| **B** | own UI page (`/3rd_rw/UI/index.html`) | medium | yes (backup + UI restart) |
+| **C** | launcher data/skin (tiles, categories, icons) | low–medium | yes (backup) |
+| **D** | own service/own function (root) | medium | yes (scripts/wrappers) |
+| **E** | patch ro files via bind mount/overlay | medium–high | yes (unmount/reboot) |
+| **F** | static tools/SSH/deploy | low | yes |
 
 ---
 
-## Route A — Eigene App-Tile (der sichere Einstieg)
+## Route A — Own app tile (the safe entry point)
 
-**Ziel:** Ein eigener Eintrag im Launcher, der eine lokale oder HTTP-Seite im **Web-Browser** öffnet (nicht die UI ersetzt).
+**Goal:** An own entry in the launcher that opens a local or HTTP page in the **web browser** (does not replace the UI).
 
-### A.1 Seite bauen
+### A.1 Build the page
 
-Lokal auf dem TV (rw):
+Locally on the TV (rw):
 
 ```
 /3rd_rw/appdata/custom/index.html
@@ -30,7 +30,7 @@ Lokal auf dem TV (rw):
 /3rd_rw/appdata/custom/icon.png
 ```
 
-Beispiel `index.html`:
+Example `index.html`:
 
 ```html
 <!doctype html>
@@ -38,7 +38,7 @@ Beispiel `index.html`:
 <style>body{background:#111;color:#eee;font-family:sans-serif;margin:0;padding:2em}</style>
 </head><body>
 <h1>MyApp</h1>
-<p>Läuft im hisense_browser (root, --allow-file-access-from-files).</p>
+<p>Runs in hisense_browser (root, --allow-file-access-from-files).</p>
 <button onclick="hi()">HiBrowser test</button>
 <pre id="out"></pre>
 <script>
@@ -52,19 +52,19 @@ function hi(){
 </body></html>
 ```
 
-- HTTP-Variante: Seite auf dem Host (`http://<host>:9000/...`) servieren; der TV-Browser lädt sie.
-- Lokal-Variante: `file:///3rd_rw/appdata/custom/index.html`; der Browser hat `--allow-file-access-from-files`.
-- Die Seite kann `HiBrowser` (`File`, `System`, `loadLibrary`, `Cache`, `JsonWrite`) und `Hisense_*` nutzen. Root-Kontext.
+- HTTP variant: serve the page on the host (`http://<host>:9000/...`); the TV browser loads it.
+- Local variant: `file:///3rd_rw/appdata/custom/index.html`; the browser has `--allow-file-access-from-files`.
+- The page can use `HiBrowser` (`File`, `System`, `loadLibrary`, `Cache`, `JsonWrite`) and `Hisense_*`. Root context.
 
-### A.2 `Appinfo.json` ergänzen
+### A.2 Add to `Appinfo.json`
 
-Datei: `/3rd_rw/appdata/launcher/Appinfo.json` (rw). **Backup:**
+File: `/3rd_rw/appdata/launcher/Appinfo.json` (rw). **Backup:**
 
 ```sh
 cp /3rd_rw/appdata/launcher/Appinfo.json /3rd_rw/backup/Appinfo.json.$(date +%s)
 ```
 
-Eintrag ergänzen (bestehende `AppInfo`-Einträge behalten!):
+Add an entry (keep the existing `AppInfo` entries!):
 
 ```json
 {"AppInfo":[
@@ -84,39 +84,39 @@ Eintrag ergänzen (bestehende `AppInfo`-Einträge behalten!):
 ]}
 ```
 
-- `StartCommand`/`URL` = HTTP oder `file://`.
-- `Image`/`IconURL`/`Thumb`/`Icon_96` = Icon; HTTP/`file://`; Fallback `useDefaultImg`.
-- `StoreType` als String (`"foxxum"`; die UI mappt über `storeTypeList`).
-- `PreInstall:false` (User-App); `canRemove=true`.
+- `StartCommand`/`URL` = HTTP or `file://`.
+- `Image`/`IconURL`/`Thumb`/`Icon_96` = icon; HTTP/`file://`; fallback `useDefaultImg`.
+- `StoreType` as a string (`"foxxum"`; the UI maps via `storeTypeList`).
+- `PreInstall:false` (user app); `canRemove=true`.
 
-**Per TV-Seite/JS** (ohne SSH):
+**Via the TV page/JS** (without SSH):
 
 ```js
-// Backup lesen (optional)
+// read backup (optional)
 var old = fileXHR("file:///3rd_rw/appdata/launcher/Appinfo.json");
-// Neuen Inhalt schreiben
+// write new content
 HiBrowser.File.write("launcher/Appinfo.json", newJsonString, 1);
 ```
 
-`File.write` schreibt Text; das JSON ist Text. (Für Binär-Icons: `File.download` von HTTP/`file://`.)
+`File.write` writes text; the JSON is text. (For binary icons: `File.download` from HTTP/`file://`.)
 
-### A.3 Launcher/UI neu laden
+### A.3 Reload the launcher/UI
 
-- UI neu starten (siehe `03`, Abschnitt 8): `kill <hisenseUI-PID>`; `nohup /3rd/opera4x/hisenseUI/start-UI.sh &`.
-- Oder TV rebooten.
-- Im Launcher/„Alle Apps“ erscheint die Tile; Launch öffnet den **Web-Browser** mit der URL (nicht die UI-Seite).
+- Restart the UI (see `03`, section 8): `kill <hisenseUI-PID>`; `nohup /3rd/opera4x/hisenseUI/start-UI.sh &`.
+- Or reboot the TV.
+- The tile appears in the launcher/"All apps"; launching opens the **web browser** with the URL (not the UI page).
 
-### A.4 Test / Rollback
+### A.4 Test / rollback
 
-- Test: Tile öffnen; `HiBrowser`-Testbutton; `file://`-Seite; HTTP-Seite.
-- Rollback: `Appinfo.json`-Backup zurückkopieren; UI neu starten. Oder Eintrag entfernen.
-- **Nicht** `preset.txt` für User-Apps missbrauchen; der `preset`-Cache kann überschrieben werden. `Appinfo.json` ist der richtige Ort.
+- Test: open the tile; `HiBrowser` test button; `file://` page; HTTP page.
+- Rollback: copy the `Appinfo.json` backup back; restart the UI. Or remove the entry.
+- Do **not** misuse `preset.txt` for user apps; the `preset` cache can be overwritten. `Appinfo.json` is the right place.
 
 ---
 
-## Route B — Eigene UI-Seite (`/3rd_rw/UI/index.html`)
+## Route B — Own UI page (`/3rd_rw/UI/index.html`)
 
-**Ziel:** Die TV-UI (PIXI/`hisenseUI`) durch eine eigene Seite ersetzen. **Höchstes Risiko** (schwarzer Bildschirm), aber machbar.
+**Goal:** Replace the TV UI (PIXI/`hisenseUI`) with your own page. **Highest risk** (black screen), but feasible.
 
 ### B.1 Backup
 
@@ -125,10 +125,10 @@ mkdir -p /3rd_rw/backup
 cp -a /3rd_rw/UI /3rd_rw/backup/UI.$(date +%Y%m%d-%H%M%S)
 ```
 
-### B.2 Minimale Custom-UI bauen
+### B.2 Build a minimal custom UI
 
-Datei: `/3rd_rw/UI/custom.html` (neu; `index.html` bleibt vorerst unangetastet).  
-Vorlage: `templates/custom-ui.html`.
+File: `/3rd_rw/UI/custom.html` (new; `index.html` stays untouched for now).  
+Template: `templates/custom-ui.html`.
 
 ```html
 <!doctype html>
@@ -170,85 +170,85 @@ function probe(){
 </script></div></body></html>
 ```
 
-- **API-Verfügbarkeit ist `UNVERIFIED`**: Im UI-DevTools (9223) prüfen, welche Globals existieren und welche Signatur `Hisense_StartApp`/`TVAPI.StartApp`/`guijs.StartApp` hat. Der Web-Browser hat `HiBrowser.System.startApp(":am,…")` (belegt); die UI kann andere Wrapper haben.
-- Größe: UI nutzt 1280×720 CSS (PIXI-Canvas); der Screen ist 1920×1080 (`OPERA_EGL_SCREEN_SIZE`). `100vw/100vh`/`meta viewport` nutzen.
+- **API availability is `UNVERIFIED`**: check in the UI DevTools (9223) which globals exist and which signature `Hisense_StartApp`/`TVAPI.StartApp`/`guijs.StartApp` has. The web browser has `HiBrowser.System.startApp(":am,…")` (evidenced); the UI may have other wrappers.
+- Size: the UI uses 1280×720 CSS (PIXI canvas); the screen is 1920×1080 (`OPERA_EGL_SCREEN_SIZE`). Use `100vw/100vh`/`meta viewport`.
 
-### B.3 Testen, ohne die UI zu ersetzen
+### B.3 Test without replacing the UI
 
-1. `custom.html` per Web-Browser öffnen: `http://<host>:9000/...` oder `file:///3rd_rw/UI/custom.html` im **`hisense_browser`** (TV-Browser). Dort `HiBrowser`/`Hisense_*` testen (die UI-spezifischen APIs fehlen evtl.).
-2. UI DevTools 9223: `window.location = "file:///3rd_rw/UI/custom.html"` **nur** in einem Test-Tab? Die UI hat ein Fenster; ein Navigieren ersetzt die UI. Besser: Custom-Seite in einem **neuen** `hisenseUI`-Prozess starten (siehe B.5) oder per Web-Browser testen.
-3. Wenn die Custom-Seite im Web-Browser gut aussieht, UI übernehmen.
+1. Open `custom.html` via the web browser: `http://<host>:9000/...` or `file:///3rd_rw/UI/custom.html` in the **`hisense_browser`** (TV browser). Test `HiBrowser`/`Hisense_*` there (the UI-specific APIs may be missing).
+2. UI DevTools 9223: `window.location = "file:///3rd_rw/UI/custom.html"` **only** in a test tab? The UI has one window; navigating replaces the UI. Better: start the custom page in a **new** `hisenseUI` process (see B.5) or test via the web browser.
+3. If the custom page looks good in the web browser, adopt it in the UI.
 
-### B.4 `index.html` ersetzen
+### B.4 Replace `index.html`
 
-**Variante 1: Datei ersetzen** (einfach, reversibel per Backup):
+**Variant 1: replace the file** (simple, reversible via backup):
 
 ```sh
 cp /3rd_rw/UI/index.html /3rd_rw/backup/index.orig.html
 cp /3rd_rw/UI/custom.html /3rd_rw/UI/index.html
-# UI neu starten
+# restart the UI
 kill $(pidof hisenseUI)
 nohup /3rd/opera4x/hisenseUI/start-UI.sh >/tmp/hisenseUI.log 2>&1 &
 ```
 
-**Variante 2: `start-UI.sh` per Bind-Mount auf `custom.html` zeigen** (lässt `index.html` unangetastet):
+**Variant 2: point `start-UI.sh` at `custom.html` via bind mount** (leaves `index.html` untouched):
 
 ```sh
-# /3rd_rw/patch/start-UI-custom.sh (siehe templates/start-UI-custom.sh)
+# /3rd_rw/patch/start-UI-custom.sh (see templates/start-UI-custom.sh)
 mount --bind /3rd_rw/patch/start-UI-custom.sh /3rd/opera4x/hisenseUI/start-UI.sh
-# UI neu starten
+# restart the UI
 ```
 
-Das ist ein **Datei-Bind-Mount**; kein full overlay. `start-UI-custom.sh` startet `hisenseUI` mit `-u file:///3rd_rw/UI/custom.html` und den gleichen Flags wie das Original.
+This is a **file bind mount**; not a full overlay. `start-UI-custom.sh` starts `hisenseUI` with `-u file:///3rd_rw/UI/custom.html` and the same flags as the original.
 
-**Variante 3: Vendor-Overlay `/3rd_rw/patch/opera4x`** (full dir bind):
+**Variant 3: vendor overlay `/3rd_rw/patch/opera4x`** (full dir bind):
 
 ```sh
 mkdir -p /3rd_rw/patch/opera4x
-cp -a /3rd/opera4x/. /3rd_rw/patch/opera4x/   # vollständige Kopie!
-# eigene Dateien überschreiben, z. B. hisenseUI/start-UI.sh
+cp -a /3rd/opera4x/. /3rd_rw/patch/opera4x/   # complete copy!
+# overwrite your own files, e.g. hisenseUI/start-UI.sh
 reboot
 ```
 
-- **Nur mit vollständiger Kopie/Symlink-Baum.** Der `mount -o bind` ersetzt `/3rd/opera4x` komplett. Fehlende Dateien = Browser/UI kaputt.
-- Vorteil: überlebt Reboots (autorun bindet vor UI-Start). Nachteil: groß/fehleranfällig.
+- **Only with a complete copy/symlink tree.** The `mount -o bind` replaces `/3rd/opera4x` entirely. Missing files = broken browser/UI.
+- Advantage: survives reboots (autorun binds before the UI start). Disadvantage: large/error-prone.
 
-### B.5 UI-Restart / Rettung
+### B.5 UI restart / rescue
 
 ```sh
-# UI-Prozess
+# UI process
 ps | grep hisenseUI | grep -v grep
 kill <PID>
 nohup /3rd/opera4x/hisenseUI/start-UI.sh >/tmp/hisenseUI.log 2>&1 &
 
-# Rettung bei schwarzem Bildschirm:
+# rescue on a black screen:
 cp /3rd_rw/backup/index.orig.html /3rd_rw/UI/index.html
 kill $(pidof hisenseUI)
 nohup /3rd/opera4x/hisenseUI/start-UI.sh >/tmp/hisenseUI.log 2>&1 &
 ```
 
-- **SSH/Root-Loop** funktionieren unabhängig von der UI. Der Web-Browser (`hisense_browser`/Recon) kann ebenfalls weiterlaufen.
-- `hisenseUI`-Log: `/tmp/hisenseUI.log`; UI-DevTools 9223 (falls die Seite lädt).
-- **Kein Flash**: `index.html`/`custom.html` liegen in `/3rd_rw`; Backup/Rollback per Datei.
+- **SSH/root loop** work independently of the UI. The web browser (`hisense_browser`/recon) can also keep running.
+- `hisenseUI` log: `/tmp/hisenseUI.log`; UI DevTools 9223 (if the page loads).
+- **No flash**: `index.html`/`custom.html` live in `/3rd_rw`; backup/rollback via file.
 
-### B.6 Was die UI-Seite kann
+### B.6 What the UI page can do
 
-- **Vollbild-HTML/CSS/JS** im Chromium/Opera-UI-Browser.
-- **`Hisense_*`/`TVAPI`/`guijs`/`model`** (UI-Kontext; Signaturen im DevTools prüfen).
-- **`file://`**-Zugriff (`--disable-web-security`, `--allow-file-access-from-files`? Das UI hat `--disable-web-security`; lokale Files ja).
-- **Video/Canvas/WebGL**; die UI nutzt GLES/Mali.
-- **Kein** direkter Shell-Zugriff aus JS; der Root-Loop/SSH ist der Weg für native Aktionen.
+- **Full-screen HTML/CSS/JS** in the Chromium/Opera UI browser.
+- **`Hisense_*`/`TVAPI`/`guijs`/`model`** (UI context; check signatures in the DevTools).
+- **`file://`** access (`--disable-web-security`, `--allow-file-access-from-files`? The UI has `--disable-web-security`; local files yes).
+- **Video/canvas/WebGL**; the UI uses GLES/Mali.
+- **No** direct shell access from JS; the root loop/SSH is the way for native actions.
 
 ---
 
-## Route C — Launcher-Daten/Skin (Tiles, Kategorien, Icons)
+## Route C — Launcher data/skin (tiles, categories, icons)
 
-**Ziel:** Apps hinzufügen/ausblenden, Kategorien/Icons ändern, ohne die UI-Seite zu ersetzen.
+**Goal:** Add/hide apps, change categories/icons without replacing the UI page.
 
-### C.1 Tiles ausblenden (einfach, persistent)
+### C.1 Hide tiles (simple, persistent)
 
-Datei: `/3rd_rw/appdata/launcher/deletedPresetApp.txt` (JSON-Array).  
-Beispiel: `templates/hide-preset.json`; die Preinstalled-Liste in `05-bloat.md`.
+File: `/3rd_rw/appdata/launcher/deletedPresetApp.txt` (JSON array).  
+Example: `templates/hide-preset.json`; the preinstalled list is in `05-bloat.md`.
 
 ```json
 [
@@ -262,41 +262,41 @@ Beispiel: `templates/hide-preset.json`; die Preinstalled-Liste in `05-bloat.md`.
 ]
 ```
 
-- Der Launcher/`ldi.js` filtert die Kacheln; die `preset.txt` ist nur Cache.
-- **Stand 2026-10-26:** Die alten Probe-URLs (data:, javascript:, 127.0.0.1;cd…) wurden beim Cleanup entfernt; die Datei ist jetzt `[]`. Zum Ausblenden die gewünschten Hide-Einträge setzen.
+- The launcher/`ldi.js` filters the tiles; `preset.txt` is only a cache.
+- **As of 2026-10-26:** The old probe URLs (data:, javascript:, 127.0.0.1;cd…) were removed during cleanup; the file is now `[]`. To hide tiles, set the desired hide entries.
 - **Backup:** `cp deletedPresetApp.txt /3rd_rw/backup/...`.
-- **Wirkung:** UI/Launcher neu starten (oder reboot).
+- **Effect:** restart the UI/launcher (or reboot).
 
-### C.2 Tiles hinzufügen
+### C.2 Add tiles
 
-- **User-App:** `Appinfo.json` (Route A).
-- **Preset:** `preset.txt` ergänzen (`AppName`, `IconURL`, `URL`, `StartCommand`, `UrlType` 37, `StoreType` 0, `PreInstall:true`). **Aber:** `preset.txt` ist ein Cache; die UI/`allAppsWriteToFileForUse` kann sie überschreiben. Für dauerhaft: `Appinfo.json` (User-App) oder die `Category*.xml`-Quelle.
-- **Kategorie-XML:** `/3rd_rw/appdata/launcher/data/Category_1001_*.xml`/`Category_57_*.xml`/`CategoryIndex.xml`/`CategoryList_*.xml` — die App-Tiles. Backup; XML-Struktur beibehalten; `preset`/Cache danach neu erzeugen lassen (UI-Restart).
-- **`serviceUpdate.xml`:** Land/Timestamp; wenn es nicht zu `DEU` passt, nutzt `ldi.js` `UI/data/`-Default. Für eigene Daten ggf. `UI/data/` bearbeiten (Fallback) oder `serviceUpdate`/`Category` in `launcher/data` konsistent halten.
+- **User app:** `Appinfo.json` (route A).
+- **Preset:** add to `preset.txt` (`AppName`, `IconURL`, `URL`, `StartCommand`, `UrlType` 37, `StoreType` 0, `PreInstall:true`). **But:** `preset.txt` is a cache; the UI/`allAppsWriteToFileForUse` can overwrite it. For persistence: `Appinfo.json` (user app) or the `Category*.xml` source.
+- **Category XML:** `/3rd_rw/appdata/launcher/data/Category_1001_*.xml`/`Category_57_*.xml`/`CategoryIndex.xml`/`CategoryList_*.xml` — the app tiles. Back up; keep the XML structure; let `preset`/cache be regenerated afterwards (UI restart).
+- **`serviceUpdate.xml`:** country/timestamp; if it does not match `DEU`, `ldi.js` uses the `UI/data/` default. For your own data, edit `UI/data/` (fallback) or keep `serviceUpdate`/`Category` in `launcher/data` consistent.
 
-### C.3 Icons / Skin
+### C.3 Icons / skin
 
-- Icons: `res/*.png`; `cache/index.json`; `Image`/`IconURL`/`Thumb`/`Icon_96`; `useDefaultImg` als Fallback.
-- Skin/Assets: `/3rd_rw/UI/assets`, `/3rd_rw/UI/templates`, `/3rd_rw/UI/module`, `/3rd_rw/launcher/{css,img,html,js}`, `/3rd_rw/VIDAAU2Launcher/*` (Alt/Alternativ).
-- **Aktiv:** `/3rd_rw/UI` (PIXI) + `/3rd_rw/appdata/launcher` (Daten). Die `launcher`/`VIDAAU2Launcher`-HTML/JS sind Alt-/Alternativ-Skins; Änderungen dort nur testen, wenn die UI sie lädt (`UNVERIFIED`).
+- Icons: `res/*.png`; `cache/index.json`; `Image`/`IconURL`/`Thumb`/`Icon_96`; `useDefaultImg` as fallback.
+- Skin/assets: `/3rd_rw/UI/assets`, `/3rd_rw/UI/templates`, `/3rd_rw/UI/module`, `/3rd_rw/launcher/{css,img,html,js}`, `/3rd_rw/VIDAAU2Launcher/*` (legacy/alternative).
+- **Active:** `/3rd_rw/UI` (PIXI) + `/3rd_rw/appdata/launcher` (data). The `launcher`/`VIDAAU2Launcher` HTML/JS are legacy/alternative skins; only test changes there if the UI loads them (`UNVERIFIED`).
 
-### C.4 Test / Rollback
+### C.4 Test / rollback
 
-- Backup der `Appinfo`/`preset`/`deleted`/`Category*`/`res`.
-- UI neu starten; Tiles prüfen; bei Problemen Backup zurück, UI neu starten/reboot.
-- Die `deletedPresetApp.txt` ist der sicherste Hide-Hebel (kein XML-Eingriff).
+- Backup of `Appinfo`/`preset`/`deleted`/`Category*`/`res`.
+- Restart the UI; check the tiles; on problems restore the backup, restart the UI/reboot.
+- The `deletedPresetApp.txt` is the safest hide lever (no XML intervention).
 
 ---
 
-## Route D — Eigener Service / eigene Funktion (root)
+## Route D — Own service / own function (root)
 
-**Ziel:** Ein eigener Prozess/Skript läuft als root beim Boot oder auf Kommando; native Aktionen, die JS nicht kann.
+**Goal:** An own process/script runs as root at boot or on command; native actions that JS cannot do.
 
-### D.1 Früher Hook: `/3rd_rw/developer.sh`
+### D.1 Early hook: `/3rd_rw/developer.sh`
 
-Wird von `/basic/autorun.sh` Zeile 90 als root ausgeführt — **vor** `ms_service`/`hisenseUI`/`app_man`/`delayrun`.
+Executed by `/basic/autorun.sh` line 90 as root — **before** `ms_service`/`hisenseUI`/`app_man`/`delayrun`.
 
-Vorlage: `templates/developer.sh`.
+Template: `templates/developer.sh`.
 
 ```sh
 #!/bin/sh
@@ -305,35 +305,35 @@ export PATH
 exec >>/3rd_rw/developer.log 2>&1
 echo "developer.sh $(date) boot=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)"
 
-# Beispiel 1: eigenen Dienst starten
+# example 1: start your own service
 # /3rd_rw/bin/mydaemon &
 
-# Beispiel 2: ro-Datei per Bind-Mount ersetzen (vor app_man)
+# example 2: replace a ro file via bind mount (before app_man)
 # mount --bind /3rd_rw/etc/am_start.ini /basic/am_start.ini
 # mount --bind /3rd_rw/etc/am_config    /basic/am_config
 
-# Beispiel 3: unerwünschten Dienst stubben (vor autorun-Zeile 162)
+# example 3: stub out an unwanted service (before autorun line 162)
 # mkdir -p /3rd_rw/stubs
 # printf '#!/bin/sh\nexit 0\n' > /3rd_rw/stubs/true
 # chmod 755 /3rd_rw/stubs/true
 # mount --bind /3rd_rw/stubs/true /3rd/ms-screen/ms_service
 
-# Beispiel 4: custom UI starten (vor autorun-Zeile 168)
+# example 4: start the custom UI (before autorun line 168)
 # mount --bind /3rd_rw/patch/start-UI-custom.sh /3rd/opera4x/hisenseUI/start-UI.sh
 
-# Beispiel 5: Root-Loop/SSH früher starten (statt HamService-Wrapper)
+# example 5: start the root loop/SSH earlier (instead of the HamService wrapper)
 # /bin/sh /3rd_rw/appdata/root_loop.sh &
 # /bin/sh /3rd_rw/sshd/start_sshd.sh &
 ```
 
-- **Reihenfolge:** `developer.sh` (90) → `ms_service` (162) → `hisenseUI` (168) → `app_man` (177) → `delayrun` (190).
-- **Bind-Mounts** von ro-Dateien in `developer.sh` wirken für die späteren Zeilen.
+- **Order:** `developer.sh` (90) → `ms_service` (162) → `hisenseUI` (168) → `app_man` (177) → `delayrun` (190).
+- **Bind mounts** of ro files in `developer.sh` take effect for the later lines.
 - **Log:** `/3rd_rw/developer.log`; `set -x` optional.
-- **Fallback:** SSH/Root-Loop; wenn `developer.sh` die UI/AM blockiert, per SSH korrigieren/entfernen, reboot.
+- **Fallback:** SSH/root loop; if `developer.sh` blocks the UI/AM, correct/remove it via SSH, reboot.
 
-### D.2 Später Hook: `HamService`-Wrapper (aktuell für SSH/Root-Loop)
+### D.2 Late hook: `HamService` wrapper (currently for SSH/root loop)
 
-`/3rd_rw/hamservice/HamService` (Wrapper; `startHam.sh` ruft ihn nach `delayrun` + 15 s):
+`/3rd_rw/hamservice/HamService` (wrapper; `startHam.sh` calls it after `delayrun` + 15 s):
 
 ```sh
 #!/bin/sh
@@ -344,103 +344,103 @@ export PATH
 exec /3rd/hamservice/HamService "$@"
 ```
 
-- **Aktuelle Persistenz:** Root-Loop + Dropbear. Das echte `HamService` läuft weiter.
-- **ACR abschalten:** `exec /3rd/hamservice/HamService "$@"` durch `exit 0` ersetzen (Root-Loop/SSH bleiben); oder ACR im HamService-Config deaktivieren (UNVERIFIED).
-- **Eigene späte Services:** vor dem `exec` starten (z. B. `/3rd_rw/bin/mydaemon &`).
+- **Current persistence:** root loop + Dropbear. The real `HamService` keeps running.
+- **Disabling ACR:** replace `exec /3rd/hamservice/HamService "$@"` with `exit 0` (root loop/SSH remain); or disable ACR in the HamService config (UNVERIFIED).
+- **Own late services:** start them before the `exec` (e.g. `/3rd_rw/bin/mydaemon &`).
 - **Rollback:** `rm /3rd_rw/hamservice/HamService; ln -s /3rd/hamservice/HamService /3rd_rw/hamservice/HamService`.
 
-### D.3 Kommando-Kanal (root_loop)
+### D.3 Command channel (root_loop)
 
-- `/3rd_rw/appdata/root_loop.sh` liest `root_cmd.sh`, schreibt `root_out.txt`.
-- Auf dem TV: `HiBrowser.File.write("root_cmd.sh", "…\n", 1)`; `fileXHR("file:///3rd_rw/appdata/root_out.txt")`.
-- Host-Snippet: `../root/scripts/host/run_root_cmd.js`.
-- **Root-equivalent:** nur vertrauenswürdige Schreiber (Browser root) zulassen.
+- `/3rd_rw/appdata/root_loop.sh` reads `root_cmd.sh`, writes `root_out.txt`.
+- On the TV: `HiBrowser.File.write("root_cmd.sh", "…\n", 1)`; `fileXHR("file:///3rd_rw/appdata/root_out.txt")`.
+- Host snippet: `../root/scripts/host/run_root_cmd.js`.
+- **Root-equivalent:** allow only trusted writers (browser root).
 
-### D.4 Native App/Funktion über AM (`:am`)
+### D.4 Native app/function via AM (`:am`)
 
-- `HiBrowser.System.startApp(":am,<app>,:start=<val>")` im Web-Browser (belegt).
-- `:am,<app>,:URL=<url>` (aus `app_man`-Strings); `:stop`, `:backgm`, `:foregm`, `:pause`, `:resume`, `:shutdown`, `:suspend`, `:wakeup`.
-- **Neue native App** braucht einen `am_config`-Eintrag (`exec`/`args`) — ro; per `developer.sh`-Bind-Mount einer modifizierten `am_config` (vor `app_man`). Oder ein eigener Service über `developer.sh`/`HamService` (kein AM nötig).
-- **`Hisense_StartApp`** in der UI: Signatur/Verhalten im UI-DevTools prüfen (`UNVERIFIED`).
+- `HiBrowser.System.startApp(":am,<app>,:start=<val>")` in the web browser (evidenced).
+- `:am,<app>,:URL=<url>` (from the `app_man` strings); `:stop`, `:backgm`, `:foregm`, `:pause`, `:resume`, `:shutdown`, `:suspend`, `:wakeup`.
+- **A new native app** needs an `am_config` entry (`exec`/`args`) — ro; via a `developer.sh` bind mount of a modified `am_config` (before `app_man`). Or an own service via `developer.sh`/`HamService` (no AM needed).
+- **`Hisense_StartApp`** in the UI: check signature/behavior in the UI DevTools (`UNVERIFIED`).
 
 ### D.5 Native UI (DirectFB/GLES) — optional
 
-- `libdirectfb.so`/`/basic/lib`, Mali/GLES; die UI nutzt GLES, der Web-Browser DirectFB.
-- Ein eigener nativer UI-Prozess ist möglich, aber aufwendig; die Web-UI-Route (B) ist der pragmatische Weg.
-- `dtv_svc`/`libdtv`/`app_man` für TV-Funktionen; `libhspdk-jsx`/`HiBrowser` für die JS-Brücke.
+- `libdirectfb.so`/`/basic/lib`, Mali/GLES; the UI uses GLES, the web browser DirectFB.
+- An own native UI process is possible but laborious; the web UI route (B) is the pragmatic path.
+- `dtv_svc`/`libdtv`/`app_man` for TV functions; `libhspdk-jsx`/`HiBrowser` for the JS bridge.
 
 ---
 
-## Route E — Ro-Dateien patchen (Bind-Mount/Overlay)
+## Route E — Patch ro files (bind mount/overlay)
 
-**Ziel:** `/basic/am_config`, `am_start.ini`, `delayrun.sh`, `ms_service`, `start-UI.sh`, `/3rd/...`-Dateien ersetzen, ohne den ro Rootfs/`/3rd` zu flashen.
+**Goal:** Replace `/basic/am_config`, `am_start.ini`, `delayrun.sh`, `ms_service`, `start-UI.sh`, `/3rd/...` files without flashing the ro rootfs/`/3rd`.
 
-### E.1 Datei-Bind-Mount (empfohlen)
+### E.1 File bind mount (recommended)
 
 ```sh
-# Kopie + Änderung in /3rd_rw
+# copy + change in /3rd_rw
 cp /basic/am_start.ini /3rd_rw/etc/am_start.ini
-vi /3rd_rw/etc/am_start.ini         # oder per File.write
-# in developer.sh (vor app_man):
+vi /3rd_rw/etc/am_start.ini         # or via File.write
+# in developer.sh (before app_man):
 mount --bind /3rd_rw/etc/am_start.ini /basic/am_start.ini
 ```
 
-- **Wirkt nur, wenn der Mount vor dem Lesen/Ausführen passiert:** `developer.sh` (Zeile 90) ist vor `ms_service`/UI/`app_man`/`delayrun`.
-- **Reboot-fest:** `developer.sh` führt den Mount bei jedem Boot aus.
-- **Rollback:** `umount /basic/am_start.ini` (oder reboot); Original bleibt unangetastet.
-- **Für `ms_service`/`start-UI.sh`/`app_man`:** Stub-Skript (`#!/bin/sh\nexit 0`) per `mount --bind` über die Binärdatei; der `-x`-Check läuft danach ins Leere.
-- **Achtung:** `mount --bind` auf eine Datei benötigt das Ziel; die ro-Datei existiert. Kein Overlay nötig.
+- **Only takes effect if the mount happens before the read/execute:** `developer.sh` (line 90) is before `ms_service`/UI/`app_man`/`delayrun`.
+- **Survives reboots:** `developer.sh` performs the mount on every boot.
+- **Rollback:** `umount /basic/am_start.ini` (or reboot); the original stays untouched.
+- **For `ms_service`/`start-UI.sh`/`app_man`:** stub script (`#!/bin/sh\nexit 0`) via `mount --bind` over the binary; the `-x` check then goes nowhere.
+- **Caution:** `mount --bind` onto a file requires the target; the ro file exists. No overlay needed.
 
 ### E.2 `patch/opera4x` (full overlay)
 
-- `autorun.sh` bindet `/3rd_rw/patch/opera4x` **als Ganzes** über `/3rd/opera4x`.
-- Nur mit vollständiger Kopie (`cp -a /3rd/opera4x/. /3rd_rw/patch/opera4x/`) oder Symlink-Baum; sonst fehlen Browser/UI-Dateien.
-- Für einzelne Dateien: E.1 (Datei-Bind) statt full overlay.
+- `autorun.sh` binds `/3rd_rw/patch/opera4x` **as a whole** over `/3rd/opera4x`.
+- Only with a complete copy (`cp -a /3rd/opera4x/. /3rd_rw/patch/opera4x/`) or symlink tree; otherwise browser/UI files are missing.
+- For individual files: E.1 (file bind) instead of a full overlay.
 - **Rollback:** `rm -rf /3rd_rw/patch/opera4x` + reboot.
 
-### E.3 `am_config`/`am_start.ini` (Bloat)
+### E.3 `am_config`/`am_start.ini` (bloat)
 
-- Kopie nach `/3rd_rw/etc/`, Sektionen entfernen/ändern, per `developer.sh` binden.
-- **Vor** `app_man` (Zeile 177); `developer.sh` (90).
-- **Risiko:** `dtv_app_mtk`/`app_man` nicht entfernen (TV/Apps). `netflix`/`dialserver`/`samba`/`browser_base`/`securetime` optional (siehe `05`).
+- Copy to `/3rd_rw/etc/`, remove/change sections, bind via `developer.sh`.
+- **Before** `app_man` (line 177); `developer.sh` (90).
+- **Risk:** do not remove `dtv_app_mtk`/`app_man` (TV/apps). `netflix`/`dialserver`/`samba`/`browser_base`/`securetime` optional (see `05`).
 
 ### E.4 `delayrun.sh`
 
-- Kopie nach `/3rd_rw/etc/delayrun.sh`; unerwünschte Zeilen entfernen; per `developer.sh` über `/basic/delayrun.sh` binden.
-- **Vor** `autorun` Zeile 190; `developer.sh` (90).
-- **Risiko:** `LauncherService` (UI-Daten) und `HamService` (unsere Persistenz) behalten; `swrc`/`runlog`/`Seriallog` optional.
+- Copy to `/3rd_rw/etc/delayrun.sh`; remove unwanted lines; bind over `/basic/delayrun.sh` via `developer.sh`.
+- **Before** `autorun` line 190; `developer.sh` (90).
+- **Risk:** keep `LauncherService` (UI data) and `HamService` (our persistence); `swrc`/`runlog`/`Seriallog` optional.
 
 ---
 
-## Route F — Statische Tools / Deploy / SSH
+## Route F — Static tools / deploy / SSH
 
-- **Kein Package Manager** (siehe `06`): statische ARM-Binaries bauen, nach `/3rd_rw/bin` legen, chmod +x.
-- **Deploy:** `File.download` (HTTP → appdata), SSH (`ssh root@… 'cat > /3rd_rw/bin/x' < x` / `base64`), USB-Symlink, `tar`.
-- **`scp`/`sftp`:** Dropbear allein hat keinen sftp-server. Der finale Ordner
-  enthält einen statischen OpenSSH-9.9p1-sftp-server + gepatchten Dropbear;
-  Installation: `../root/scripts/host/install_sftp.sh` (testet Port 2222, dann
-  Tausch auf 22). Danach:
+- **No package manager** (see `06`): build static ARM binaries, put them in `/3rd_rw/bin`, chmod +x.
+- **Deploy:** `File.download` (HTTP → appdata), SSH (`ssh root@… 'cat > /3rd_rw/bin/x' < x` / `base64`), USB symlink, `tar`.
+- **`scp`/`sftp`:** Dropbear alone has no sftp-server. The final folder
+  contains a static OpenSSH 9.9p1 sftp-server + patched Dropbear;
+  installation: `../root/scripts/host/install_sftp.sh` (tests port 2222, then
+  switches to 22). After that:
   ```bash
   sftp root@192.0.2.94
-  # put -r /lokaler/UI-Ordner /3rd_rw/
+  # put -r /local/UI-folder /3rd_rw/
   # get /3rd_rw/UI/index.html
   ```
-  Modernes `scp` (OpenSSH 9+) nutzt ebenfalls SFTP und funktioniert dann.
-  **Vor UI-Uploads:** Backup `/3rd_rw/backup/UI...`; nach dem Upload UI neu
-  starten (siehe Route B). SFTP ist root-equivalent, key-only, LAN.
-- **SSH:** siehe `../root/ROOT-GUIDE.md`; key-only, PTY via devpts-Workaround.
-- **Root-Loop:** der bequemste Deploy-Kanal für kleine Dateien/Kommandos (siehe D.3).
+  Modern `scp` (OpenSSH 9+) also uses SFTP and then works.
+  **Before UI uploads:** backup `/3rd_rw/backup/UI...`; after the upload restart
+  the UI (see route B). SFTP is root-equivalent, key-only, LAN.
+- **SSH:** see `../root/ROOT-GUIDE.md`; key-only, PTY via devpts workaround.
+- **Root loop:** the most convenient deploy channel for small files/commands (see D.3).
 
 ---
 
-## Test- und Rollback-Plan
+## Test and rollback plan
 
-1. **Backup:** `/3rd_rw/backup/<datum>/` für jede geänderte Datei (`UI/index.html`, `Appinfo.json`, `deletedPresetApp.txt`, `preset.txt`, `Category*.xml`, `am_config`, `am_start.ini`, `delayrun.sh`, `HamService`-Wrapper).
-2. **Eine Änderung:** nicht UI + AM + Bloat gleichzeitig.
-3. **Test:** UI neu starten; SSH/Recon offen halten; `log`/DevTools prüfen.
-4. **Rollback:** Backup zurück; `umount` der Bind-Mounts; UI/AM neu starten; notfalls reboot.
-5. **Kein Flash:** alle Änderungen in `/3rd_rw`/`/data`/`/perm`/Bind-Mounts; der ro Rootfs/`/3rd` bleibt unangetastet.
-6. **SSH/Root-Loop:** nie aussperren; vor UI-/AM-Änderungen testen, dass SSH noch geht.
+1. **Backup:** `/3rd_rw/backup/<date>/` for every changed file (`UI/index.html`, `Appinfo.json`, `deletedPresetApp.txt`, `preset.txt`, `Category*.xml`, `am_config`, `am_start.ini`, `delayrun.sh`, `HamService` wrapper).
+2. **One change:** not UI + AM + bloat at the same time.
+3. **Test:** restart the UI; keep SSH/recon open; check `log`/DevTools.
+4. **Rollback:** restore the backup; `umount` the bind mounts; restart UI/AM; reboot if necessary.
+5. **No flash:** all changes in `/3rd_rw`/`/data`/`/perm`/bind mounts; the ro rootfs/`/3rd` stays untouched.
+6. **SSH/root loop:** never lock yourself out; before UI/AM changes, test that SSH still works.
 
 ---
 
@@ -453,4 +453,4 @@ mount --bind /3rd_rw/etc/am_start.ini /basic/am_start.ini
 - `templates/start-UI-custom.sh`
 - `templates/README.md`
 
-**Dead Ends / verworfene Wege:** `../dead-ends.md`.
+**Dead ends / abandoned paths:** `../dead-ends.md`.

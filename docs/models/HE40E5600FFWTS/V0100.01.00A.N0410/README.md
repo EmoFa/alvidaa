@@ -239,7 +239,7 @@ the size and hash before going on; do not reboot on an unverified write.
 **Correction to older wording:** the shadow library is loaded when
 `hisense_browser` **next starts**. The browser is *not* started at boot — it is
 launched on demand when the TV browser tile is opened
-(`source/modding/02-boot.md:177`). A reboot alone therefore does not execute the
+(`source/modding/02-boot.md`). A reboot alone therefore does not execute the
 payload.
 
 Recorded procedure: reboot the TV, then **open the TV browser once**. That

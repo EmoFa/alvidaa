@@ -1,10 +1,10 @@
-# 02 — Boot: vom U-Boot bis UI/AM/Services
+# 02 — Boot: from U-Boot to UI/AM/Services
 
-**Status:** Boot-Kette, Skripte, Zeilennummern und Service-Reihenfolge **CONFIRMED** aus `/etc`, `/basic`, `/3rd` (live/static). Einzelne Bootloader-/Hardware-Details `UNVERIFIED`.
+**Status:** boot chain, scripts, line numbers and service order **CONFIRMED** from `/etc`, `/basic`, `/3rd` (live/static). Individual bootloader/hardware details `UNVERIFIED`.
 
 ---
 
-## 1. Boot-Reihenfolge (Überblick)
+## 1. Boot order (overview)
 
 ```text
 U-Boot (eMMC)
@@ -19,7 +19,7 @@ U-Boot (eMMC)
             → insmod /basic/fusion.ko
             → /etc/scripts/hisense_rc.sh (mount_userdata.sh async)
             → /basic/autorun.sh
-              → OTA-Check, Wireless, /3rd_rw/developer.sh (Zeile 90)
+              → OTA check, wireless, /3rd_rw/developer.sh (line 90)
               → preload_opera, core-dump, ms_service (162)
               → hisenseUI/start-UI.sh (168)
               → app_man -c am_config -s am_start.ini (177)
@@ -29,23 +29,23 @@ U-Boot (eMMC)
               → usb_console.sh, Bluetooth
 ```
 
-**Wichtig:** `/3rd_rw/developer.sh` läuft **früh** (Zeile 90) — **vor** `ms_service`, `hisenseUI`, `app_man` und `delayrun`. Das ist der beste Hook für frühe Bind-Mounts/Stubs/custom Services. Der `HamService`-Wrapper läuft **spät** (nach `delayrun` + 15 s) und ist der aktuelle SSH/Root-Loop-Boot-Hook.
+**Important:** `/3rd_rw/developer.sh` runs **early** (line 90) — **before** `ms_service`, `hisenseUI`, `app_man` and `delayrun`. That is the best hook for early bind mounts/stubs/custom services. The `HamService` wrapper runs **late** (after `delayrun` + 15 s) and is the current SSH/root loop boot hook.
 
 ---
 
-## 2. U-Boot / Kernel / Partitionen
+## 2. U-Boot / Kernel / Partitions
 
-- **Bootmedium:** eMMC, MediaTek `mt53xx-emmc`.
-- **A/B-Slots:** `ubootA/B`, `kernelA/B`, `rootfsA/B`; root ist `/dev/mmcblk0p9` (rootfsA).
-- **Rootfs:** squashfs **ro** (38.8 MB, 100 %); `/3rd` ist `dm-3` squashfs ro (141 MB, 100 %).
-- **Kernel-Cmdline** (Auszug):
+- **Boot medium:** eMMC, MediaTek `mt53xx-emmc`.
+- **A/B slots:** `ubootA/B`, `kernelA/B`, `rootfsA/B`; root is `/dev/mmcblk0p9` (rootfsA).
+- **Rootfs:** squashfs **ro** (38.8 MB, 100 %); `/3rd` is `dm-3` squashfs ro (141 MB, 100 %).
+- **Kernel cmdline** (excerpt):
   ```
   rootwait rootfstype=squashfs ro console=ttyMT0,115200n1 vmalloc=512mb quiet
   mtdparts=mt53xx-emmc:... root=/dev/mmcblk0p9 ... adb_enable=0
   ```
-- **U-Boot-Env:** `fw_printenv` → **„Bad CRC, using default environment“**; Default ist NFS (`bootcmd=bootp...`). Die **echte** Boot-Konfiguration ist die `/proc/cmdline`; das gespeicherte U-Boot-Env ist nicht verlässlich.
-- **Seriell:** `ttyMT0` 115200 (getty); `rootlogin.sh` = USB-Key + doppelt-MD5-PIN (Hardware-Root). **Nicht nötig** für den Software-Root.
-- **ADB:** `adb_enable=0`; kein ADB.
+- **U-Boot env:** `fw_printenv` → **"Bad CRC, using default environment"**; the default is NFS (`bootcmd=bootp...`). The **real** boot configuration is `/proc/cmdline`; the stored U-Boot env is not reliable.
+- **Serial:** `ttyMT0` 115200 (getty); `rootlogin.sh` = USB key + double-MD5 PIN (hardware root). **Not needed** for the software root.
+- **ADB:** `adb_enable=0`; no ADB.
 
 ---
 
@@ -69,11 +69,11 @@ source /etc/profile
 [ -x /etc/rc.d/rc.local ] && /etc/rc.d/rc.local
 ```
 
-### `/etc/rc.d/rc.local` (Auszug)
+### `/etc/rc.d/rc.local` (excerpt)
 
 ```sh
 echo "rc.local begin" > /proc/boottime
-# /dev/shm/shm_tmp (Basis für /tmp)
+# /dev/shm/shm_tmp (basis for /tmp)
 sh /etc/rc.d/rc.local.partial &
 sh /etc/scripts/mount_main.sh
 sh /etc/scripts/mount_data.sh
@@ -87,32 +87,32 @@ sh /etc/scripts/hisense_rc.sh          # mount_userdata.sh async
 # ms_service, hisenseUI/start-UI.sh, app_man, delayrun
 ```
 
-- **`/proc/boottime`** wird an mehreren Stellen geschrieben (Boot-Timing).
-- **`file_upgrading`** in `/proc/cmdline` triggert `checker.sh` + `mount_perm`/`mount_3rd`/`mount_3rd_ro`; nicht der normale Boot.
-- **`/basic/3rd_ini/*/global_env_setup.ini`** setzt `LD_LIBRARY_PATH`/Env für die 3rd-Services.
-- **`fusion.ko`** ist das MediaTek-AM-/App-Framework-Modul; `dtv_driver*.ko` für den Tuner/DTV.
-- **`/3rd_rw/patch/opera4x`**: Vendor-Overlay — wenn das Verzeichnis existiert, wird es **als Ganzes** über `/3rd/opera4x` gebindet (`mount -o bind`). Siehe Abschnitt 7.
-- **`/3rd_rw/developer.sh`**: früher Root-Hook (siehe Abschnitt 6).
+- **`/proc/boottime`** is written from several places (boot timing).
+- **`file_upgrading`** in `/proc/cmdline` triggers `checker.sh` + `mount_perm`/`mount_3rd`/`mount_3rd_ro`; not the normal boot.
+- **`/basic/3rd_ini/*/global_env_setup.ini`** sets `LD_LIBRARY_PATH`/env for the 3rd-party services.
+- **`fusion.ko`** is the MediaTek AM/app framework module; `dtv_driver*.ko` for the tuner/DTV.
+- **`/3rd_rw/patch/opera4x`**: vendor overlay — if the directory exists, it is bind-mounted **as a whole** over `/3rd/opera4x` (`mount -o bind`). See section 7.
+- **`/3rd_rw/developer.sh`**: early root hook (see section 6).
 
 ---
 
-## 4. `/basic/autorun.sh` — die Service-Zentrale
+## 4. `/basic/autorun.sh` — the service hub
 
-Reihenfolge (Zeilennummern aus der Datei):
+Order (line numbers from the file):
 
-| Zeile | Aktion |
+| Line | Action |
 |---:|---|
-| 1–~60 | Header, OTA-Strategie (`ota_upgrade_strategy.sh`), Wireless-Datei, Developer-Hook |
+| 1–~60 | Header, OTA strategy (`ota_upgrade_strategy.sh`), wireless file, developer hook |
 | **90–92** | **`if [ -f /3rd_rw/developer.sh ]; then sh /3rd_rw/developer.sh; fi`** |
-| ~128 | `preload_opera.sh` (Opera-Libs) |
-| ~137 | Core-Dump-Setup (optional) |
-| ~162 | **`ms_service`** starten (`/3rd/ms-screen/ms_service &`) |
-| **168** | **`hisenseUI/start-UI.sh &`** (TV-UI, `/3rd_rw/UI/index.html`) |
+| ~128 | `preload_opera.sh` (Opera libs) |
+| ~137 | Core dump setup (optional) |
+| ~162 | Start **`ms_service`** (`/3rd/ms-screen/ms_service &`) |
+| **168** | **`hisenseUI/start-UI.sh &`** (TV UI, `/3rd_rw/UI/index.html`) |
 | **177** | **`/basic/app_man -c /basic/am_config -s /basic/am_start.ini -input_fifo &`** |
 | **190** | **`sh /basic/delayrun.sh &`** |
-| danach | `usb_console.sh`, Bluetooth-Service |
+| after that | `usb_console.sh`, Bluetooth service |
 
-**Wichtig:** Der `developer.sh`-Hook ist **vor** `ms_service`/`hisenseUI`/`app_man`/`delayrun`. Damit lassen sich ro-Dateien (z. B. `/basic/am_config`, `/basic/am_start.ini`, `/basic/delayrun.sh`, `/3rd/ms-screen/ms_service`, `/3rd/opera4x/hisenseUI/start-UI.sh`) per **Datei-Bind-Mount** oder Stub ersetzen, **bevor** sie gelesen/ausgeführt werden.
+**Important:** the `developer.sh` hook is **before** `ms_service`/`hisenseUI`/`app_man`/`delayrun`. This allows ro files (e.g. `/basic/am_config`, `/basic/am_start.ini`, `/basic/delayrun.sh`, `/3rd/ms-screen/ms_service`, `/3rd/opera4x/hisenseUI/start-UI.sh`) to be replaced via **file bind mount** or stub **before** they are read/executed.
 
 ---
 
@@ -125,11 +125,11 @@ cd /basic
 /basic/app_man -c /basic/am_config -s /basic/am_start.ini -input_fifo &
 ```
 
-- **AM** = MediaTek App Manager. Startet native Apps/Services aus `am_start.ini`/`am_config`.
-- Steuerung: `:am,<app>,:<verb>=<val>`; Verbs u. a. `start`, `stop`, `pause`, `resume`, `URL`, `backgm`, `foregm`, `shutdown`, `suspend`, `wakeup`; `:am,am,...` für den Manager.
-- **Kein `exec`/`args` über AM** (nur die konfigurierten `exec`/`args`).
+- **AM** = MediaTek App Manager. Starts native apps/services from `am_start.ini`/`am_config`.
+- Control: `:am,<app>,:<verb>=<val>`; verbs include `start`, `stop`, `pause`, `resume`, `URL`, `backgm`, `foregm`, `shutdown`, `suspend`, `wakeup`; `:am,am,...` for the manager.
+- **No `exec`/`args` via AM** (only the configured `exec`/`args`).
 
-### 5.2 `am_start.ini` — Boot-App-Sektionen
+### 5.2 `am_start.ini` — boot app sections
 
 ```ini
 [ application_context ]
@@ -150,33 +150,33 @@ exec = /3rd/netflix/nrd-app/netflix
 ...
 ```
 
-- **`dtv_app_mtk` / `dtv_svc`**: TV-Kern (Tuner/DTV/Navigator); wird zuerst gestartet.
-- **`netflix`**: Netflix-App; `coexist_set` mit `dtv_app_mtk`, `opera4x`, `factory_lite`.
+- **`dtv_app_mtk` / `dtv_svc`**: TV core (tuner/DTV/navigator); started first.
+- **`netflix`**: Netflix app; `coexist_set` with `dtv_app_mtk`, `opera4x`, `factory_lite`.
 - **`dialserver`**: DIAL/CAST.
-- **`samba_relay_agent`**: Samba-Relay (Port 9090).
-- **`browser_base`**: Hintergrund-Browser (`/3rd/internet_browser/browser -x bws_background`), `start_self=true`.
+- **`samba_relay_agent`**: Samba relay (port 9090).
+- **`browser_base`**: background browser (`/3rd/internet_browser/browser -x bws_background`), `start_self=true`.
 - **`securetime`**: PlayReady Secure Time (`/3rd/playready/securetime`).
 
-### 5.3 `am_config` — App-Definitionen (Auszug)
+### 5.3 `am_config` — app definitions (excerpt)
 
-| App | exec / args | Bemerkung |
+| App | exec / args | Note |
 |---|---|---|
-| `opera4x` | `/3rd/opera4x/browser/run-Browser.sh` | Web-Browser (`hisense_browser`), `start_self=true`, DevTools 9224 |
+| `opera4x` | `/3rd/opera4x/browser/run-Browser.sh` | Web browser (`hisense_browser`), `start_self=true`, DevTools 9224 |
 | `netflix_niab` | `/3rd/netflix/nrd-app/netflix` | Netflix |
-| `opera_browser` | `/3rd/internet_browser/browser -u http://www.google.com ...` | „Internet Browser“-Variante |
+| `opera_browser` | `/3rd/internet_browser/browser -u http://www.google.com ...` | "Internet Browser" variant |
 | `opera_tv_store` | `/3rd/internet_browser/browser -u https://demo.tvstore.opera.com ...` | TV Store |
-| `youtube` | `/3rd/internet_browser/browser -u http://www.youtube.com/tv ...` | YouTube (Web) |
-| `youtube_kids` / `youtube_tv` | `/3rd/cobalt/cobalt ...` | Cobalt-YouTube |
+| `youtube` | `/3rd/internet_browser/browser -u http://www.youtube.com/tv ...` | YouTube (web) |
+| `youtube_kids` / `youtube_tv` | `/3rd/cobalt/cobalt ...` | Cobalt YouTube |
 | `cobalt` | `/3rd/cobalt/cobalt ...` | Cobalt |
 | `amazon_ignition` | `/3rd/amazon/bin/ignition` | Amazon |
-| `factory_lite` | `/3rd/his_factory/factory_lite -qws` | Factory-Menü |
-| `huluplus`, `hotlist`, `generic_osd` | Internet-Browser | Legacy/Store |
-| `vudu` (referenziert) | — | Store/Region |
+| `factory_lite` | `/3rd/his_factory/factory_lite -qws` | Factory menu |
+| `huluplus`, `hotlist`, `generic_osd` | Internet browser | Legacy/store |
+| `vudu` (referenced) | — | Store/region |
 
 - `exec`/`args`; `coexist_set`; `start_self`; `backgm_support`; `keymap`; `timeout_4_stop`; `loosely_exclusive_set`.
-- **Der Web-Browser** (`opera4x`) wird **nicht** beim Boot aus `am_start.ini` gestartet; er wird bei Bedarf (TV-Browser-Tile) über AM gestartet. **Die UI** (`hisenseUI`) startet separat aus `autorun.sh` (Zeile 168).
+- **The web browser** (`opera4x`) is **not** started at boot from `am_start.ini`; it is started on demand (TV browser tile) via AM. **The UI** (`hisenseUI`) starts separately from `autorun.sh` (line 168).
 
-### 5.4 `delayrun.sh` — späte Services (nach 15 s)
+### 5.4 `delayrun.sh` — late services (after 15 s)
 
 ```sh
 sleep 15
@@ -185,37 +185,37 @@ export LD_LIBRARY_PATH=/3rd/loglevel/lib:$LD_LIBRARY_PATH
 /3rd/his_runlog/runlogservice.sh &
 /3rd/launcherservice/startLS.sh &      # LauncherService
 /3rd/Serial_log/Seriallog &
-/3rd/hamservice/startHam.sh &          # HamService (unser Wrapper)
+/3rd/hamservice/startHam.sh &          # HamService (our wrapper)
 mkswap /dev/mmcblk0p34; swapon /dev/mmcblk0p34
 ```
 
-- **`swrc-server`**: Software-Remote-Control-Server.
-- **`runlogservice`**: Logging/Runlog.
-- **`LauncherService`**: Launcher-/App-Daten/UI-Service (`startLS.sh`).
-- **`Seriallog`**: serielles Logging.
-- **`HamService`**: ACR/Hisense-Service; **hier** greift unser Wrapper (`/3rd_rw/hamservice/HamService`), der Root-Loop + Dropbear startet und dann das echte `/3rd/hamservice/HamService` ausführt.
+- **`swrc-server`**: software remote control server.
+- **`runlogservice`**: logging/runlog.
+- **`LauncherService`**: launcher/app data/UI service (`startLS.sh`).
+- **`Seriallog`**: serial logging.
+- **`HamService`**: ACR/Hisense service; **this** is where our wrapper (`/3rd_rw/hamservice/HamService`) hooks in, starting the root loop + Dropbear and then executing the real `/3rd/hamservice/HamService`.
 - **Swap:** `mmcblk0p34` (100M).
 
 ---
 
-## 6. Boot-Hooks (die wichtigen)
+## 6. Boot hooks (the important ones)
 
-| Hook | Zeitpunkt | Was |
+| Hook | Timing | What |
 |---|---|---|
-| **`/3rd_rw/developer.sh`** | **früh** (autorun Zeile 90) | Root; vor `ms_service`/`hisenseUI`/`app_man`/`delayrun`. Bestens für: `mount --bind` von modifizierten `am_start.ini`/`am_config`/`delayrun.sh`, Stubs für `ms_service`/`start-UI.sh`/`app_man`, frühe eigene Services, SSH/Root-Loop. |
-| **`/3rd_rw/hamservice/HamService`** | spät (delayrun + 15 s) | Root; unser Wrapper: `root_loop.sh` + `start_sshd.sh`, dann `exec /3rd/hamservice/HamService`. **Aktuelle SSH/Root-Persistenz.** |
-| **`/3rd_rw/patch/opera4x`** | autorun (vor `preload_opera`/UI) | Vendor-Overlay: `mount -o bind /3rd_rw/patch/opera4x /3rd/opera4x`. **Full overlay** — nur mit vollständigem Baum/Symlinks; für einzelne Dateien lieber Datei-Bind-Mount via `developer.sh`. |
-| **`/3rd_rw/UI`** | UI-Start | Die aktive UI-Seite (`/3rd_rw/UI/index.html`); rw. |
-| **`/3rd_rw/appdata/launcher`** | UI/LauncherService | App-Tiles/Daten (`preset.txt`, `Appinfo.json`, `deletedPresetApp.txt`, `data/Category*.xml`, `res/`). |
-| **`/3rd_rw/sshd`** | via HamService/`start_sshd.sh` | Dropbear, Host-Key, authorized_keys, Startskript. |
-| **`/3rd_rw/appdata/root_loop.sh`** | via HamService/`developer.sh` | Root-Kommandokanal (`root_cmd.sh` → `root_out.txt`). |
-| **`/3rd_rw/patch/opera4x`** | autorun | full `/3rd/opera4x` overlay; siehe oben. |
+| **`/3rd_rw/developer.sh`** | **early** (autorun line 90) | Root; before `ms_service`/`hisenseUI`/`app_man`/`delayrun`. Best suited for: `mount --bind` of modified `am_start.ini`/`am_config`/`delayrun.sh`, stubs for `ms_service`/`start-UI.sh`/`app_man`, early custom services, SSH/root loop. |
+| **`/3rd_rw/hamservice/HamService`** | late (delayrun + 15 s) | Root; our wrapper: `root_loop.sh` + `start_sshd.sh`, then `exec /3rd/hamservice/HamService`. **Current SSH/root persistence.** |
+| **`/3rd_rw/patch/opera4x`** | autorun (before `preload_opera`/UI) | Vendor overlay: `mount -o bind /3rd_rw/patch/opera4x /3rd/opera4x`. **Full overlay** — only with a complete tree/symlinks; for individual files prefer a file bind mount via `developer.sh`. |
+| **`/3rd_rw/UI`** | UI start | The active UI page (`/3rd_rw/UI/index.html`); rw. |
+| **`/3rd_rw/appdata/launcher`** | UI/LauncherService | App tiles/data (`preset.txt`, `Appinfo.json`, `deletedPresetApp.txt`, `data/Category*.xml`, `res/`). |
+| **`/3rd_rw/sshd`** | via HamService/`start_sshd.sh` | Dropbear, host key, authorized_keys, start script. |
+| **`/3rd_rw/appdata/root_loop.sh`** | via HamService/`developer.sh` | Root command channel (`root_cmd.sh` → `root_out.txt`). |
+| **`/3rd_rw/patch/opera4x`** | autorun | full `/3rd/opera4x` overlay; see above. |
 
-**Wichtig:** Die ro-Dateien `/basic/am_config`, `/basic/am_start.ini`, `/basic/delayrun.sh` werden **nach** dem `developer.sh` gelesen/ausgeführt. Ein `mount --bind` in `developer.sh` wirkt daher. Ein Stub über `/3rd/ms-screen/ms_service` oder `/3rd/opera4x/hisenseUI/start-UI.sh` wirkt ebenfalls, weil die `-x`-Checks danach kommen.
+**Important:** the ro files `/basic/am_config`, `/basic/am_start.ini`, `/basic/delayrun.sh` are read/executed **after** `developer.sh`. A `mount --bind` in `developer.sh` therefore takes effect. A stub via `/3rd/ms-screen/ms_service` or `/3rd/opera4x/hisenseUI/start-UI.sh` also works, because the `-x` checks come afterwards.
 
 ---
 
-## 7. `/3rd_rw/patch/opera4x` (Vendor-Overlay)
+## 7. `/3rd_rw/patch/opera4x` (vendor overlay)
 
 In `autorun.sh`:
 
@@ -226,28 +226,28 @@ if [ -d $BROWSER_3RD_RW ]; then
 fi
 ```
 
-- **Full directory bind**: `/3rd/opera4x` wird komplett durch `/3rd_rw/patch/opera4x` ersetzt.
-- **Konsequenz:** Der Patch-Ordner muss die **komplette** `opera4x`-Struktur enthalten (oder ein Symlink-Baum auf `/3rd/opera4x` sein), sonst fehlen Browser/UI/Libs.
-- **Für einzelne Dateien** (z. B. `hisenseUI/start-UI.sh`, `opera_env.sh`) ist ein **Datei-Bind-Mount** in `developer.sh` sicherer:
+- **Full directory bind**: `/3rd/opera4x` is completely replaced by `/3rd_rw/patch/opera4x`.
+- **Consequence:** the patch folder must contain the **complete** `opera4x` structure (or be a symlink tree to `/3rd/opera4x`), otherwise browser/UI/libs are missing.
+- **For individual files** (e.g. `hisenseUI/start-UI.sh`, `opera_env.sh`) a **file bind mount** in `developer.sh` is safer:
   ```sh
   mount --bind /3rd_rw/patch/start-UI-custom.sh /3rd/opera4x/hisenseUI/start-UI.sh
   ```
-- Der Patch-Ordner ist **nicht** vorhanden; er ist ein optionaler Vendor-Hook. Siehe `04-modding.md` Route E.
+- The patch folder is **not** present; it is an optional vendor hook. See `04-modding.md` route E.
 
 ---
 
-## 8. Logs / Verifikation
+## 8. Logs / Verification
 
-- **`/proc/boottime`**: Timing-Marker (`rc.local begin`, `mount_main.sh`, `fusion.ko`, `ms_service` etc.).
-- **`/tmp/am_*`**: AM-Infos (`am_tv_model_name`, `am_tv_version`, `am_start.ini`-Status).
+- **`/proc/boottime`**: timing markers (`rc.local begin`, `mount_main.sh`, `fusion.ko`, `ms_service` etc.).
+- **`/tmp/am_*`**: AM info (`am_tv_model_name`, `am_tv_version`, `am_start.ini` status).
 - **`/tmp/fifo_am_*`, `/tmp/DmrLaunchedStatus.dat`, …**: AM/DIAL.
-- **Hisense Runlog**: `/3rd/his_runlog/runlogservice.sh`, `/3rd_rw/...` (Logs).
+- **Hisense runlog**: `/3rd/his_runlog/runlogservice.sh`, `/3rd_rw/...` (logs).
 - **`Seriallog`**: `/3rd/Serial_log`.
-- **Unser SSH/Deploy**: `/3rd_rw/sshd/dropbear.log`, `/3rd_rw/sshd/mount.log`, `/3rd_rw/appdata/root_out.txt`, `/3rd_rw/appdata/root_loop.log`.
-- **Prozesse:** `ps`, `/proc/<pid>/cmdline`, `/proc/<pid>/status`.
-- **UI:** `hisenseUI` (PID z. B. 589), `hisense_browser` (PID z. B. 1320), `app_man`, `dtv_svc`, `LauncherService`, `HamService`.
+- **Our SSH/deploy**: `/3rd_rw/sshd/dropbear.log`, `/3rd_rw/sshd/mount.log`, `/3rd_rw/appdata/root_out.txt`, `/3rd_rw/appdata/root_loop.log`.
+- **Processes:** `ps`, `/proc/<pid>/cmdline`, `/proc/<pid>/status`.
+- **UI:** `hisenseUI` (PID e.g. 589), `hisense_browser` (PID e.g. 1320), `app_man`, `dtv_svc`, `LauncherService`, `HamService`.
 
-**Health-Check auf dem TV:**
+**Health check on the TV:**
 
 ```sh
 /bin/sh /3rd_rw/appdata/verify.sh
@@ -255,24 +255,24 @@ fi
 
 ---
 
-## 9. Risiken / Grenzen
+## 9. Risks / limits
 
-- **`developer.sh`-Fehler** können `ms_service`/UI/`app_man`/`delayrun` verhindern → TV-UI schwarz, Apps starten nicht. Immer mit `set -x`/Log und Fallback (SSH/Root-Loop, Web-Browser) arbeiten.
-- **`am_config`/`am_start.ini` beschädigen** → native Apps (TV, Netflix, DIAL) starten nicht. Modifizierte Kopien **vorher testen**; `developer.sh`-Bind nur mit Backup; Rollback = Bind lösen/reboot.
-- **`app_man`/`dtv_svc` deaktivieren** → TV/Remote/Apps kaputt; für eine reine Custom-UI riskant. `dtv_svc`/`app_man` lieber behalten.
-- **`/3rd_rw/patch/opera4x` full overlay** → fehlende Dateien = Browser/UI kaputt. Nur mit vollständiger Kopie; besser Datei-Bind.
-- **`ms_service`/`swrc`/`runlog`/`Seriallog`** abschalten ist meist unkritisch, kann aber DLNA/Remote/Logs kosten.
-- **`securetime`** ist PlayReady/DRM; deaktivieren kann DRM/Netflix brechen.
-- **Kein Flash/Recovery:** Der TV hat kein UART angeschlossen; der Root/SSH-Weg und `developer.sh`/HamService-Wrapper sind die Rettungswege. Keine Änderungen am ro Rootfs/`/3rd` ohne vollständiges Verständnis.
+- **`developer.sh` errors** can prevent `ms_service`/UI/`app_man`/`delayrun` → TV UI goes black, apps do not start. Always work with `set -x`/log and a fallback (SSH/root loop, web browser).
+- **Damaging `am_config`/`am_start.ini`** → native apps (TV, Netflix, DIAL) do not start. **Test** modified copies **beforehand**; `developer.sh` bind only with a backup; rollback = release the bind/reboot.
+- **Disabling `app_man`/`dtv_svc`** → TV/remote/apps broken; risky for a pure custom UI. Prefer keeping `dtv_svc`/`app_man`.
+- **`/3rd_rw/patch/opera4x` full overlay** → missing files = broken browser/UI. Only with a complete copy; a file bind is better.
+- **Turning off `ms_service`/`swrc`/`runlog`/`Seriallog`** is mostly uncritical but can cost DLNA/remote/logs.
+- **`securetime`** is PlayReady/DRM; disabling it can break DRM/Netflix.
+- **No flash/recovery:** the TV has no UART connected; the root/SSH route and the `developer.sh`/HamService wrapper are the rescue paths. No changes to the ro rootfs/`/3rd` without full understanding.
 
 ---
 
 ## 10. Unknowns
 
-- Echter U-Boot-Flow/Env (Bad CRC), Secure Boot, Signaturprüfung, A/B-Slot-Auswahl.
-- Voller Inhalt von `checker.sh`, `ota_upgrade_strategy.sh`, `file_upgrading`, `bspatch`/OTA.
-- `dtv_svc`/`app_man`/`am`-Interna, `:am`-Semantik im Detail, `coexist_set`/`backgm`/`keymap`.
-- `LauncherService`-Datenquelle (Store/Foxxum/FCGI), `hisenseUI`-Template-Auswahl.
-- Ob `VIDAAU2Launcher` auf diesem Modell je aktiv ist (die aktive UI ist `/3rd_rw/UI`).
-- `ms_service`/`swrc`/`runlog`/`Seriallog`/`HamService`-Abschaltfolgen.
-- Exakte Service-PIDs/Reihenfolge variieren pro Boot; die Skript-/Zeilen-Reihenfolge ist stabil.
+- Real U-Boot flow/env (Bad CRC), secure boot, signature verification, A/B slot selection.
+- Full content of `checker.sh`, `ota_upgrade_strategy.sh`, `file_upgrading`, `bspatch`/OTA.
+- `dtv_svc`/`app_man`/`am` internals, `:am` semantics in detail, `coexist_set`/`backgm`/`keymap`.
+- `LauncherService` data source (store/Foxxum/FCGI), `hisenseUI` template selection.
+- Whether `VIDAAU2Launcher` is ever active on this model (the active UI is `/3rd_rw/UI`).
+- Consequences of disabling `ms_service`/`swrc`/`runlog`/`Seriallog`/`HamService`.
+- Exact service PIDs/order vary per boot; the script/line order is stable.

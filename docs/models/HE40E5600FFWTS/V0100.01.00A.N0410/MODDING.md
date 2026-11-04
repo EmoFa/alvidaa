@@ -25,8 +25,8 @@ This page separates the system facts (recorded live/static) from the recipes
 | CPU | ARMv7 EABI5, hard-float, VFPv4/NEON, Cortex-A53 | `arm-linux-gnueabihf-gcc -static` |
 | Init | SysV (`inittab` → `rcS` → `rc.local` → `autorun.sh`) | boot hooks are files in writable paths, see below |
 
-Sources: `source/modding/01-system-linux.md:11-18`, `:56-59`, `:67-93`, `:99-114`,
-`:128-169`; `source/modding/06-toolchain-deploy.md:25-33`.
+Sources: `source/modding/01-system-linux.md`, `:56-59`, `:67-93`, `:99-114`,
+`:128-169`; `source/modding/06-toolchain-deploy.md`.
 
 Minimal static build and deploy:
 
@@ -41,7 +41,7 @@ Deploy alternatives: `HiBrowser.File.download` (binary-safe, into the file-API
 whitelist or through the USB symlink bypass), `File.write` (text only; binary
 data returns `EINVAL`), the root command loop, SSH + `base64`/`tar`, USB, and —
 only after the optional SFTP install — `sftp`/`scp`. Source:
-`source/modding/06-toolchain-deploy.md:220-235`.
+`source/modding/06-toolchain-deploy.md`.
 
 ## Boot order and persistence hooks
 
@@ -71,10 +71,10 @@ Also present: `/3rd_rw/patch/opera4x` — if this directory exists, `autorun.sh`
 bind-mounts it **as a whole** over `/3rd/opera4x` before the UI starts. That is
 a full-tree replacement, not a single-file patch; a partial tree breaks the
 browser and UI. For one file, use a file bind mount from `developer.sh`
-instead. Sources: `source/modding/02-boot.md:99-115`, `:201-214`, `:218-235`.
+instead. Sources: `source/modding/02-boot.md`, `:201-214`, `:218-235`.
 
 **Important for the root chain:** the web browser (`opera4x`,
-`hisense_browser`) is **not** started at boot (`source/modding/02-boot.md:177`). The
+`hisense_browser`) is **not** started at boot (`source/modding/02-boot.md`). The
 shadow library from the root chain therefore runs when the browser is opened,
 not during boot. Boot survival of the root loop and SSH comes from the
 `HamService` wrapper.
@@ -129,7 +129,7 @@ cache/index.json           icon cache
 
 `ldi.js` chooses `launcher/data/` when `serviceUpdate` matches the device
 country and timestamp; otherwise it falls back to `/3rd_rw/UI/data/`
-(`source/modding/03-ui.md:137-153`). `preset.txt` is a **cache** and can be
+(`source/modding/03-ui.md`). `preset.txt` is a **cache** and can be
 regenerated — `deletedPresetApp.txt` is the durable hide lever, `Appinfo.json`
 is the durable place for user apps.
 
@@ -139,7 +139,7 @@ Native apps are started by `app_man` (`/basic/app_man -c /basic/am_config -s
 `suspend`, `wakeup`. There is **no** `exec`/`args` injection through AM: only
 the configured command line runs. From the web browser:
 `HiBrowser.System.startApp(":am,opera4x,:start=opera4x")`
-(`source/modding/03-ui.md:249-267`; `source/dead-ends.md:8`).
+(`source/modding/03-ui.md`; `source/dead-ends.md`).
 
 ### Routes and risk
 
@@ -181,13 +181,13 @@ page. Then restart the UI or reboot: `kill $(pidof hisenseUI)` and
 `nohup /3rd/opera4x/hisenseUI/start-UI.sh >/tmp/hisenseUI.log 2>&1 &`.
 Status: **UNVERIFIED** — the mechanics come from the live `Appinfo.json`
 structure, the recipe was not executed end-to-end
-(`source/modding/07-evidence-unknowns.md:79`).
+(`source/modding/07-evidence-unknowns.md`).
 
 Route B, custom UI page: build it as `/3rd_rw/UI/custom.html` first, test it in
 the web browser, then either copy it over `index.html` (after backing up
 `index.html`) or point `start-UI.sh` at it through a file bind mount. Keep a
 backup and expect a black screen on failure; SSH/root-loop still works.
-Status: **UNVERIFIED** (`source/modding/07-evidence-unknowns.md:80`).
+Status: **UNVERIFIED** (`source/modding/07-evidence-unknowns.md`).
 
 Route E, single-file bind mount (the mechanic that is proven for
 `/etc/passwd` and `/dev/pts`):
@@ -206,7 +206,7 @@ written. Status of this specific AM bind: **UNVERIFIED**.
 26 tiles were observed on the reference device, including the lab
 `VidaaRecon` app (`http://<host-ip>:9000/recon.html`). That is a **modified
 device snapshot, not a stock retail list**
-(`source/modding/03-ui.md:155-186`; `source/modding/05-bloat.md:8`, `:39`). Hiding is done by
+(`source/modding/03-ui.md`; `source/modding/05-bloat.md`, `:39`). Hiding is done by
 adding the tile's start command/ID to `deletedPresetApp.txt`; adding a durable
 tile is done through `Appinfo.json`.
 
@@ -214,7 +214,7 @@ tile is done through `Appinfo.json`.
 
 | Area | Status | Basis |
 |---|---|---|
-| Linux/kernel/package manager/storage | recorded live/static | `source/modding/07-evidence-unknowns.md:75` |
+| Linux/kernel/package manager/storage | recorded live/static | `source/modding/07-evidence-unknowns.md` |
 | Boot chain, script lines, service order | recorded live/static | `:76` |
 | UI start, processes, paths, app data, AM | recorded live/static | `:77` |
 | 26 preset tiles / `Appinfo` / `deleted` | recorded live (inventory only) | `:78` |

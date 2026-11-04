@@ -3,9 +3,14 @@
 These are the author's research notes for the HE40E5600FFWTS /
 `V0100.01.00A.N0410` chain, included so the public guide is self-contained.
 
+> **Note:** these notes predate the public packaging. References to binaries,
+> keys or a "self-contained folder" describe the original research tree; this
+> public copy ships the notes only.
+
 They are **sanitized**: device serials, SSH keys, host-key fingerprints,
-example LAN addresses and private workspace paths were removed. The language
-follows the original; most of the HE40 notes were written in German.
+example LAN addresses and private workspace paths were removed. The HE40 notes
+were originally written in German and are included here as English
+translations; commands, paths, hashes and placeholders are preserved.
 
 Relative links inside these archived notes may still point at the original
 research tree and are not part of this repository's navigation. The reviewed

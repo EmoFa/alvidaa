@@ -18,20 +18,20 @@ those notes. No device, binary or shell was used to write this page.
 
 | Property | Recorded value | Basis |
 |---|---|---|
-| Retail model | `HE40E5600FFWTS` | `source/docs/HARDWARE-NOTES.md:14`; `source/modding/01-system-linux.md:3` |
-| Firmware | `V0100.01.00A.N0410` | `source/docs/HARDWARE-NOTES.md:15`; `source/modding/01-system-linux.md:20` |
-| SoC class | MediaTek **MT53xx / MT5863 class** (`mt53xx-emmc`, `mt5863_sa_768_linux`) | `source/docs/HARDWARE-NOTES.md:16`; `source/modding/01-system-linux.md:57` |
-| CPU | ARMv7, Cortex-A53 (`part 0xd03`), NEON/VFPv4, Thumb-2 | `source/modding/01-system-linux.md:48-56` |
-| Kernel | Linux 3.18.25, 32-bit ARM, SMP, PREEMPT; Linaro GCC 4.8.2; build 2023-04-10 | `source/modding/01-system-linux.md:11-18` |
-| libc / userland | glibc 2.18; BusyBox 1.18.5; SysV init (`inittab`/`rcS`/`rc.local`); no systemd | `source/modding/01-system-linux.md:67-93` |
-| Package manager | none (`apt`, `dpkg`, `opkg`, `ipkg`, `rpm`, `apk`, `yum`, `pacman` absent) | `source/modding/01-system-linux.md:99-114` |
-| Storage | squashfs **ro** `/` (38.8 MB) and `/3rd` (141 MB); ext4 **rw** `/3rd_rw`, `/data`, `/perm`; `/spdata` ro; no overlayfs | `source/modding/01-system-linux.md:128-169` |
-| `/dev` | part of the ro squashfs; no devtmpfs; static nodes | `source/modding/01-system-linux.md:165` |
-| UI processes | `hisenseUI` (GLES, DevTools 9223) and `hisense_browser` (DirectFB, DevTools 9224), both root | `source/modding/03-ui.md:9-20` |
+| Retail model | `HE40E5600FFWTS` | `source/docs/HARDWARE-NOTES.md`; `source/modding/01-system-linux.md` |
+| Firmware | `V0100.01.00A.N0410` | `source/docs/HARDWARE-NOTES.md`; `source/modding/01-system-linux.md` |
+| SoC class | MediaTek **MT53xx / MT5863 class** (`mt53xx-emmc`, `mt5863_sa_768_linux`) | `source/docs/HARDWARE-NOTES.md`; `source/modding/01-system-linux.md` |
+| CPU | ARMv7, Cortex-A53 (`part 0xd03`), NEON/VFPv4, Thumb-2 | `source/modding/01-system-linux.md` |
+| Kernel | Linux 3.18.25, 32-bit ARM, SMP, PREEMPT; Linaro GCC 4.8.2; build 2023-04-10 | `source/modding/01-system-linux.md` |
+| libc / userland | glibc 2.18; BusyBox 1.18.5; SysV init (`inittab`/`rcS`/`rc.local`); no systemd | `source/modding/01-system-linux.md` |
+| Package manager | none (`apt`, `dpkg`, `opkg`, `ipkg`, `rpm`, `apk`, `yum`, `pacman` absent) | `source/modding/01-system-linux.md` |
+| Storage | squashfs **ro** `/` (38.8 MB) and `/3rd` (141 MB); ext4 **rw** `/3rd_rw`, `/data`, `/perm`; `/spdata` ro; no overlayfs | `source/modding/01-system-linux.md` |
+| `/dev` | part of the ro squashfs; no devtmpfs; static nodes | `source/modding/01-system-linux.md` |
+| UI processes | `hisenseUI` (GLES, DevTools 9223) and `hisense_browser` (DirectFB, DevTools 9224), both root | `source/modding/03-ui.md` |
 
 Not established: exact SoC part number, exact core count, secure-boot and
-signature state (`source/modding/01-system-linux.md:203`;
-`source/modding/07-evidence-unknowns.md:92`).
+signature state (`source/modding/01-system-linux.md`;
+`source/modding/07-evidence-unknowns.md`).
 
 ## Claim / status matrix
 
@@ -48,27 +48,27 @@ Labels:
 
 | # | Claim | Status | Basis |
 |---|---|---|---|
-| 1 | `hisense_browser` runs as uid/gid 0 with full `CapEff`, single process, no seccomp/`NoNewPrivs` | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md:34` — "`hisense_browser` läuft als UID/GID 0, `CapEff` voll, Single-Process, kein Seccomp"; repeated at `source/modding/03-ui.md:302` |
-| 2 | A dangling ext4 symlink bypasses the file-API whitelist (`realpath` + prefix check) and creates a root-owned file | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md:35`; `source/modding/07-evidence-unknowns.md:12` — "`pwn`/`tvi` dangling; `File.write`/`File.download` legt Root-Datei an; `SYMTEST`" |
-| 3 | The browser writes the payload through that symlink with `HiBrowser.File.download` | CONFIRMED live (recorded) — the planted file is present at the recorded size/hash and is the library the loader later executes | `source/root/ROOT-GUIDE.md:219` (target expression); `:231-232` (33,500 B, SHA-256); `source/modding/07-evidence-unknowns.md:12` (file download creates a root file) |
-| 4 | Planted payload is 33,500 bytes with SHA-256 `37b13f…5b0a` | CONFIRMED live (recorded), byte identity also CONFIRMED host/build | `source/root/ROOT-GUIDE.md:231-232`; `source/modding/07-evidence-unknowns.md:19` — "`build_tvi_payload.py` → exakt `37b13f…` … **CONFIRMED** (Host)" |
-| 5 | `libtvsysinfo.so` is a direct `NEEDED`; `LD_LIBRARY_PATH` index 17 is `/3rd_rw/loglevel/lib`, the first writable slot | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md:36`; `source/dead-ends.md:19` — "nur `libtvsysinfo.so` ist ein direktes `NEEDED` und an Index 17 frei" |
-| 6 | The shadow library is loaded on the **next browser start** | CONFIRMED live (recorded), with a wording correction | `source/root/ROOT-GUIDE.md:36` — "wird beim nächsten Browser-Start geladen"; browser is not in the boot set: `source/modding/02-boot.md:177` |
-| 7 | Appended `DT_INIT` payload: self-unlink, writes `/3rd_rw/root_proof.txt`, forks `root_loop.sh`, calls the original init | Effect CONFIRMED live (recorded); exact ELF edit UNVERIFIED here | `source/root/ROOT-GUIDE.md:37-41`; `:37` describes appended code and extended RX `p_filesz/memsz` |
-| 8 | `DT_INIT` value `0x81c4` | documented only | `source/ORIGINAL-README.md:156` — a documentation claim; no byte was inspected for this page |
-| 9 | Root loop runs as root and reports `uid=0`, `CapEff=0000003fffffffff` | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md:270-284` |
-| 10 | Static Dropbear 2022.83 listens on `0.0.0.0:22`, key-only, public-key login for root works | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md:328`, `:347`, `:531-532`; `source/modding/07-evidence-unknowns.md:15` |
-| 11 | `/etc/passwd` bind mount gives root home `/3rd_rw/sshd/home` and shell `/bin/sh` | CONFIRMED live (recorded) | `source/modding/07-evidence-unknowns.md:17`; `source/root/ROOT-GUIDE.md:324` |
-| 12 | PTY works via devpts on `/dev/shm/pts` bind-mounted over `/dev/pts` | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md:352-354`, `:533`; `source/modding/07-evidence-unknowns.md:16` |
-| 13 | `HamService` wrapper installed: starts root loop + SSH, then `exec`s the real service | CONFIRMED live (recorded) — installation only | `source/root/ROOT-GUIDE.md:409-415`; `source/modding/07-evidence-unknowns.md:18` — "**CONFIRMED installiert**; Reboot-Test im Root-Guide" |
-| 14 | Root loop + SSH survive a reboot | **owner-verified** (2026-11-04) | Owner statement: daily use, several reboots, root Dropbear still live; alvidaa commit `f9dc68d`. The archived record has install + test procedure, not a post-reboot log (`source/root/ROOT-GUIDE.md:6`, `:535`) |
-| 15 | SFTP works on the device | UNVERIFIED | `source/root/ROOT-GUIDE.md:534` — "**TV-Test nach Install**"; `source/modding/07-evidence-unknowns.md:102` — result "steht in … log"; `source/modding/docs/root-guide.md:239` — "built and staged; verify on your own device" |
-| 16 | SFTP host/build: static OpenSSH 9.9p1 sftp-server, patched Dropbear, installer tests 2222 and then swaps 22 | CONFIRMED host/build + documented procedure | `source/root/ROOT-GUIDE.md:369-371`, `:381-384`; `source/modding/06-toolchain-deploy.md:159-190` |
-| 17 | UI / launcher / app-tile / bloat recipes work | UNVERIFIED | `source/modding/07-evidence-unknowns.md:79-81`, `:86`; `source/modding/docs/root-guide.md:240` |
-| 18 | 26 preset tiles were observed, including the lab `VidaaRecon` app | CONFIRMED live inventory, but **not a stock list** | `source/modding/03-ui.md:155-186`; `source/modding/05-bloat.md:8`, `:39` |
-| 19 | Browser generation is Chromium 59.0.3071.115 | recorded; V8 version UNVERIFIED | `source/dead-ends.md:13` vs `source/modding/07-evidence-unknowns.md:113` disagree; see corrections |
-| 20 | No flash, no `.pkg`, no UART, no case opening; ro rootfs untouched | design property of this chain | `source/root/ROOT-GUIDE.md:3`; `:515`; `source/modding/01-system-linux.md:39` |
-| 21 | `id` and `uname` are available as used in the proof | DEAD END / contradicted | `source/modding/01-system-linux.md:78`, `:86` list `id`/`uname` as missing applets; `source/root/ROOT-GUIDE.md:271`, `:281` use them |
+| 1 | `hisense_browser` runs as uid/gid 0 with full `CapEff`, single process, no seccomp/`NoNewPrivs` | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md` — "`hisense_browser` runs as UID/GID 0, full `CapEff`, single process, no seccomp"; repeated at `source/modding/03-ui.md` |
+| 2 | A dangling ext4 symlink bypasses the file-API whitelist (`realpath` + prefix check) and creates a root-owned file | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md`; `source/modding/07-evidence-unknowns.md` — "`pwn`/`tvi` dangling; `File.write`/`File.download` creates a root file; `SYMTEST`" |
+| 3 | The browser writes the payload through that symlink with `HiBrowser.File.download` | CONFIRMED live (recorded) — the planted file is present at the recorded size/hash and is the library the loader later executes | `source/root/ROOT-GUIDE.md` (target expression); `:231-232` (33,500 B, SHA-256); `source/modding/07-evidence-unknowns.md` (file download creates a root file) |
+| 4 | Planted payload is 33,500 bytes with SHA-256 `37b13f…5b0a` | CONFIRMED live (recorded), byte identity also CONFIRMED host/build | `source/root/ROOT-GUIDE.md`; `source/modding/07-evidence-unknowns.md` — "`build_tvi_payload.py` → exakt `37b13f…` … **CONFIRMED** (Host)" |
+| 5 | `libtvsysinfo.so` is a direct `NEEDED`; `LD_LIBRARY_PATH` index 17 is `/3rd_rw/loglevel/lib`, the first writable slot | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md`; `source/dead-ends.md` — "only `libtvsysinfo.so` is a direct `NEEDED` and free at index 17" |
+| 6 | The shadow library is loaded on the **next browser start** | CONFIRMED live (recorded), with a wording correction | `source/root/ROOT-GUIDE.md` — "is loaded on the next browser start"; browser is not in the boot set: `source/modding/02-boot.md` |
+| 7 | Appended `DT_INIT` payload: self-unlink, writes `/3rd_rw/root_proof.txt`, forks `root_loop.sh`, calls the original init | Effect CONFIRMED live (recorded); exact ELF edit UNVERIFIED here | `source/root/ROOT-GUIDE.md`; `:37` describes appended code and extended RX `p_filesz/memsz` |
+| 8 | `DT_INIT` value `0x81c4` | documented only | `source/ORIGINAL-README.md` — a documentation claim; no byte was inspected for this page |
+| 9 | Root loop runs as root and reports `uid=0`, `CapEff=0000003fffffffff` | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md` |
+| 10 | Static Dropbear 2022.83 listens on `0.0.0.0:22`, key-only, public-key login for root works | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md`, `:347`, `:531-532`; `source/modding/07-evidence-unknowns.md` |
+| 11 | `/etc/passwd` bind mount gives root home `/3rd_rw/sshd/home` and shell `/bin/sh` | CONFIRMED live (recorded) | `source/modding/07-evidence-unknowns.md`; `source/root/ROOT-GUIDE.md` |
+| 12 | PTY works via devpts on `/dev/shm/pts` bind-mounted over `/dev/pts` | CONFIRMED live (recorded) | `source/root/ROOT-GUIDE.md`, `:533`; `source/modding/07-evidence-unknowns.md` |
+| 13 | `HamService` wrapper installed: starts root loop + SSH, then `exec`s the real service | CONFIRMED live (recorded) — installation only | `source/root/ROOT-GUIDE.md`; `source/modding/07-evidence-unknowns.md` — "**CONFIRMED installed**; reboot test in the root guide" |
+| 14 | Root loop + SSH survive a reboot | **owner-verified** (2026-11-04) | Owner statement: daily use, several reboots, root Dropbear still live; alvidaa commit `f9dc68d`. The archived record has install + test procedure, not a post-reboot log (`source/root/ROOT-GUIDE.md`, `:535`) |
+| 15 | SFTP works on the device | UNVERIFIED | `source/root/ROOT-GUIDE.md` — "**TV test after install**"; `source/modding/07-evidence-unknowns.md` — result "is in … log"; `source/modding/docs/root-guide.md` — "built and staged; verify on your own device" |
+| 16 | SFTP host/build: static OpenSSH 9.9p1 sftp-server, patched Dropbear, installer tests 2222 and then swaps 22 | CONFIRMED host/build + documented procedure | `source/root/ROOT-GUIDE.md`, `:381-384`; `source/modding/06-toolchain-deploy.md` |
+| 17 | UI / launcher / app-tile / bloat recipes work | UNVERIFIED | `source/modding/07-evidence-unknowns.md`, `:86`; `source/modding/docs/root-guide.md` |
+| 18 | 26 preset tiles were observed, including the lab `VidaaRecon` app | CONFIRMED live inventory, but **not a stock list** | `source/modding/03-ui.md`; `source/modding/05-bloat.md`, `:39` |
+| 19 | Browser generation is Chromium 59.0.3071.115 | recorded; V8 version UNVERIFIED | `source/dead-ends.md` vs `source/modding/07-evidence-unknowns.md` disagree; see corrections |
+| 20 | No flash, no `.pkg`, no UART, no case opening; ro rootfs untouched | design property of this chain | `source/root/ROOT-GUIDE.md`; `:515`; `source/modding/01-system-linux.md` |
+| 21 | `id` and `uname` are available as used in the proof | DEAD END / contradicted | `source/modding/01-system-linux.md`, `:86` list `id`/`uname` as missing applets; `source/root/ROOT-GUIDE.md`, `:281` use them |
 
 ## What was actually captured vs. only documented
 
@@ -112,13 +112,13 @@ it must be recreated from your own device.
 | Dropbear source tarball | — | `bc5a121ffbc94b5171ad5ebe01be42746d50aa797c9549a4639894a16749443b` |
 | OpenSSH source tarball | — | `b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02` |
 
-Source of the values: `source/root/ROOT-GUIDE.md:491-500`;
-`source/modding/06-toolchain-deploy.md:70-75`. Hashes identify a build; they are not a
+Source of the values: `source/root/ROOT-GUIDE.md`;
+`source/modding/06-toolchain-deploy.md`. Hashes identify a build; they are not a
 substitute for the binary and they do not prove that your build matches.
 
 Also recorded: the Dropbear build disables password auth at compile time
 (`DROPBEAR_SVR_PASSWORD_AUTH 0`, `DROPBEAR_SVR_PUBKEY_AUTH 1`,
-`DROPBEAR_CLIENT 0`) — `source/modding/06-toolchain-deploy.md:98-100`.
+`DROPBEAR_CLIENT 0`) — `source/modding/06-toolchain-deploy.md`.
 
 ## Sanitization and provenance
 
@@ -147,55 +147,55 @@ These are preserved, not silently resolved. The wording in the public guide is
 given for each.
 
 **C1 — Boot persistence.** The 2026-10-26 record says the wrapper is installed
-and the reboot test is *described*, not passed: `source/root/ROOT-GUIDE.md:6`
-("Boot-Persistenz installiert (Reboot-Test offen)"), `:535` ("eingerichtet;
-Reboot-Test in dieser Doku beschrieben"), `source/ORIGINAL-README.md:11`,
-`source/docs/HARDWARE-NOTES.md:28` ("Confirmed installed; reboot test documented").
-`source/docs/PRIOR-ART.md:95-96` says the chain "provided persistence", which is
+and the reboot test is *described*, not passed: `source/root/ROOT-GUIDE.md`
+("boot persistence installed (reboot test pending)"), `source/ORIGINAL-README.md`
+("set up; reboot test described in this document"),
+`source/docs/HARDWARE-NOTES.md` ("Confirmed installed; reboot test documented").
+`source/docs/PRIOR-ART.md` says the chain "provided persistence", which is
 stronger than any recorded result. The owner reports survival across several
 reboots on 2026-11-04.
 *Public wording:* "installed in the 2026-10-26 record; owner-verified across
 reboots on 2026-11-04". Never "confirmed across reboots by the record".
 
 **C2 — "The browser loads the shadow library at boot".**
-`source/root/ROOT-GUIDE.md:14` and `:253` say the load happens "beim Boot". The same
+`source/root/ROOT-GUIDE.md` says the load happens "at boot". The same
 bundle documents that the web browser is **not** started at boot
-(`source/modding/02-boot.md:177`; `source/modding/03-ui.md:12`).
+(`source/modding/02-boot.md`; `source/modding/03-ui.md`).
 *Public wording:* the payload executes when `hisense_browser` next starts;
 after a reboot, open the TV browser once. Boot persistence of the root loop and
 SSH comes from the `HamService` wrapper and is independent of the browser.
 
-**C3 — `id` / `uname`.** `source/modding/01-system-linux.md:78` says the applets are
+**C3 — `id` / `uname`.** `source/modding/01-system-linux.md` says the applets are
 missing as `/bin/<name>`; `:86` lists them as "not built". Yet the proof
-commands use `id` (`source/root/ROOT-GUIDE.md:271`, `:281`) and `uname`
-(`source/modding/06-toolchain-deploy.md:265`).
+commands use `id` (`source/root/ROOT-GUIDE.md`, `:281`) and `uname`
+(`source/modding/06-toolchain-deploy.md`).
 *Public wording:* the bare applet is not linked; use `/bin/busybox id`, and if
 that is unavailable, read `/proc/self/status`. The contradiction is not
 resolved.
 
-**C4 — V8 version.** `source/dead-ends.md:13` gives "Chromium 59.0.3071.115 / V8
-203.0.113.38"; `source/modding/07-evidence-unknowns.md:113` gives "V8 5.9/Chromium
+**C4 — V8 version.** `source/dead-ends.md` gives "Chromium 59.0.3071.115 / V8
+203.0.113.38"; `source/modding/07-evidence-unknowns.md` gives "V8 5.9/Chromium
 59". The first "version" has the shape of a TEST-NET address and looks like a
 transcription error; neither is verified by a binary inspection.
 *Public wording:* Chromium 59.0.3071.115 is the recorded browser generation; no
 V8 version is asserted. The V8 route was not used.
 
 **C5 — "Self-contained" vs "no binaries shipped".**
-`source/root/ROOT-GUIDE.md:8` calls the folder self-contained, including payload,
-original library and Dropbear binaries. `source/ORIGINAL-README.md:3-6` says the public tree
+`source/root/ROOT-GUIDE.md` calls the folder self-contained, including payload,
+original library and Dropbear binaries. `source/ORIGINAL-README.md` says the public tree
 does not ship the vendor binaries or key material.
 *Public wording:* paths and build scripts are published; every binary and key
 must be recreated from your own device.
 
 **C6 — SFTP wording.** The guide shows `sftp root@…` as the next step
-(`source/root/ROOT-GUIDE.md:24-27`, `:387-389`), while its own status table says the
+(`source/root/ROOT-GUIDE.md`, `:387-389`), while its own status table says the
 TV test is pending (`:534`).
 *Public wording:* SFTP is optional; the installer tests port 2222 and swaps to
 22 only on success; a device-side success is not recorded.
 
 **C7 — "26 preset tiles".** The list is a live snapshot of the reference
 device and includes the lab `VidaaRecon` tile
-(`source/modding/03-ui.md:186`; `source/modding/05-bloat.md:8`, `:39`).
+(`source/modding/03-ui.md`; `source/modding/05-bloat.md`, `:39`).
 *Public wording:* 26 tiles were observed on the reference device, including the
 lab app; this is not a stock retail list.
 
@@ -229,7 +229,7 @@ these two models; the inventory has been corrected to
 
 ## Dead ends (do not repeat)
 
-From `dead-ends.md` and `source/modding/07-evidence-unknowns.md:108-118`:
+From `dead-ends.md` and `source/modding/07-evidence-unknowns.md`:
 
 - Factory "Builtin Video" suffix injection; Factory "Write Keys".
 - AM `startApp` `args`/`exec`/`run` injection; shell-injection attempts were

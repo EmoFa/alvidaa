@@ -38,6 +38,7 @@ Two lanes share one TV:
 | `server/vidaa_server.py` | HTTP + WebSocket + MQTT bridge; `/api/open` loads any URL on the TV; `/api/recon` receives probe reports |
 | `server/pair.py` | the 2024 pairing handshake (cert + dynamic credentials) |
 | `server/tv` | root one-shot/interactive wrapper over dropbear (PATH-fixed) |
+| `bridge/` | on-TV Go daemon: loopback HTTP + WS + local MQTT session (see `bridge/README.md`) |
 | `launcher/recon.html` | the probe page pattern (v1–v8 in git history) |
 | `launcher/hookinstall.html`, `hookcheck.html` | remote hook install/verify |
 | `docs/models/50A51HUV/09.01O.P0813/findings/01…09,11–12` and `docs/research/10-patched-firmware-playbook.md` | canonical record: bridge, privilege map, root primitive, SSH gauntlet, root summary, images, endpoints, patched firmware playbook, firmware notes, cobalt runtime & overlay traps |

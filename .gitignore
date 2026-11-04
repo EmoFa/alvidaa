@@ -10,3 +10,7 @@ __pycache__/
 .DS_Store
 firmware/
 research/
+
+# native bridge build output
+bridge/dist/
+bridge/bridge

@@ -15,10 +15,15 @@
 <script>
 (function () {
   "use strict";
-  // Installs root-hook v11 to /var/local/otaTest.sh (runs as root at boot):
+  // Installs root-hook v12 to /var/local/otaTest.sh (runs as root at boot):
   // fetches tvtools.tar.gz (busybox + static dropbear) from the Pi over
   // bash /dev/tcp, starts telnetd on 2323 and dropbear on 2222 (keys only,
   // authorized_keys on rw /var/local/roothome via dropbear -D).
+  // v12 adds the early alvidaa-bridge start (pidof-guarded retry loop right
+  // after tvrc/tvfw, ~15s boot instead of ~2min), `&& ! pidof` on the late
+  // bridge block so early+late can never double-start, and bridge keepalive
+  // + port 8770 in the watchdog.
+  // Canonical template: tools/otaTest-hook.sh — keep the two in sync.
   // Backs up the existing hook first. Fast: two bridge calls + POST.
 
   var el = document.getElementById("out");
@@ -50,15 +55,26 @@
 
   var HOOK_PATH = "../var/local/otaTest.sh";
 
-  var HOOK_V11 = [
+  var HOOK_V12 = [
     "#!/bin/sh",
     "[ -f /var/local/hook.off ] && exit 0",
-    "# alvidaa root hook v11 — installed " + rep.started,
+    "# alvidaa root hook v12 — installed " + rep.started,
     "# remove: rm -rf /var/local/otaTest.sh /var/local/tvtools /var/local/roothome",
     "exec > /var/local/otaTest.log 2>&1",
     "chmod 644 /var/local/otaTest.log",
     "[ -f /var/local/tvrc ] && . /var/local/tvrc",
     "[ -f /var/local/tvfw ] && . /var/local/tvfw",
+    "# alvidaa bridge v12 early start: loopback MQTT needs no LAN and the bridge",
+    "# retries mosquitto internally, so it comes up ~15s into boot instead of",
+    "# ~2min. Watchdog below and this loop are both pidof-guarded.",
+    "(if [ -f /var/local/alvidaa/alvidaa-bridge ]; then",
+    "  n=0",
+    "  while [ $n -lt 60 ]; do",
+    "    pidof alvidaa-bridge > /dev/null 2>&1 || /var/local/alvidaa/alvidaa-bridge -keys /var/local/alvidaa/keys -assets /var/local/alvidaa/launcher -config /var/local/alvidaa/config.json -addr 0.0.0.0:8770 -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 &",
+    "    pidof alvidaa-bridge > /dev/null 2>&1 && break",
+    "    sleep 2; n=$((n+1))",
+    "  done",
+    "fi) &",
     "date",
     "if [ 1 = 1 ]; then",
     "  n=0",
@@ -95,7 +111,8 @@
     "[ -f /var/local/tvtools/host_ed25519 ] || /var/local/tvtools/dropbearkey -t ed25519 -f /var/local/tvtools/host_ed25519",
     "iptables -C INPUT -p tcp --dport 2222 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2222 -j ACCEPT",
     "iptables -C INPUT -p tcp --dport 2323 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2323 -j ACCEPT",
-    "(i=0; while [ $i -lt 12 ]; do sleep 15; iptables -C INPUT -p tcp --dport 2222 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2222 -j ACCEPT; iptables -C INPUT -p tcp --dport 2323 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2323 -j ACCEPT; i=$((i+1)); done) &",
+    "iptables -C INPUT -p tcp --dport 8770 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 8770 -j ACCEPT",
+    "(i=0; while [ $i -lt 12 ]; do sleep 15; iptables -C INPUT -p tcp --dport 2222 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2222 -j ACCEPT; iptables -C INPUT -p tcp --dport 2323 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2323 -j ACCEPT; iptables -C INPUT -p tcp --dport 8770 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 8770 -j ACCEPT; i=$((i+1)); done) &",
     "echo '--- authorized_keys on disk ---'",
     "cat /var/local/roothome/authorized_keys",
     "md5sum /var/local/tvtools/dropbear /var/local/roothome/authorized_keys",
@@ -103,7 +120,7 @@
     "kill -9 $(pidof dropbear) 2>/dev/null",
     "/var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s > /var/local/dropbear.log 2>&1 &",
     "sleep 1; chmod 644 /var/local/dropbear.log; pgrep -f dropbear > /dev/null && echo DROPBEAR-OK-2222",
-    "(i=0; while [ $i -lt 40 ]; do sleep 30; pgrep -f 'dropbear -F' > /dev/null || { kill -9 $(pidof dropbear) 2>/dev/null; /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s >> /var/local/dropbear.log 2>&1 & chmod 644 /var/local/dropbear.log; }; pidof telnetd > /dev/null || /var/local/tvtools/busybox telnetd -p 2323 -l /bin/sh; i=$((i+1)); done) &",
+    "(i=0; while [ $i -lt 40 ]; do sleep 30; pgrep -f 'dropbear -F' > /dev/null || { kill -9 $(pidof dropbear) 2>/dev/null; /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s >> /var/local/dropbear.log 2>&1 & chmod 644 /var/local/dropbear.log; }; pidof telnetd > /dev/null || /var/local/tvtools/busybox telnetd -p 2323 -l /bin/sh; [ -f /var/local/alvidaa/alvidaa-bridge ] && { pidof alvidaa-bridge > /dev/null || /var/local/alvidaa/alvidaa-bridge -keys /var/local/alvidaa/keys -assets /var/local/alvidaa/launcher -config /var/local/alvidaa/config.json -addr 0.0.0.0:8770 -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 & }; i=$((i+1)); done) &",
     "D=/var/local/rootdumps; mkdir -p $D; chmod 755 $D; chmod 644 $D/* 2>/dev/null",
     "ps",
     "iptables -L -n 2>&1 | head -60",
@@ -111,7 +128,18 @@
     "cp /etc/0002-cli-login-sign-public.pem $D/ 2>/dev/null",
     "cp /usr/local/bin/check_usb_key $D/ 2>/dev/null",
     "chmod 644 $D/* 2>/dev/null",
-    "echo 'hook v11 done'"
+    "# Start native alvidaa bridge (late fallback — early loop above owns",
+    "# first start; this is guarded so the two can never double-start)",
+    "if [ -f /var/local/alvidaa/alvidaa-bridge ] && ! pidof alvidaa-bridge > /dev/null 2>&1; then",
+    "  /var/local/alvidaa/alvidaa-bridge \\",
+    "    -keys /var/local/alvidaa/keys \\",
+    "    -assets /var/local/alvidaa/launcher \\",
+    "    -config /var/local/alvidaa/config.json \\",
+    "    -addr 0.0.0.0:8770 \\",
+    "    -mqtt 127.0.0.1:36669 > /var/local/alvidaa/bridge.log 2>&1 &",
+    "fi",
+    "",
+    "echo 'hook v12 done'"
   ].join("\n") + "\n";
 
   // 1. back up whatever hook is installed
@@ -125,15 +153,15 @@
     rep.backup = { backed_up: false, reason: String(cur.msg).slice(0, 100) };
   }
 
-  // 2. install v2
-  var w = hiCall("fileWrite", { path: HOOK_PATH, mode: 6, writedata: HOOK_V11 });
+  // 2. install v12
+  var w = hiCall("fileWrite", { path: HOOK_PATH, mode: 6, writedata: HOOK_V12 });
   rep.write = { ok: isOk(w.ret), result: String(w.msg).slice(0, 100) };
-  line("hook v2 write: " + (isOk(w.ret) ? "OK" : "FAILED " + String(w.msg).slice(0, 80)),
+  line("hook v12 write: " + (isOk(w.ret) ? "OK" : "FAILED " + String(w.msg).slice(0, 80)),
     isOk(w.ret) ? "ok" : "err");
 
   if (isOk(w.ret)) {
     var rb = hiCall("fileRead", { path: HOOK_PATH, mode: 6 });
-    rep.write.readback_ok = isOk(rb.ret) && rb.msg.indexOf("v2") !== -1;
+    rep.write.readback_ok = isOk(rb.ret) && rb.msg.indexOf("v12") !== -1;
     line("readback: " + rep.write.readback_ok, rep.write.readback_ok ? "ok" : "err");
   }
 

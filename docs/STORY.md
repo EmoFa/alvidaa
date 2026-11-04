@@ -969,27 +969,32 @@ valuable was stored outside it.
 **The road ahead** — now written up as [LAUNCHER_V2.md](LAUNCHER_V2.md),
 phased so nothing bricks the party:
 
-- **R0 — guardrails first.** Freeze OTA/update endpoints with iptables
-  *before anything else* (an update that reseals the hole mid-project is
-  the only true game-over), firewall 2323 to trusted hosts, make the hook
-  idempotent with a kill-switch file so a bad iteration can never
-  boot-loop the TV.
-- **R1 — shell lands.** Verify persistence across remote reboots, then
-  the firmware dump: `dd` per partition → Pi → squashfs → Ghidra/rea.
-- **R2 — map the home plumbing.** Where the stock home boots from, how
-  the HOME key routes. Map before patching.
-- **R3 — telemetry kill at the kernel layer.** iptables rules for the
-  mapped endpoints, service-level suppression of the four suspects —
-  network blocking without process suppression is half a win. AdGuard's
-  per-client lists remain the outer layer.
-- **R4 — alvidaa goes native.** The real prize: port the Python bridge
-  to Node under the on-box phoenix runtime, serve the page from local
-  storage, MQTT at `localhost:36669`. The Pi retires, the
-  single-point-of-failure dies, page loads go from LAN round-trip to
-  loopback.
-- **R5 — stock home suppressed at the source.** Boot/home slot pointed
-  at our app in rw space, HOME remapped. The watcher retires to a
-  fallback and the ~1s flash dies with it.
+- **R0 — guardrails first (Done).** Frozen OTA/update endpoints with iptables
+  in `/var/local/tvrc` (ota-tv.vidaahub.com blocked in-kernel and via DNS),
+  outbound DNS/DoH locked to the AdGuard Pi, and hook idempotency preserved.
+- **R1 — shell lands (Done).** Persistent Dropbear SSH on port 2222 across
+  reboots, eMMC mapped (3.87 GB, 42 partitions), rootfs dumped and verified.
+- **R2 — map the home plumbing (Done).** Traced Cobalt engine bootstrap,
+  `HI_UI_HOME=/APPS/channelA`, and how `sdk.js` handles remote inputs.
+- **R3 — telemetry kill at the kernel layer (Active).** iptables wiretap
+  salvager active; caught `spectrum.s3.amazonaws.com` calling home over
+  plaintext HTTP; deployed TV-scoped AdGuard filters and kernel rules.
+- **R4 — alvidaa goes native (Achieved via overlay).** Rather than a fragile
+  standalone engine rewrite, alvidaa achieved native residency directly on
+  the TV via an append-only injection into `/APPS/channelA/hisenseUI/index.html`.
+  Served by the Pi and rendered as a crisp 1080p HiDPI Canvas (`alvidaa-remote.js`),
+  it runs directly inside Cobalt while the stock `sdk.js` runs underneath so
+  remote keys and `HOME` route cleanly. Along the way we hit two big
+  discoveries: Cobalt's Starboard parser discards scripts appended after
+  `</html>` (must insert before `</body>`), and XHR from `file://` causes a
+  reproducible CORS preflight deadlock in Cobalt — leading to a strict ban
+  on XHR in favor of WebSocket-only transport.
+- **R5 — stock home suppressed at the source (Achieved).** An injected
+  `<style id="alvidaa-head-style">#app{display:none!important}html,body{background:#0a0d12!important}</style>`
+  hides the stock `#app` and ad billboard at parse-time. The 1-second stock
+  ad flash is dead; the TV powers up directly into a clean dark canvas and
+  paints our overlay. Handled cleanly with `tools/deploy-overlay.sh` (1 TV write +
+  `cobalt_home/*` cache wipe + synchronous reboot).
 - **R6 — strip the ad components** out of the UI code on
   `/APPS/channelA` — the cleanest ad kill of all, not even
   network-dependent.
@@ -1046,7 +1051,9 @@ It just said alvida to its ads.
 | Oct 29, evening | "Check online for firmware gaps" → no public root for 2024+ → recon v1–v8 ladder built and climbed in ~90 minutes. |
 | Oct 29, night | `rc.local` root primitive found; hook armed; fake reboot exposed by `/proc/uptime`; **wall plug pulled** → **ROOT CONFIRMED**. |
 | Oct 29, late night | Hook v2 harvest (toolbox, shadow, applet inventory), hook v3 (busybox-over-`/dev/tcp`), dropbear cross-built with `zig cc`. Hook v4 fired → **Hisense's EULA firewall discovered** → hook v5 punches the holes. The five-lock gauntlet (firewall, key path, `/etc/shells`, the `chmod 777` perms walk, and the gate-as-shell costume) cleared version by version — **hook v10: `ssh -p 2222` lands at a root shell. Jailbreak complete.** First hour of ownership: eMMC mapped (3.87 GB, 42 partitions), `server/tv` wrapper, and the verity rootfs (p20) dumped to the Pi and unpacked — `cli-login-aes.pem` in hand. The actual project begins. |
-| Oct 30 | Doom goes playable (BT remote on `event3`, OK=352) and gets a launcher tile; R0 guardrails applied via `tvrc` (DNS close verified, OTA host frozen); wiretap salvager installed — first catch: the TV calls an Amazon S3 bucket over plaintext HTTP. Repo published. |
+| Oct 30 | Doom goes playable (BT remote on `event3`, OK=352) and gets a launcher tile; R0 guardrails applied via `tvrc` (DNS close verified, OTA host frozen); wiretap salvager installed — first catch: the TV calls an Amazon S3 bucket over plaintext HTTP (`spectrum.s3.amazonaws.com`). Tailscale joins the TV; repo published. |
+| Nov 1–2 | Full partition backup & DoH kill-list: verified and mirrored all 42 eMMC partitions; decoded the `hiutils` HMAC-SHA1 security-code forge (`setDebugPort`); shipped tiered AdGuard + `tvfw` kernel blocklists; published the `09.60V` / `MTK9603` patched-firmware playbook. |
+| Nov 3 | Native launcher overlay goes LIVE on TV: append-only injection into `/APPS/channelA/hisenseUI/index.html` with parse-time stock suppression (`#app` hidden, 1-second ad flash dead); diagnosed the Cobalt Starboard parser trap (scripts after `</html>` discarded) and the Cobalt XHR preflight deadlock (banning XHR for pure WebSocket); shipped 1080p HiDPI canvas overlay (`alvidaa-remote.js`) with deterministic `deploy-overlay.sh` deploy tool; TV DHCP lease moved to `192.168.0.11` (AdGuard rules and tools updated). |
 
 ## Photo shopping list
 
@@ -1061,7 +1068,7 @@ It just said alvida to its ads.
 9. Recon page / recon report
 10. The unplugged plug
 11. Root shell over telnet
-12. Before/after side by side
+12. Native overlay live on TV (1080p canvas, clock, green bridge status dot, HDMI & app tiles, zero ads)
 13. Living room, final state
 
 ## Credits

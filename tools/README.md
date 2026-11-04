@@ -13,8 +13,8 @@ exact model and firmware they were written for.
 
 ## Provenance
 
-The tool tree is ported and adapted from the author's private research tree,
-by [@oOHiyoriOo](https://github.com/oOHiyoriOo). The HE40 and 100U7Q source
+The tool tree is ported and adapted from the author's research tree, by
+[@oOHiyoriOo](https://github.com/oOHiyoriOo). The HE40 and 100U7Q source
 subtrees carry MIT licenses; the published copies here are released under this
 repository's MIT license, and the device-independent `fw/` scripts are the
 author's own tooling. Paths were reorganized for this repository and the

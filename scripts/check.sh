@@ -58,6 +58,10 @@ link = re.compile(r'\[[^\]]*\]\(([^)]+)\)')
 skip = ("http://", "https://", "mailto:", "tel:")
 bad = []
 for doc in files:
+    # Archived research notes keep their original tree-relative links; they
+    # are not part of the public navigation.
+    if "source" in doc.parts:
+        continue
     try:
         text = doc.read_text(encoding="utf-8", errors="ignore")
     except OSError as e:

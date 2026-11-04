@@ -10,9 +10,9 @@ states that everything in its `modding/` directory was measured on the device,
 and that anything not measured is marked UNVERIFIED and is not a recipe. That
 distinction is preserved here.
 
-> Source citations prefixed `record:100u7q/...` are line references into the
-> private research record, not files in this repository. See
-> [EVIDENCE.md](EVIDENCE.md) for the claim matrix.
+> `source/...` citations point into the sanitized research notes included in
+> [`source/`](source/README.md). See [EVIDENCE.md](EVIDENCE.md) for the claim
+> matrix.
 
 ## System layout, storage, constraints
 
@@ -138,21 +138,21 @@ the `postinst`.
 
 | Area | Status | Basis |
 |---|---|---|
-| Mounts, writable set, `nosuid`, SELinux | measured | `record:100u7q/modding/01-system.md:6-38`, `:83-95` |
-| Boot chain, inert `/OAD` hooks, no writable boot hook | measured/documented | `record:100u7q/modding/01-system.md:40-62`; `record:100u7q/modding/05-limits.md:33-39` |
-| `fetcher` empty permission block and the four-segment route | documented code | `record:100u7q/docs/HOW-IT-WORKS.md:16-19` |
-| `fetchFile` arbitrary write as uid 314 | documented code + operational reliance | `record:100u7q/docs/HOW-IT-WORKS.md:33-49` |
-| superwatch socket mode/group and `82` install | documented code + stated measurement (no raw transcript) | `record:100u7q/docs/HOW-IT-WORKS.md:52-64` |
-| `postinst` uid 0 / full capabilities | measured | `record:100u7q/docs/HOW-IT-WORKS.md:71-81` |
-| No signature check | documented claim, no excerpt → **UNVERIFIED/documented** | `record:100u7q/docs/HOW-IT-WORKS.md:83-84` |
-| Dropbear patches and offset 15162 | documented code + build recipe | `record:100u7q/docs/BUILD.md:26-72` |
-| Port 8008 / 22 dropped / 2222 timeout | measured | `record:100u7q/docs/HOW-IT-WORKS.md:119-125`; `record:100u7q/modding/01-system.md:64-81` |
-| Root SSH uid 0 + PTY | measured | `record:100u7q/modding/04-ssh.md:3-4`, `:54-58` |
-| Re-arm with `83` then `82` | documented procedure | `record:100u7q/README.md:100-111` |
-| Automatic boot persistence | **none on this build** | `record:100u7q/modding/05-limits.md:33-39` |
-| Persistence candidates | **UNVERIFIED** | `record:100u7q/modding/06-open.md:6-21`, `:40` |
-| DevTools ports | **UNVERIFIED** (did not open) | `record:100u7q/modding/06-open.md:23-32` |
-| Full rollback | **UNVERIFIED / operator-defined** | `record:100u7q/modding/03-root.md:99-102` |
+| Mounts, writable set, `nosuid`, SELinux | measured | `source/modding/01-system.md:6-38`, `:83-95` |
+| Boot chain, inert `/OAD` hooks, no writable boot hook | measured/documented | `source/modding/01-system.md:40-62`; `source/modding/05-limits.md:33-39` |
+| `fetcher` empty permission block and the four-segment route | documented code | `source/docs/HOW-IT-WORKS.md:16-19` |
+| `fetchFile` arbitrary write as uid 314 | documented code + operational reliance | `source/docs/HOW-IT-WORKS.md:33-49` |
+| superwatch socket mode/group and `82` install | documented code + stated measurement (no raw transcript) | `source/docs/HOW-IT-WORKS.md:52-64` |
+| `postinst` uid 0 / full capabilities | measured | `source/docs/HOW-IT-WORKS.md:71-81` |
+| No signature check | documented claim, no excerpt → **UNVERIFIED/documented** | `source/docs/HOW-IT-WORKS.md:83-84` |
+| Dropbear patches and offset 15162 | documented code + build recipe | `source/docs/BUILD.md:26-72` |
+| Port 8008 / 22 dropped / 2222 timeout | measured | `source/docs/HOW-IT-WORKS.md:119-125`; `source/modding/01-system.md:64-81` |
+| Root SSH uid 0 + PTY | measured | `source/modding/04-ssh.md:3-4`, `:54-58` |
+| Re-arm with `83` then `82` | documented procedure | `source/ORIGINAL-README.md:100-111` |
+| Automatic boot persistence | **none on this build** | `source/modding/05-limits.md:33-39` |
+| Persistence candidates | **UNVERIFIED** | `source/modding/06-open.md:6-21`, `:40` |
+| DevTools ports | **UNVERIFIED** (did not open) | `source/modding/06-open.md:23-32` |
+| Full rollback | **UNVERIFIED / operator-defined** | `source/modding/03-root.md:99-102` |
 
 ## Rollback and recovery
 

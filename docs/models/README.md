@@ -102,7 +102,7 @@ Field definitions for a device report:
 
 The 50A51HUV / MTK9602 research and original write-up is by
 [@carteakey](https://github.com/carteakey). The HE40 and 100U7Q research is by
-[@oOHiyoriOo](https://github.com/oOHiyoriOo); the source is the author's private
-research record for those models (line labels only; the record is not part of
-this repository). The guides themselves are original English text under the
-repository's MIT license — see [LICENSE](../../LICENSE).
+[@oOHiyoriOo](https://github.com/oOHiyoriOo); the sanitized source notes are
+included under each model's `source/` directory. The guides themselves are
+original English text under the repository's MIT license — see
+[LICENSE](../../LICENSE).

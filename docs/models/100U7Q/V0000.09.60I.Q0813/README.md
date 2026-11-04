@@ -10,10 +10,9 @@ chain and to [the 50A51HUV / MTK9602 guide](../../50A51HUV/09.01O.P0813/README.m
 > The chain rests on four properties of this build. A different firmware
 > almost certainly breaks at least one of them.
 
-> Source citations prefixed `record:100u7q/...` are line references into the
-> author's private research record, not files in this repository. See
-> [EVIDENCE.md](EVIDENCE.md) for the claim matrix; the guide itself is
-> self-contained.
+> `source/...` citations point into the sanitized research notes included in
+> [`source/`](source/README.md). This page is the reviewed English guide; see
+> [EVIDENCE.md](EVIDENCE.md) for the claim matrix.
 
 ## What this is
 
@@ -432,8 +431,7 @@ build patches are documented above; supply your own build.
 ## Attribution
 
 Research and the original 100U7Q record: [@oOHiyoriOo](https://github.com/oOHiyoriOo).
-Source: the author's private research record for this model and firmware (line
-labels only; the record is not part of this repository). The bundled Dropbear
-is GPLv2; this page is original English text under the repository's MIT
-license — see [LICENSE](../../../../LICENSE) and
+Source: the sanitized research notes in [`source/`](source/README.md). The
+bundled Dropbear is GPLv2; this page is original English text under the
+repository's MIT license — see [LICENSE](../../../../LICENSE) and
 [SECURITY.md](../../../../SECURITY.md).

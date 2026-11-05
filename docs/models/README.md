@@ -20,6 +20,7 @@ in the TV's system information and compare it character by character.
 | `HE40E5600FFWTS` | `V0100.01.00A.N0410` | MediaTek MT53xx / MT5863 class, ARMv7 Cortex-A53 | root via browser + loader shadow; key-only Dropbear SSH on 22; PTY | `HamService` wrapper; owner-verified across reboots (2026-11-04) | [README](HE40E5600FFWTS/V0100.01.00A.N0410/README.md) · [EVIDENCE](HE40E5600FFWTS/V0100.01.00A.N0410/EVIDENCE.md) · [MODDING](HE40E5600FFWTS/V0100.01.00A.N0410/MODDING.md) |
 | `100U7Q` (`100U70QEVS`) | `V0000.09.60I.Q0813` (VIDAA `U09.60`, EU_A) | MediaTek MT9655, 32-bit ARM userland | root via `fetcher` write + package `postinst`; key-only root SSH on 8008; PTY | **none automatic**; re-arm with uninstall `83` + install `82` after each reboot | [README](100U7Q/V0000.09.60I.Q0813/README.md) · [EVIDENCE](100U7Q/V0000.09.60I.Q0813/EVIDENCE.md) · [MODDING](100U7Q/V0000.09.60I.Q0813/MODDING.md) |
 | `75UR9S` | `V0000.09.60W.Q0624` (VIDAA `U09.0`, US) | MediaTek MT9655, 32-bit ARM userland | same chain as 100U7Q on the `09.60W` build; key-only root SSH on 8008; PTY | **none automatic**; re-arm with uninstall `83` + install `82` after each reboot | [README](75UR9S/V0000.09.60W.Q0624/README.md) |
+| `43Q60SEVS` (`43E7DS`, serial type `43E7SE`) | `V0000.09.60W.Q0612` (VIDAA `U09.60`, EU_A) | MediaTek MTK9603 | root via the same fetcher write + package `postinst`; no Dropbear on this build | **vendor service manager** (`serviceList.json` entry + two-file service); proven across a power-cycle, runs as uid 314 | [README](43Q60SEVS/V0000.09.60W.Q0612/README.md) |
 
 These chains are **different and not interchangeable**:
 
@@ -37,6 +38,11 @@ other two. Do not apply one model's paths to another.
 same `postinst`, same 8008 daemon. Only the FaaS package that hosts `fetch`
 differs (`tv.vidaa.jsservice.basic` instead of `...system`). Read the 100U7Q
 guide first, then the [75UR9S deltas](75UR9S/V0000.09.60W.Q0624/README.md).
+
+**43Q60SEVS is the same entry point again** (fetcher write → `/function` exec →
+superwatch install), on MTK9603. What differs is the exit: this build ships no
+Dropbear, so persistence comes from the vendor's own service manager instead of
+a shipped daemon. See the [43Q60SEVS guide](43Q60SEVS/V0000.09.60W.Q0612/README.md).
 
 ## How to read the labels
 

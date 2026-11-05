@@ -83,7 +83,7 @@ use. Installing the hook changes your TV's boot behavior.
 | Doc | What it is |
 | --- | --- |
 | [docs/](docs/README.md) | Documentation map — models, research, launcher, project |
-| [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40, 100U7Q and 75UR9S |
+| [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40, 100U7Q, 75UR9S and 43Q60SEVS |
 | [50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md) | The original MTK9602 root chain, stage by stage |
 | [50A51HUV findings](docs/models/50A51HUV/09.01O.P0813/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |
 | [EXPLOITS.md](docs/research/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |
@@ -124,7 +124,7 @@ model and firmware.
 | HE40E5600FFWTS | ? (EU, German-language docs) | MT53xx / MT5863 class (armv7 Cortex-A53) | pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit) | V0100.01.00A.N0410 | untested (vector did not use MQTT) | hisenseUI (Chromium 59.0.3071.115, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security) | custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI); not verified end-to-end | achieved (root + key-only SSH; boot persistence owner-verified across multiple reboots, 2026-11-04) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | 100U7Q (100U70QEVS) | EU_A | MT9655 (32-bit ARM userland) | U09.60 | V0000.09.60I.Q0813 | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | 75UR9S | US | MT9655 (32-bit ARM userland) | U09.0 | V0000.09.60W.Q0624 | untested | untested | untested | achieved (root + key-only SSH on 8008 verified 2026-11-04; manual re-trigger after reboot) | [@EvzenP](https://github.com/EvzenP) |
-| 43E7DS (43Q60SEVS_02, serial type 43E7SE) | EU_A (DEU) | MTK9603 | 9.0 | 09.60W.Q0612 (EU_A) | ? | Chromium 111 "odin" | working | untested | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
+| 43E7DS (43Q60SEVS_02, serial type 43E7SE) | EU_A (DEU) | MTK9603 | U09.60 | 09.60W.Q0612 (EU_A) | ? | Chromium 111 "odin" (multi-shell UAs: WebExplorer/1.2.8, SurfMaster/7.0.0, Weblayer, NetSurfer) | working | achieved (13 postinst runs as uid 0; no Dropbear on this build — boot persistence via the vendor service manager) | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 <!-- INVENTORY:END -->
 
 **Report yours by PR, not issue** — add a firmware entry to [inventory.json](docs/research/inventory.json) (single source of truth; fields and where to find them: [TESTED-MODELS.md](docs/research/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.

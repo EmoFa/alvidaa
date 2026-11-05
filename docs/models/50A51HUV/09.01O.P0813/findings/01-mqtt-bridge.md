@@ -64,6 +64,16 @@ What actually matters, in order:
    access token as password; refresh via `platform_service/data/gettoken`
    with `{"refreshtoken": …}`.
 
+**Reading the error code.** `paho-mqtt` 2.x — the version the server pins —
+reports MQTT 3.1.1 CONNACK codes as v5 reason codes, so the "rc 5" above
+arrives as **`rc=135`** (*Not authorized*); a bad username/password is
+`rc=134`. Both mean the TV refused the **identity**, not the transport: the
+TLS handshake and TCP connect already succeeded. Check
+`server/keys/tokens.json` before anything else — with no token file the server
+falls back to the legacy static login and is guaranteed to be rejected on
+2024+ firmware. The server now names the code and prints the identity it
+presented on every reject.
+
 ### 09.60 pairing report: controller identity
 
 [Wing-Tsit-Chong reported](https://reddit.com/r/Hisense/comments/1xj3pc2/comment/19rx89p6gsqyq/)

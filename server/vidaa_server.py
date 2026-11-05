@@ -45,6 +45,17 @@ PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 8765
 MQTT_PORT = 36669
 LEGACY_DEVICE = "VIDAALAUNCHER$normal"
 
+# paho 2.x reports MQTT 3.1.1 CONNACK codes as v5 reason codes, so the familiar
+# "rc 5" (Not authorized) surfaces as 135 and a bad password as 134. Name them
+# on the way out — these are identity rejections, not network failures.
+CONNACK_MEANING = {
+    134: "bad username or password",
+    135: "not authorized",
+    136: "server unavailable",
+    137: "server busy",
+    138: "banned",
+}
+
 # ---- doom: the game tile (spawned over SSH from this host, drawn on fb0)
 
 DOOM_KEY = os.path.join(KEYS, "tv_root_ed25519")
@@ -262,6 +273,9 @@ class TVBridge:
         else:
             self.device = LEGACY_DEVICE
             username, password = "hisenseservice", "multimqttservice"
+            print("no tokens.json — using the legacy static login; 2024+ firmware "
+                  "rejects this with rc=135 (Not authorized). Run pair.py first.",
+                  flush=True)
         self.username = username
         self.c = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                              client_id=self.device, clean_session=True, protocol=mqtt.MQTTv311)
@@ -273,10 +287,21 @@ class TVBridge:
         self.apps_at = 0.0
         self._recovering = False
 
+    def _identity(self):
+        """Who the broker thinks we are — the first thing to check on a reject."""
+        if not self.session:
+            return (f"legacy static login (client_id={self.device}, "
+                    f"username={self.username}, no tokens.json)")
+        return (f"profile={self.session.get('_profile', '?')} "
+                f"client_id={self.device} "
+                f"username={self.session.get('_username', '?')} "
+                f"accesstoken={'set' if self.session.get('accesstoken') else 'MISSING'}")
+
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         rc = int(getattr(reason_code, "value", reason_code))
         if rc != 0:
-            print(f"MQTT rejected (rc={rc}) — refreshing tokens in background", flush=True)
+            why = CONNACK_MEANING.get(rc, "rejected")
+            print(f"MQTT rejected (rc={rc} — {why}) as {self._identity()}", flush=True)
             if self.session and not self._recovering:
                 threading.Thread(target=self._recover_auth, daemon=True).start()
             return

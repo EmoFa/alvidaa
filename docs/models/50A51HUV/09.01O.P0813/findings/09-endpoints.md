@@ -62,3 +62,40 @@ All 12 partition images captured (byte-verified). p41 `/APPS` walked:
   first) — the iptables layer and AdGuard layer now overlap.
 - The hourly collector (`wiretap.log`) continues; the window stays open
   for the full baseline before the deliberate ON-capture.
+
+## The kernel backstop was silently dead at boot (2026-11-05)
+
+The wiretap baseline above was measured against a firewall that was only
+half applied. Found while building the OTA-freeze utility, by listing the
+chain instead of trusting the script.
+
+**Symptom.** `iptables -L OUTPUT -n` on a fresh boot returned an empty
+chain. The policy file `/var/local/tvfw` was present and correct, and the
+boot hook sources it, so nothing looked wrong.
+
+**Cause 1 — the binary was not there yet.** The hook sources `tvfw` near
+the top of the script, before `/usr/local/bin/iptables` is on the effective
+path. Every `iptables` call in the file failed, and a shell script that
+cannot find a command does not fail loudly enough to notice. The rules
+simply never existed.
+
+**Cause 2 — the host list resolves at boot.** Tier 1 loops over the
+telemetry hostnames and calls `nslookup` at source time, which is the one
+moment DNS is least reliable. Even with a working `iptables`, the second
+half would have no-opped.
+
+**Measured.** Sourcing `tvfw` by hand with the system fully up landed the
+four Tier-0 DoH REJECTs (`8.8.8.8` / `8.8.4.4`, tcp+udp, :443) and nothing
+else — Tier 1 still produced zero rules, confirming the DNS half fails
+independently of the path half.
+
+**Consequence for the record.** The 26-hour baseline in the section above
+was taken with the kernel backstop absent. The resolver layer (AdGuard
+per-client rules) and the 79 INPUT DROP rules were doing the work; the
+OUTPUT backstop was not. Any claim that "the layers overlap" needs the
+chain listed, not the script read.
+
+**Fix shape** (landed with the OTA utility): the policy defers itself,
+bounded-waits for `iptables` to exist, uses absolute paths, retries DNS
+instead of trusting boot-time resolution, and re-applies a freeze from a
+state sidecar. Acceptance is a rule *count*, not a successful source.

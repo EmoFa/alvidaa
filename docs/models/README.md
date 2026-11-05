@@ -20,7 +20,11 @@ in the TV's system information and compare it character by character.
 | `HE40E5600FFWTS` | `V0100.01.00A.N0410` | MediaTek MT53xx / MT5863 class, ARMv7 Cortex-A53 | root via browser + loader shadow; key-only Dropbear SSH on 22; PTY | `HamService` wrapper; owner-verified across reboots (2026-11-04) | [README](HE40E5600FFWTS/V0100.01.00A.N0410/README.md) · [EVIDENCE](HE40E5600FFWTS/V0100.01.00A.N0410/EVIDENCE.md) · [MODDING](HE40E5600FFWTS/V0100.01.00A.N0410/MODDING.md) |
 | `100U7Q` (`100U70QEVS`) | `V0000.09.60I.Q0813` (VIDAA `U09.60`, EU_A) | MediaTek MT9655, 32-bit ARM userland | root via `fetcher` write + package `postinst`; key-only root SSH on 8008; PTY | **none automatic**; re-arm with uninstall `83` + install `82` after each reboot | [README](100U7Q/V0000.09.60I.Q0813/README.md) · [EVIDENCE](100U7Q/V0000.09.60I.Q0813/EVIDENCE.md) · [MODDING](100U7Q/V0000.09.60I.Q0813/MODDING.md) |
 | `75UR9S` | `V0000.09.60W.Q0624` (VIDAA `U09.0`, US) | MediaTek MT9655, 32-bit ARM userland | same chain as 100U7Q on the `09.60W` build; key-only root SSH on 8008; PTY | **none automatic**; re-arm with uninstall `83` + install `82` after each reboot | [README](75UR9S/V0000.09.60W.Q0624/README.md) |
-| `43Q60SEVS` (`43E7DS`, serial type `43E7SE`) | `V0000.09.60W.Q0612` (VIDAA `U09.60`, EU_A) | MediaTek MTK9603 | root via the same fetcher write + package `postinst`; no Dropbear on this build | **vendor service manager** (`serviceList.json` entry + two-file service); proven across a power-cycle, runs as uid 314 | [README](43Q60SEVS/V0000.09.60W.Q0612/README.md) |
+| `43Q60SEVS` (`43E7DS`, serial type `43E7SE`) | `V0000.09.60W.Q0612` (VIDAA `U09.60`, EU_A) | MediaTek MTK9603 | root via the same fetcher write + package `postinst`; no Dropbear on this build | **vendor service manager** (`serviceList.json` entry + two-file service) | [README](43Q60SEVS/V0000.09.60W.Q0612/README.md) |
+
+This table is hand-maintained; the [tested-model matrix](../../README.md#tested-models)
+is generated from `inventory.json` and wins if the two disagree. `scripts/check.sh`
+fails if a guide exists here without a row.
 
 These chains are **different and not interchangeable**:
 

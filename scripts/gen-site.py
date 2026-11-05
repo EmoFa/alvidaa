@@ -94,6 +94,8 @@ th{background:var(--panel);font-weight:600;white-space:nowrap}
 tr:nth-child(even) td{background:#10151b}
 blockquote{margin:1.2em 0;padding:.2em 1em;border-left:3px solid var(--warn);color:var(--dim)}
 img{max-width:100%}
+.contrib img{border-radius:10px;vertical-align:middle}
+.contrib a{display:inline-block;margin:0 6px 6px 0}
 .foot{margin-top:60px;padding-top:16px;border-top:1px solid var(--line);
   color:var(--dim);font-size:13px;display:flex;gap:18px;flex-wrap:wrap}
 #menu{display:none}

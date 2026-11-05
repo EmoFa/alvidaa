@@ -22,6 +22,15 @@ markdown, rendered with the tested-model matrix, the model guides and the
 method catalogue in one place. Generated from the repo by
 [`scripts/gen-site.py`](scripts/gen-site.py); nothing is moved or duplicated.
 
+## Start here
+
+| If you want to… | Go to |
+| --- | --- |
+| **replace your home screen** — no root, reversible | [Quickstart — the launcher](#quickstart--the-launcher) |
+| **root the TV** | [docs/models/](docs/models/) — match your model *and* firmware string, then read [SECURITY.md](SECURITY.md) |
+| **see what works on which TV** | [Tested models](#tested-models) and [EXPLOITS.md](docs/research/EXPLOITS.md) |
+| **contribute a report** | [TESTED-MODELS.md](docs/research/TESTED-MODELS.md) — PR, not issue |
+
 ## The two lanes
 
 ```
@@ -71,37 +80,30 @@ Harden `server/config.json` (hide preset apps, rename tiles, set `"autoSwitch": 
 
 ## Quickstart — root
 
-Read [the 50A51HUV / MTK9602 guide](docs/models/50A51HUV/09.01O.P0813/README.md) end to end first, and
-[SECURITY.md](SECURITY.md) for the disclosure stance. **If your TV is a
-HE40E5600FFWTS or a 100U7Q, start at [docs/models/](docs/models/) instead** —
-those guides are model- and firmware-specific and do not use the MTK9602
-chain. The short version of the MTK9602 chain: the same browser bridge that
-installs the launcher can be walked past its sandbox (`../`), the raw file API
-behind it is unauthenticated, and a production boot script executes a
-writable file as root — after that it's a static dropbear and five lockpick
-hook versions. The recon probe ([launcher/recon.html](launcher/recon.html))
-includes write probes and a root hook installation action; inspect it before
-use. Installing the hook changes your TV's boot behavior.
+Root is **model- and firmware-specific**: the chain that works on a 50A51HUV
+does nothing on a 100U7Q. Start at [docs/models/](docs/models/), match the model
+*and* the firmware string exactly, and read that guide end to end before
+touching anything. [SECURITY.md](SECURITY.md) has the disclosure stance.
+
+The MTK9602 chain in one line: the browser bridge that installs the launcher can
+be walked past its sandbox (`../`), the file API behind it is unauthenticated,
+and a boot script executes a writable file as root — after that it is a static
+dropbear and five hook versions. Full detail:
+[the 50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md).
+
+The recon probe ([launcher/recon.html](launcher/recon.html)) includes write
+probes and a root hook installation action; inspect it before use. Installing
+the hook changes your TV's boot behaviour.
 
 ## The docs
 
 | Doc | What it is |
 | --- | --- |
-| [docs/](docs/README.md) | Documentation map — models, research, launcher, project |
-| [Docs site](https://carteakey.github.io/alvidaa/) | The same pages rendered, with a filterable index — built by `scripts/gen-site.py` |
-| [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40, 100U7Q, 75UR9S and 43Q60SEVS |
-| [50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md) | The original MTK9602 root chain, stage by stage |
-| [50A51HUV findings](docs/models/50A51HUV/09.01O.P0813/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |
+| [docs/](docs/README.md) | **The map** — every guide, finding and tool, with where to start |
+| [docs/models/](docs/models/) | Model- and firmware-specific root guides — 50A51HUV, HE40, 100U7Q, 75UR9S, 43Q60SEVS |
 | [EXPLOITS.md](docs/research/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |
-| [HACK-YOUR-OWN.md](docs/project/HACK-YOUR-OWN.md) | The staged prompt ladder for running this with your own AI agent |
-| [LAUNCHER_V2.md](docs/launcher/LAUNCHER_V2.md) | The on-TV launcher port plan (root-era roadmap, R0–R6) |
-| [DOOM.md](docs/models/50A51HUV/09.01O.P0813/DOOM.md) | DOOM at 1080p on the TV's framebuffer — the full recipe |
-| [DEPLOY.md](docs/launcher/DEPLOY.md) | Pi deployment, single-instance rule, cutover notes |
-| [TESTED-MODELS.md](docs/research/TESTED-MODELS.md) | How to report your TV (fields, where to find them) |
-| [STORY.md](docs/project/STORY.md) | The whole story, full detail — the human version of the findings |
 | [AGENTS.md](AGENTS.md) | Briefing for AI sessions working in this repo |
 | [TODO.md](TODO.md) | Open work, ordered — loose ends and the catalogue refactor plan |
-| [SECURITY.md](SECURITY.md) | Disclosure status and reasoning |
 
 ## Repo layout
 
@@ -114,7 +116,7 @@ model and firmware.
 | `docs/models/<Model>/<FW>/` | per-model root guides, evidence and modding |
 | `docs/research/` | cross-model inventory, method catalogue, tested-models guide, patched-firmware playbook |
 | `docs/launcher/` | launcher deployment and v2 roadmap |
-| `docs/project/` | story, AI prompt ladder, blog draft |
+| `docs/project/` | story and the AI prompt ladder |
 | `tools/` | scripts used by the guides |
 
 ## Tested models
@@ -138,20 +140,17 @@ model and firmware.
 
 ## Contributors
 
-This repo grows by PR, and the matrix is the receipt: every row below is
-someone's own TV, and the guide it links was written by the person who ran it.
+<p class="contrib">
+<a href="https://github.com/carteakey" title="carteakey — the project, 50A51HUV / MTK9602"><img src="https://github.com/carteakey.png?size=96" width="56" height="56" alt="carteakey"></a>
+<a href="https://github.com/oOHiyoriOo" title="oOHiyoriOo — HE40 and 100U7Q guides and tooling"><img src="https://github.com/oOHiyoriOo.png?size=96" width="56" height="56" alt="oOHiyoriOo"></a>
+<a href="https://github.com/EvzenP" title="EvzenP — 75UR9S / V0000.09.60W.Q0624"><img src="https://github.com/EvzenP.png?size=96" width="56" height="56" alt="EvzenP"></a>
+<a href="https://github.com/ryjr2ddznn-lab" title="ryjr2ddznn-lab — 43E7DS / 43Q60SEVS, MTK9603"><img src="https://github.com/ryjr2ddznn-lab.png?size=96" width="56" height="56" alt="ryjr2ddznn-lab"></a>
+</p>
 
-| Who | What they contributed |
-|---|---|
-| [@carteakey](https://github.com/carteakey) | The project itself — launcher, server, and the original 50A51HUV / MTK9602 root chain |
-| [@oOHiyoriOo](https://github.com/oOHiyoriOo) | The HE40 (MT53xx, loader shadow) and 100U7Q (MT9655, IPK post-install) guides and tooling |
-| [@EvzenP](https://github.com/EvzenP) | 75UR9S / `V0000.09.60W.Q0624` — the 09.60W build, where the FaaS `fetch` function moved to the basic package |
-| [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) | 43E7DS / 43Q60SEVS — MTK9603, 13 verified `postinst` runs as uid 0, and binary-less boot persistence through the vendor service manager |
-| [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) | 65U7H / MTK9900 report |
-| [u/possibly_matt](https://reddit.com/user/possibly_matt) | MTK9618 root-shell report |
-| [u/LulzTigre](https://reddit.com/user/LulzTigre) | U7K root report (chain unpublished) |
-| u/Affectionate-End-601, u/Wing-Tsit-Chong, u/____dls | 09.60V EU_A preflight reports — blocked traversal, gated writes |
-| u/uzueta | Launcher-only report |
+Community reports: [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) ·
+[u/possibly_matt](https://reddit.com/user/possibly_matt) ·
+[u/LulzTigre](https://reddit.com/user/LulzTigre) ·
+u/Affectionate-End-601 · u/Wing-Tsit-Chong · u/____dls · u/uzueta
 
 A report without a model and firmware string stays in
 [TESTED-MODELS.md](docs/research/TESTED-MODELS.md) until someone fills in the

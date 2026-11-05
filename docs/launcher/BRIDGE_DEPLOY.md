@@ -16,16 +16,31 @@ never reboot as part of a deploy, home shell stays pristine (findings
 ## 1. Build and stage
 
 ```sh
+git pull --ff-only                      # ALWAYS deploy from synced HEAD
 cd bridge && go test ./... && cd ..
 ./tools/build-bridge.sh                 # -> bridge/dist/alvidaa-bridge-armv7
 shasum -a 256 bridge/dist/alvidaa-bridge-armv7
 md5 -q bridge/dist/alvidaa-bridge-armv7 # record this — announce it
 ```
 
+**Currency rule (learned 2026-11-05 the hard way): an md5 match against
+your staged artifact proves you deployed what you intended — it proves
+NOTHING about whether that artifact is current.** Another lane may have
+built and deployed a newer binary while you were heads-down. Two guards,
+both mandatory:
+
+- Rebuild from synced HEAD every deploy; never deploy a `dist/` binary
+  you did not just build (`git describe` — the `-X main.version` embed —
+  must reference the commit you mean to ship).
+- Immediately before the swap, `curl http://$TV_HOST:8770/api/health` and
+  compare its `version` to yours. If the live version is NEWER than your
+  artifact, STOP — reconcile with the board before overwriting anything.
+
 `tools/build-bridge.sh` embeds the version (`v1.0-XX-g<hash>`) from
-`git describe`; commit your work first so the binary is not `-dirty`.
-The running bridge reports its version at `GET /api/health`
-(`version` field) and as the first `bridge.log` line.
+`git describe`; commit your work first so the binary is not `-dirty`
+(an unrelated-dirty worktree still shows `-dirty` — say so when
+announcing). The running bridge reports its version at
+`GET /api/health` (`version` field) and as the first `bridge.log` line.
 
 ## 2. Announce
 
@@ -57,13 +72,19 @@ $SSH 'md5sum /var/local/alvidaa/alvidaa-bridge.new; chmod 755 /var/local/alvidaa
 ```sh
 $SSH 'kill $(pidof alvidaa-bridge) 2>/dev/null; sleep 1
       mv /var/local/alvidaa/alvidaa-bridge.new /var/local/alvidaa/alvidaa-bridge
-      /var/local/tvtools/busybox nohup /var/local/alvidaa/alvidaa-bridge \
+      /var/local/alvidaa/alvidaa-bridge \
         -keys /var/local/alvidaa/keys \
         -assets /var/local/alvidaa/launcher \
         -config /var/local/alvidaa/config.json \
         -addr 0.0.0.0:8770 \
         -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 &'
 ```
+
+Currency re-check goes here (see §1): health `version` compared against
+your artifact BEFORE the kill. The TV has no usable `nohup` and no
+`busybox setsid` applet on this build — the plain backgrounded start
+survives the ssh session in practice, but verify with `pidof` +
+`/api/health` from a separate connection before declaring success.
 
 `nohup` matters: without it the dropbear session teardown can reap the
 bridge the moment your ssh command returns. Flags are exact — `-addr

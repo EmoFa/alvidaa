@@ -82,6 +82,17 @@ generated [exploit and method inventory](../../../research/EXPLOITS.md).
    `/var/local`, started by the hook; TV becomes reachable over the
    tailnet from anywhere, MagicDNS name, no firewall exposure. Login URL
    can even be opened on the TV via `/api/open`.
+
+   **Status 2026-11-05: working, with two warts.** The node re-registered
+   after a logged-out period and is reachable from the Mac over the
+   tailnet (ping to its 100.64.x address answers). Two things to know:
+   the `/var/local/tailscale-bin/ts` wrapper was `exec ... ""` instead of
+   `"$@"`, so every `ts <command>` silently ignored the command (fixed);
+   and the node registers under the control-plane name it first
+   authenticated with, so `tailscale set --hostname=…` updates the local
+   pref (`debug prefs` shows the new name) without renaming the device —
+   that rename has to happen in the admin console, or via a full
+   logout/re-login.
 6. **GitHub publish — done.** Repo public (github.com/carteakey/alvidaa),
    README carries the tested-models matrix with PR-based reporting, agent
    onboarding (AGENTS.md + docs/project/HACK-YOUR-OWN.md) shipped.

@@ -18,7 +18,15 @@
 // idle redraw throttling (once per minute instead of 1Hz), and self-install.
 
 var cv = document.getElementById("c");
-var ctx = cv.getContext("2d");
+// Hunt diagnostics (odin black-render, 2026-11-04): OFF by default on the
+// live page. Append ?debug to paint the screen-console (state line, red
+// composite square, error panel); ?flat/?opaque stay available for future
+// raster/compositing tests. Mirrors launcher/next/ (always-debug staging).
+var DEBUG = /[?&]debug/.test(location.search);
+var OPAQUE = /[?&]opaque/.test(location.search);
+var FLAT = /[?&]flat/.test(location.search);
+var MODE = "r1" + (FLAT ? "+flat" : "") + (OPAQUE ? "+opaque" : "") + (DEBUG ? "+debug" : "");
+var ctx = cv.getContext("2d", OPAQUE ? { alpha: false } : undefined);
 var W = 960, H = 540;
 var SCALE = /[?&]540p/.test(location.search) ? 1 : 2;
 cv.width = W * SCALE;
@@ -341,6 +349,7 @@ function drawTile(x, y, focused, it, hotkeyNum) {
   // 1. Shadow & Glow
   if (focused) {
     // Ambient bloom glow behind focused card (soft, diffused Apple TV bloom)
+    if (!FLAT) {
     var glow = ctx.createRadialGradient(
       x + tileW() / 2, y + tileH() / 2, tileW() * 0.15,
       x + tileW() / 2, y + tileH() / 2, tileW() * 0.75
@@ -351,6 +360,7 @@ function drawTile(x, y, focused, it, hotkeyNum) {
     ctx.fillStyle = glow;
     roundRect(x - 14, y - 10, tileW() + 28, tileH() + 20, 20);
     ctx.fill();
+    }
 
     // Focused drop shadow
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
@@ -375,6 +385,9 @@ function drawTile(x, y, focused, it, hotkeyNum) {
 
   // Setup / Install tile special case (Lane 1 webapp)
   if (it.install) {
+    if (FLAT) {
+      ctx.fillStyle = focused ? "#1b2230" : "#12161f";
+    } else {
     var cardGrad = ctx.createLinearGradient(x, y, x, y + tileH());
     if (focused) {
       cardGrad.addColorStop(0, "#232a36");
@@ -384,6 +397,7 @@ function drawTile(x, y, focused, it, hotkeyNum) {
       cardGrad.addColorStop(1, "#0d1017");
     }
     ctx.fillStyle = cardGrad;
+    }
     roundRect(x, y, tileW(), tileH(), 14);
     ctx.fill();
 
@@ -421,6 +435,9 @@ function drawTile(x, y, focused, it, hotkeyNum) {
   var fullIcon = typeof resolveUrl === "function" ? resolveUrl(it.icon) : it.icon;
   var base = fullIcon && ICONS[fullIcon] && ICONS[fullIcon].complete && ICONS[fullIcon].naturalWidth;
 
+  if (FLAT) {
+    ctx.fillStyle = focused ? "#1b2230" : (base ? "#12161f" : "hsl(" + hue(it.label) + ", 18%, 13%)");
+  } else {
   var cardGrad = ctx.createLinearGradient(x, y, x, y + tileH());
   if (focused) {
     cardGrad.addColorStop(0, "#232a36");
@@ -430,6 +447,7 @@ function drawTile(x, y, focused, it, hotkeyNum) {
     cardGrad.addColorStop(1, "#0d1017");
   }
   ctx.fillStyle = cardGrad;
+  }
   roundRect(x, y, tileW(), tileH(), 14);
   ctx.fill();
 
@@ -536,10 +554,14 @@ function drawTile(x, y, focused, it, hotkeyNum) {
     roundRect(bx, by + 2, bSize, bSize, br);
     ctx.fill();
 
+    if (FLAT) {
+      ctx.fillStyle = "hsl(" + h + ", 70%, 38%)";
+    } else {
     var bGrad = ctx.createLinearGradient(bx, by, bx, by + bSize);
     bGrad.addColorStop(0, "hsl(" + h + ", 65%, 46%)");
     bGrad.addColorStop(1, "hsl(" + h + ", 75%, 30%)");
     ctx.fillStyle = bGrad;
+    }
     roundRect(bx, by, bSize, bSize, br);
     ctx.fill();
 
@@ -634,7 +656,7 @@ function draw() {
                   BG.naturalWidth * sc, BG.naturalHeight * sc);
     ctx.fillStyle = "rgba(6, 8, 12, 0.6)";
     ctx.fillRect(0, 0, W, H);
-  } else {
+  } else if (!FLAT) {
     // Ultra-subtle ethereal ambient bloom from top
     var amb = ctx.createRadialGradient(W / 2, -20, 20, W / 2, 120, W * 0.75);
     amb.addColorStop(0, "rgba(56, 189, 248, 0.05)");
@@ -645,11 +667,13 @@ function draw() {
   }
 
   // Soft perimeter vignette
+  if (!FLAT) {
   var vig = ctx.createRadialGradient(W / 2, H / 2, W * 0.35, W / 2, H / 2, W * 0.75);
   vig.addColorStop(0, "rgba(0, 0, 0, 0)");
   vig.addColorStop(1, "rgba(0, 0, 0, 0.45)");
   ctx.fillStyle = vig;
   ctx.fillRect(0, 0, W, H);
+  }
 
   // Refined Header: Light typography clock with hours/minutes hierarchy & clean uppercase date
   var now = new Date();
@@ -953,24 +977,79 @@ function installAsApp() {
   draw();
 }
 
-loadCache();
+// ---------------------------------------------------------------- diagnostics
+// Screen-as-console from the odin black-render hunt. Gated behind ?debug:
+// every draw is still guarded (an error can never wedge the loop) and
+// window.onerror still POSTs to /api/probe, but nothing is painted unless
+// DEBUG is on — the live page stays visually pristine.
+var DIAG = { errors: [], draws: 0 };
+
+function diagState() {
+  return "ws:" + (S.online ? "up" : "down") + (wsRetry ? "(" + wsRetry + ")" : "") +
+    " hello:" + (S.hello ? "y" : "n") +
+    " apps:" + (S.apps ? S.apps.length : "null") +
+    " src:" + (S.sources ? S.sources.length : "null");
+}
+
+function paintDiag(errText) {
+  if (!DEBUG) return;
+  try {
+    // Composite-test pixel: if this square is invisible while the page runs,
+    // the canvas layer itself is not compositing (GPU) — not a JS bug.
+    ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+    ctx.fillStyle = "#ff2d2d";
+    ctx.fillRect(W - 18, H - 18, 14, 14);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.font = "600 10px monospace";
+    ctx.textAlign = "right";
+    ctx.fillText("NEXT " + MODE + " · " + diagState(), W - left(), 96);
+    ctx.textAlign = "left";
+    if (errText) {
+      ctx.fillStyle = "rgba(120, 10, 20, 0.92)";
+      ctx.fillRect(0, H - 92, W, 92);
+      ctx.fillStyle = "#ff5470";
+      ctx.font = "600 13px monospace";
+      ctx.fillText("RENDER ERROR (report text to super)", 12, H - 72);
+      ctx.fillStyle = "#ffd7dd";
+      ctx.font = "12px monospace";
+      var lines = String(errText).split("\n");
+      for (var i = 0; i < Math.min(4, lines.length); i++) {
+        ctx.fillText(lines[i].slice(0, 110), 12, H - 52 + i * 16);
+      }
+    }
+  } catch (e2) {}
+}
+
+var _draw = draw;
+draw = function () {
+  DIAG.draws++;
+  try {
+    _draw();
+    paintDiag(DIAG.errors.length ? DIAG.errors[DIAG.errors.length - 1] : null);
+  } catch (e) {
+    var msg = ((e && e.name) || "Error") + ": " + (e && e.message);
+    if (e && e.stack) msg += "\n" + String(e.stack).split("\n")[1];
+    DIAG.errors.push(msg);
+    paintDiag(msg);
+  }
+};
+
 window.onerror = function (msg, src, line) {
+    var text = "onerror: " + String(msg) + " @" + line;
+    DIAG.errors.push(text);
     try {
       var x = new XMLHttpRequest();
       x.open("POST", "http://" + (location.host || "192.168.0.85:8770") + "/api/probe", true);
       x.setRequestHeader("Content-Type", "application/json");
       x.send(JSON.stringify({ tag: "tv-error", msg: String(msg), line: line, t: Date.now() }));
     } catch (e2) {}
-    try {
-      ctx.fillStyle = "#e11d48";
-      ctx.font = "18px sans-serif";
-      ctx.fillText("ERR: " + String(msg).slice(0, 60) + " @" + line, 20, 30);
-    } catch (e3) {}
+    paintDiag(text);
     return false;
   };
 
-connect();
-draw();
+try { loadCache(); } catch (e) { DIAG.errors.push("loadCache: " + e.message); }
+try { connect(); } catch (e) { DIAG.errors.push("connect: " + e.message); }
+try { draw(); } catch (e) { paintDiag("kickoff: " + e.message); }
 </script>
 </body>
 </html>

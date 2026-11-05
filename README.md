@@ -129,6 +129,39 @@ model and firmware.
 
 **Report yours by PR, not issue** — add a firmware entry to [inventory.json](docs/research/inventory.json) (single source of truth; fields and where to find them: [TESTED-MODELS.md](docs/research/TESTED-MODELS.md)) and run `scripts/gen-inventory.py` — every table in the repo regenerates from it.
 
+## Contributors
+
+This repo grows by PR, and the matrix is the receipt: every row below is
+someone's own TV, and the guide it links was written by the person who ran it.
+
+| Who | What they contributed |
+|---|---|
+| [@carteakey](https://github.com/carteakey) | The project itself — launcher, server, and the original 50A51HUV / MTK9602 root chain |
+| [@oOHiyoriOo](https://github.com/oOHiyoriOo) | The HE40 (MT53xx, loader shadow) and 100U7Q (MT9655, IPK post-install) guides and tooling |
+| [@EvzenP](https://github.com/EvzenP) | 75UR9S / `V0000.09.60W.Q0624` — the 09.60W build, where the FaaS `fetch` function moved to the basic package |
+| [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) | 43E7DS / 43Q60SEVS — MTK9603, 13 verified `postinst` runs as uid 0, and binary-less boot persistence through the vendor service manager |
+| [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) | 65U7H / MTK9900 report |
+| [u/possibly_matt](https://reddit.com/user/possibly_matt) | MTK9618 root-shell report |
+| [u/LulzTigre](https://reddit.com/user/LulzTigre) | U7K root report (chain unpublished) |
+| u/Affectionate-End-601, u/Wing-Tsit-Chong, u/____dls | 09.60V EU_A preflight reports — blocked traversal, gated writes |
+| u/uzueta | Launcher-only report |
+
+A report without a model and firmware string stays in
+[TESTED-MODELS.md](docs/research/TESTED-MODELS.md) until someone fills in the
+gaps; that is the entry bar, not a judgement on the report.
+
+### Finding your way around
+
+The repo is growing faster than its layout, so start from the index rather
+than the tree:
+
+- [docs/models/](docs/models/) — one page per **model and** firmware string. If your model is not listed there, it is not documented yet.
+- [EXPLOITS.md](docs/research/EXPLOITS.md) — every method, its evidence grade, and what already failed.
+- [inventory.json](docs/research/inventory.json) — the single source for every table in the repo. Edit the JSON; never the tables.
+- [AGENTS.md](AGENTS.md) — the briefing, including for an AI session doing the work.
+
+Prior art and the safety stance are in [Credits & safety](#credits--safety) below.
+
 ## Credits & safety
 
 Built on the shoulders of [Bananamafia's hisensehax](https://bananamafia.dev/post/hisensehax/),

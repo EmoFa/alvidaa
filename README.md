@@ -123,6 +123,7 @@ model and firmware.
 | 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) |
 | HE40E5600FFWTS | ? (EU, German-language docs) | MT53xx / MT5863 class (armv7 Cortex-A53) | pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit) | V0100.01.00A.N0410 | untested (vector did not use MQTT) | hisenseUI (Chromium 59.0.3071.115, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security) | custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI); not verified end-to-end | achieved (root + key-only SSH; boot persistence owner-verified across multiple reboots, 2026-11-04) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | 100U7Q (100U70QEVS) | EU_A | MT9655 (32-bit ARM userland) | U09.60 | V0000.09.60I.Q0813 | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
+| 75UR9S | US | MT9655 (32-bit ARM userland) | U09.0 | V0000.09.60W.Q0624 | untested | untested | untested | achieved (root + key-only SSH on 8008 verified 2026-11-04; manual re-trigger after reboot) | [@EvzenP](https://github.com/EvzenP) |
 | 43E7DS (43Q60SEVS_02, serial type 43E7SE) | EU_A (DEU) | MTK9603 | 9.0 | 09.60W.Q0612 (EU_A) | ? | Chromium 111 "odin" | working | untested | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 <!-- INVENTORY:END -->
 

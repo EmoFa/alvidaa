@@ -14,3 +14,9 @@ research/
 # native bridge build output
 bridge/dist/
 bridge/bridge
+
+# tools/u7q build output and runtime artifacts (no vendor binaries shipped)
+tools/u7q/bin/
+tools/u7q/web/pub/
+tools/u7q/web/captures/
+tools/u7q/web/server.log

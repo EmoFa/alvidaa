@@ -39,9 +39,16 @@ Installed-Size: 1200
 POSTINST = r"""#!/bin/sh
 D=/APPS/.re_sshd
 SRC=/APPS/pkgs/APPS/.re_sshd
+# mkdir BEFORE the log redirect (original design redirected first and
+# silently skipped the whole block on a clean system)
+mkdir -p "$D" 2>/dev/null
 {
   echo "INSTALLER"
+  echo "--- env ---"
+  env 2>/dev/null | grep -i -E 'opkg|ipk|pkg' | head -20
+  echo "--- step: dirs ---"
   mkdir -p "$D/root_home/.ssh" "$D/home/.ssh" 2>&1
+  echo "--- step: move binaries ---"
 
   if [ -f "$D/dropbear.pid" ]; then kill "$(cat "$D/dropbear.pid")" 2>/dev/null; sleep 1; fi
 
@@ -49,6 +56,7 @@ SRC=/APPS/pkgs/APPS/.re_sshd
   [ -f "$SRC/dropbearkey" ] && mv -f "$SRC/dropbearkey" "$D/dropbearkey"
   [ -f "$SRC/authorized_keys" ] && mv -f "$SRC/authorized_keys" "$D/root_home/.ssh/authorized_keys"
   cp -f "$D/root_home/.ssh/authorized_keys" "$D/home/.ssh/authorized_keys" 2>/dev/null
+  ls -la "$SRC" 2>&1 | head -10
 
   printf '/bin/bash\n' > /APPS/shell
   chmod 644 /APPS/shell
@@ -65,14 +73,16 @@ SRC=/APPS/pkgs/APPS/.re_sshd
 
   chmod 666 /dev/ptmx /dev/pts/ptmx 2>/dev/null
 
+  echo "--- step: start dropbear ---"
   cd "$D" || exit 0
-  ./dropbear-root -s -r "$D/hostkey_ed25519" -p 8008 -P "$D/dropbear.pid"
+  # no -s: this build has no password auth compiled in (key-only by design)
+  ./dropbear-root -r "$D/hostkey_ed25519" -p 8008 -P "$D/dropbear.pid"
   sleep 1
   echo "pid=$(cat "$D/dropbear.pid" 2>/dev/null)"
   grep -i ':1F48' /proc/net/tcp 2>&1
   grep -E '^(Uid|CapEff):' /proc/self/status 2>&1
-} > /APPS/.re_sshd/installer_log.txt 2>&1
-chmod 644 /APPS/.re_sshd/installer_log.txt
+} > "$D/installer_log.txt" 2>&1
+chmod 644 "$D/installer_log.txt" 2>/dev/null
 exit 0
 """
 

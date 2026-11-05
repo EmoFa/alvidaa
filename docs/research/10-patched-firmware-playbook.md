@@ -17,6 +17,7 @@
 | V0000.06.29X.P0813 (65U7H, India) | MTK9900 | open | untested | untested | untested | in progress | [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) |
 | V0100.01.00A.N0410 (HE40E5600FFWTS, ? (EU, German-language docs)) | MT53xx / MT5863 class (armv7 Cortex-A53) | open (browser runs as ROOT uid 0, full CapEff, single-process, no seccomp) | open (File.write text-only EINVAL for binary; binaries via File.download/curl) | n-a | n-a (generation lacks the package) | achieved (root + key-only SSH; boot persistence owner-verified across multiple reboots, 2026-11-04) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | V0000.09.60I.Q0813 (100U7Q (100U70QEVS), EU_A) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
+| V0000.09.60W.Q0624 (75UR9S, US) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (root + key-only SSH on 8008 verified 2026-11-04; manual re-trigger after reboot) | [@EvzenP](https://github.com/EvzenP) |
 | 09.60W.Q0612 (EU_A) (43E7DS (43Q60SEVS_02, serial type 43E7SE), EU_A (DEU)) | MTK9603 | closed | gated | working | untested | untested | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 <!-- INVENTORY:END -->
 

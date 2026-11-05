@@ -1,5 +1,8 @@
 # alvidaa
 
+![alvidaa launcher, live on a Hisense VIDAA TV — clock, inputs with live
+signal, and real app icons, captured from the TV itself](docs/img/launcher-home.png)
+
 Two projects in one repo, one weekend, one TV:
 
 1. **A launcher** — a self-installed, self-hosted home screen for Hisense

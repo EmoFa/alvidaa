@@ -162,6 +162,10 @@ renders fine there.
 Hands-off reminder (cross-ref findings 03): never write to `/OAD` — the
 fileOperation service reaches it (mode 7) and it holds update staging.
 
+Stock-bundle internals reference:
+[HOME-UI-INTERNALS.md](../../../../launcher/HOME-UI-INTERNALS.md) — static
+pass over the vendor tree (load chain, service layer, key dispatch).
+
 ## 8. Engine lifecycle, the crash-evidence blackhole, and the uncaught-error exit path (2026-11-04)
 
 Static rootfs dig (vendor tree `apps/opt-hisenseUI/{bin,lib}` +

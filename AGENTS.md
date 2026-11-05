@@ -55,6 +55,10 @@ Two lanes share one TV:
 
 - Verify before you commit: `./scripts/check.sh` — read-only, no regeneration.
   Fails on stale generated tables, syntax errors, or broken relative links.
+- Screenshot the TV (no remote interaction): `tools/screenshot.sh [out.png]` —
+  vendor HAL capture into TV `/tmp`, pulled over the root-SSH lane. `/dev/fb0`
+  has no readback path on this MTK display (read/dd give ENODEV); the HAL's
+  sysctrlservice RPC is the working lane.
 - Root shell: `./server/tv` (interactive) or `./server/tv 'cmd'`. PATH is
   exported by the wrapper — dropbear sessions have none. Default host is
   `192.168.0.11`; override with `TV_HOST=<ip>` when the TV's DHCP lease moves.

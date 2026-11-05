@@ -6,7 +6,7 @@ reimplemented here); bridge work goes through http://<tv>:8770. Every
 health check degrades gracefully: a doctor that dies when the thing it
 checks is down is useless.
 
-Subcommands: sys, logs, net, doctor, open, apps, sources
+Subcommands: sys, logs, net, doctor, open, apps, sources, ota
 Environment: TV_HOST overrides the default 192.168.0.11 (the TV is
 DHCP-shuffled — see server/tv).
 """
@@ -234,6 +234,183 @@ def cmd_doctor(args):
     return 0 if verdict == "HEALTHY" else 1
 
 
+# ---------------------------------------------------------------- ota freeze
+# Firmware-OTA freeze (issue #14): two independent layers, both verified on
+# every transition. Kernel layer = dedicated iptables chain ALVIDAA_OTA
+# (chain isolation guarantees 'on' can never touch bee2's INPUT kill-list
+# or tvfw's own rules). Resolver layer = 0.0.0.0 pins in /tmp/hosts (the
+# /etc/hosts symlink target — tmpfs, so the boot re-apply in firmware/tvfw
+# rewrites it; reboot survival = hook -> tvfw -> state.sh sidecar with
+# pre-resolved IPs, no boot-DNS dependency). Standing policy (ENDPOINTS.md)
+# is ALLOW for ota-tv; the freeze is an explicit, tracked override.
+OTA_HOSTS = ["ota-tv.vidaahub.com", "upgrade-cus.prod-eu-c.az.vidaahub.com"]
+OTA_CHAIN = "ALVIDAA_OTA"
+OTA_STATE = "/var/local/alvidaa/ota_freeze.state"
+OTA_STATE_SH = "/var/local/alvidaa/ota_freeze.state.sh"
+OTA_HOSTS_FILE = "/tmp/hosts"
+BB = "/var/local/tvtools/busybox"
+
+
+def _tv_ota(cmd, timeout=60):
+    return tv(cmd, timeout=timeout)
+
+
+def _ota_resolve(host):
+    """Return the real IPv4 addresses for host as seen by the TV resolver."""
+    out = _tv_ota("%s nslookup %s 2>/dev/null" % (BB, host))
+    ips = []
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("Address ") or line.startswith("Address:"):
+            ip = line.split(":", 1)[-1].strip()
+            if ip and ":" not in ip and ip != "0.0.0.0":
+                ips.append(ip)
+    return sorted(set(ips))
+
+
+def _ota_pin_present():
+    out = _tv_ota("%s grep -h '^0\\.0\\.0\\.0 ' %s 2>/dev/null | %s grep -E 'ota-tv|upgrade-cus' | grep -c ."
+                  % (BB, OTA_HOSTS_FILE, BB))
+    return int(out.strip() or 0)
+
+
+def _ota_chain_state():
+    out = _tv_ota("iptables -L %s -n 2>/dev/null | grep -c REJECT; "
+                  "iptables -L OUTPUT -n 2>/dev/null | grep -c '%s'" % (OTA_CHAIN, OTA_CHAIN))
+    lines = [x.strip() for x in out.splitlines() if x.strip()]
+    rules = int(lines[0]) if lines else 0
+    jump = int(lines[1]) if len(lines) > 1 else 0
+    return rules, jump
+
+
+def _ota_state_exists():
+    return _tv_ota("[ -f %s ] && echo yes || echo no" % OTA_STATE).strip() == "yes"
+
+
+def _ota_nc(target):
+    """True if a TCP:443 connect from the TV to target SUCCEEDS."""
+    out = _tv_ota("%s nc -w 5 -z %s 443 >/dev/null 2>&1 && echo OK || echo FAIL" % (BB, target))
+    return "OK" in out
+
+
+def _ota_state_files(state, ips):
+    """Write the JSON state and the shell sidecar tvfw re-applies at boot."""
+    import datetime
+    now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    js = json.dumps({
+        "frozen_at": now, "hosts": OTA_HOSTS, "ips": ips,
+        "chain": OTA_CHAIN, "layers": ["iptables-chain", "hosts-pin"],
+    })
+    sh = ("OTA_HOSTS='%s'\nOTA_IPS='%s'\n" % (" ".join(OTA_HOSTS), " ".join(ips)))
+    _tv_ota("echo '%s' > %s" % (js.replace("'", "'\\''"), OTA_STATE))
+    _tv_ota("echo '%s' > %s" % (sh.replace("'", "'\\''"), OTA_STATE_SH))
+
+
+def cmd_ota(args):
+    action = args[0] if args else "status"
+
+    if action == "off":
+        if _ota_state_exists():
+            print("already frozen (state file present) — nothing to do")
+            return cmd_ota(["status"])
+        print("resolving %s from the TV resolver..." % ", ".join(OTA_HOSTS))
+        ips = []
+        for h in OTA_HOSTS:
+            found = _ota_resolve(h)
+            print("  %-42s -> %s" % (h, ", ".join(found) or "UNRESOLVED"))
+            ips.extend(found)
+        ips = sorted(set(ips))
+        if not ips:
+            print("ERROR: cannot freeze — kernel layer needs at least one resolved IP")
+            return 1
+        # Kernel layer: dedicated chain (isolation = safe unfreeze).
+        _tv_ota("iptables -N %s 2>/dev/null; true" % OTA_CHAIN)
+        for ip in ips:
+            _tv_ota("iptables -C %s -d %s -j REJECT 2>/dev/null || iptables -A %s -d %s -j REJECT"
+                    % (OTA_CHAIN, ip, OTA_CHAIN, ip))
+        _tv_ota("iptables -C OUTPUT -j %s 2>/dev/null || iptables -I OUTPUT 1 -j %s"
+                % (OTA_CHAIN, OTA_CHAIN))
+        # Resolver layer: 0.0.0.0 pins in /tmp/hosts (dedup-safe).
+        for h in OTA_HOSTS:
+            _tv_ota("%s grep -q '^0\\.0\\.0\\.0 %s$' %s 2>/dev/null || echo '0.0.0.0 %s' >> %s"
+                    % (BB, h, OTA_HOSTS_FILE, h, OTA_HOSTS_FILE))
+        _ota_state_files(None, ips)
+        print("verifying freeze (both layers must fail to connect)...")
+        rules, jump = _ota_chain_state()
+        pin = _ota_pin_present()
+        real_ok = any(_ota_nc(ip) for ip in ips)
+        name_ok = _ota_nc(OTA_HOSTS[0])
+        print("  kernel layer : chain %d REJECT rules, jump %s" % (rules, "armed" if jump else "MISSING"))
+        print("  resolver     : %d pin line(s) in %s" % (pin, OTA_HOSTS_FILE))
+        print("  live probe   : connect by IP %s | connect by name %s"
+              % ("OPEN (BAD)" if real_ok else "blocked", "OPEN (BAD)" if name_ok else "blocked"))
+        if rules and jump and pin and not real_ok and not name_ok:
+            print("FROZEN (verified) — OTA firmware updates are blocked at both layers")
+            return 0
+        print("ERROR: freeze incomplete — see per-layer lines above; do NOT trust this state")
+        return 1
+
+    if action == "on":
+        print("removing exactly what 'off' added (chain + jump + pins + state)...")
+        _tv_ota("iptables -D OUTPUT -j %s 2>/dev/null; true" % OTA_CHAIN)
+        _tv_ota("iptables -F %s 2>/dev/null; iptables -X %s 2>/dev/null; true" % (OTA_CHAIN, OTA_CHAIN))
+        _tv_ota("%s grep -v -E '^(0\\.0\\.0\\.0 (ota-tv\\.vidaahub\\.com|upgrade-cus\\.prod-eu-c\\.az\\.vidaahub\\.com))' %s > %s.new 2>/dev/null; "
+                "mv %s.new %s" % (BB, OTA_HOSTS_FILE, OTA_HOSTS_FILE, OTA_HOSTS_FILE, OTA_HOSTS_FILE))
+        _tv_ota("rm -f %s %s" % (OTA_STATE, OTA_STATE_SH))
+        print("verifying unfreeze (resolution and connect must BOTH succeed)...")
+        rules, jump = _ota_chain_state()
+        pin = _ota_pin_present()
+        ips_now = _ota_resolve(OTA_HOSTS[0])
+        real_ok = any(_ota_nc(ip) for ip in ips_now)
+        name_ok = _ota_nc(OTA_HOSTS[0])
+        print("  kernel layer : chain rules %d (want 0), jump %s (want removed)" % (rules, jump))
+        print("  resolver     : %d pin line(s) (want 0) | live resolve -> %s"
+              % (pin, ", ".join(ips_now) or "UNRESOLVED"))
+        print("  live probe   : connect by IP %s | connect by name %s"
+              % ("OK" if real_ok else "BLOCKED", "OK" if name_ok else "BLOCKED"))
+        if not rules and not jump and not pin and ips_now and real_ok and name_ok:
+            print("UNFROZEN (verified) — OTA firmware updates flow again")
+            return 0
+        print("ERROR: PARTIAL UNFREEZE — a layer did not come back. This is the "
+              "dangerous state; fix before trusting OTA. (Per-layer lines above.)")
+        return 1
+
+    if action == "status":
+        state = _ota_state_exists()
+        rules, jump = _ota_chain_state()
+        pin = _ota_pin_present()
+        resolved = _ota_resolve(OTA_HOSTS[0])
+        real_ok = any(_ota_nc(ip) for ip in resolved)
+        name_ok = _ota_nc(OTA_HOSTS[0])
+        killswitch = _tv_ota("[ -f /var/local/hook.off ] && echo present || echo absent").strip()
+        tvfw_block = _tv_ota("%s grep -c 'ota_freeze.state.sh' /var/local/tvfw 2>/dev/null" % BB).strip()
+        frozen_at = ""
+        if state:
+            frozen_at = _tv_ota("%s grep -o '\"frozen_at\": *\"[^\"]*\"' %s 2>/dev/null" % (BB, OTA_STATE)).strip()
+        print("  state file     : %s %s" % ("present" if state else "absent", frozen_at))
+        print("  kernel layer   : chain %d REJECT rules, jump %s" % (rules, "armed" if jump else "absent"))
+        print("  resolver layer : %d pin line(s) | live resolve -> %s"
+              % (pin, ", ".join(resolved) or "UNRESOLVED"))
+        print("  live probe     : connect by IP %s | connect by name %s"
+              % ("OPEN" if real_ok else "blocked", "OPEN" if name_ok else "blocked"))
+        print("  reboot survival: tvfw re-apply block %s | kill-switch %s"
+              % ("present" if tvfw_block and int(tvfw_block or 0) > 0 else "MISSING", killswitch))
+        if rules and jump and pin and not real_ok and not name_ok:
+            verdict = "FROZEN (verified)"
+        elif not rules and not jump and not pin and real_ok and name_ok:
+            verdict = "UNFROZEN (verified)"
+        else:
+            verdict = "PARTIAL/UNKNOWN — layers disagree, investigate before UI work"
+        print("VERDICT: %s" % verdict)
+        if state and killswitch == "present":
+            print("WARNING: /var/local/hook.off is present — the next reboot disarms "
+                  "the freeze (reversibility law). Remove the kill-switch or re-freeze after recovery.")
+        return 0
+
+    print("usage: alvidaa ota off|on|status")
+    return 2
+
+
 COMMANDS = {
     "sys": cmd_sys,
     "logs": cmd_logs,
@@ -242,6 +419,7 @@ COMMANDS = {
     "open": cmd_open,
     "apps": cmd_apps,
     "sources": cmd_sources,
+    "ota": cmd_ota,
 }
 
 

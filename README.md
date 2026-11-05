@@ -94,6 +94,7 @@ use. Installing the hook changes your TV's boot behavior.
 | [TESTED-MODELS.md](docs/research/TESTED-MODELS.md) | How to report your TV (fields, where to find them) |
 | [STORY.md](docs/project/STORY.md) | The whole story, full detail — the human version of the findings |
 | [AGENTS.md](AGENTS.md) | Briefing for AI sessions working in this repo |
+| [TODO.md](TODO.md) | Open work, ordered — loose ends and the catalogue refactor plan |
 | [SECURITY.md](SECURITY.md) | Disclosure status and reasoning |
 
 ## Repo layout

@@ -13,7 +13,7 @@ TV="${TV_HOST:-192.168.0.11}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 KEY="$HERE/../server/keys/tv_root_ed25519"
 ICONS="$HERE/../launcher/icons"
-REMOTE_DIR="/var/local/alvidaa/keys/iconcache"
+REMOTE_DIR="/var/local/alvidaa/launcher/iconcache"
 
 # appId -> asset + content-type. The safe id must match the bridge's
 # alnum-only transform (http.go iconBytes): non-alnum chars are stripped.
@@ -22,6 +22,7 @@ MAPPING=(
   "284|tile-dtv.webp|image/webp"      # Live TV  (vendor launcher tile_dtv)
   "3|youtube.png|image/png"           # YouTube  (vendor app-service img)
   "16|browser.png|image/png"          # Browser  (vendor app-service TVBrowser)
+  "2256|spotify.jpg|image/jpeg"       # Spotify  (official brand icon, Play Store listing)
   "vidahrecon|recon.png|image/png"    # Recon    (project icon)
 )
 

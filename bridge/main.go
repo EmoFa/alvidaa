@@ -30,7 +30,7 @@ func main() {
 	keys := flag.String("keys", "/var/local/alvidaa/keys", "directory with certs + tokens.json")
 	configPath := flag.String("config", "/var/local/alvidaa/config.json", "config.json path")
 	assets := flag.String("assets", "/var/local/alvidaa/launcher", "directory served to the overlay")
-	icons := flag.String("icons", "", "icon cache directory (default <keys>/iconcache)")
+	icons := flag.String("icons", "", "icon cache directory (default <assets>/iconcache)")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -41,7 +41,9 @@ func main() {
 
 	iconDir := *icons
 	if iconDir == "" {
-		iconDir = filepath.Join(*keys, "iconcache")
+		// Under the assets root, not keys/: keys/ holds credentials only;
+		// the cache is bridge-owned launcher data (supers call, 2026-11-04).
+		iconDir = filepath.Join(*assets, "iconcache")
 	}
 	tokensPath := filepath.Join(*keys, "tokens.json")
 

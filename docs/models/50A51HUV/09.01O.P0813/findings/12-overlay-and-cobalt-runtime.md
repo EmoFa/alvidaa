@@ -311,14 +311,31 @@ cmdline carries `--remote_debugging_port=9666 --webdriver_port=4445`, but
 `netstat -lnt` shows only 2222 and 8770. An ssh forward to 9666 returns
 nothing.
 
-**3. `/usr/local/bin/screenshot` is a display-pipeline client, not a grabber.**
+**3. `/usr/local/bin/screenshot` is a display-pipeline client — and it works.**
 112 KB, dynamically linked, stripped, built from
 `systools/app-screencapture/src/screenshot.cpp`. Strings show it starts an
 `fsal2 tcp server`, registers a peer `dvbmain`, and calls `cmdCaptureScreen`,
-reporting `Screenshot will be stored at : %s %s of type %d`. It takes a
-*name* argument (`wrong parameter,please check name!`). Run with a name it
-produced no file and no output, so it needs the display service in a state
-not yet found. Treat as a research task, not a utility.
+reporting `Screenshot will be stored at : %s %s of type %d`.
+
+**Correction (2026-11-05, same day): this route works and is the one in
+use.** It takes **two** arguments — a directory and a name:
+
+```sh
+/usr/local/bin/screenshot /tmp alvidaa-shot.jpg
+```
+
+An earlier attempt passed a single argument (`screenshot shot1`) and
+produced no file and no output, which was read as "needs a display service
+that is not running". It does not: it needs the second argument. The HAL
+writes **PNG bytes regardless of the `.jpg` name**, 1920x1080 RGBA, about
+1.2 MB per frame, into the directory given. The RPC is asynchronous, so
+poll for the file rather than assuming it exists on return.
+
+`tools/screenshot.sh` wraps this: capture into TV `/tmp` (tmpfs, gone at
+reboot), pull over the root-SSH lane, delete the TV copy. No persistent
+writes, no remote interaction. This supersedes route 4 for whole-screen
+capture.
+
 
 **4. The launcher can capture itself, and that is the useful one.**
 `launcher/index.html` renders everything into

@@ -27,8 +27,9 @@ type Bridge struct {
 	tokens  string // tokens.json path
 	cfgPath string
 
-	mc  *Client
-	hub *Hub
+	mc      *Client
+	hub     *Hub
+	started time.Time // process start — surfaces "last restart" on /api/debug
 
 	askMu sync.Mutex
 	inbox chan inboxMsg
@@ -55,6 +56,7 @@ func NewBridge(addr string, port int, tlsConf *tls.Config, keysDir, tokensPath, 
 		cfgPath: cfgPath,
 		hub:     NewHub(),
 		inbox:   make(chan inboxMsg, 64),
+		started: time.Now(),
 	}
 }
 

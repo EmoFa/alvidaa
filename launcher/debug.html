@@ -1,0 +1,82 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="user-scalable=no,width=device-width"/><title>alvidaa root status</title><style>
+html, body { margin: 0; padding: 0; background: #07080c; color: #cbd5e1; font: 500 14px -apple-system, 'Segoe UI', Roboto, sans-serif; height: 100%; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 24px 20px 40px; }
+h1 { font: 300 26px -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; color: #fff; margin: 6px 0 2px; letter-spacing: .02em; }
+.sub { color: #64748b; font-size: 12px; margin-bottom: 18px; }
+.card { background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; }
+.card h2 { font: 600 11px -apple-system, sans-serif; color: #8e9ab0; text-transform: uppercase; letter-spacing: .12em; margin: 2px 0 10px; }
+.row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.row:last-child { border-bottom: 0; }
+.k { color: #8e9ab0; } .v { color: #e2e8f0; text-align: right; max-width: 62%; word-break: break-all; }
+.ok { color: #10b981; } .bad { color: #ef4444; } .warn { color: #f59e0b; }
+.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+#err { color: #ef4444; padding: 12px 0; display: none; }
+</style></head><body><div class="wrap">
+<h1>alvidaa · root status</h1>
+<div class="sub">read-only diagnostics · refreshes every 10s · <span id="stamp"></span></div>
+<div id="err"></div>
+<div class="card"><h2>Bridge</h2><div id="c-bridge"></div></div>
+<div class="card"><h2>MQTT session</h2><div id="c-mqtt"></div></div>
+<div class="card"><h2>Boot hook</h2><div id="c-hook"></div></div>
+<div class="card"><h2>Deployment</h2><div id="c-deploy"></div></div>
+<div class="card"><h2>TV</h2><div id="c-tv"></div></div>
+</div><script>
+(function () {
+  "use strict";
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function row(k, v) { return '<div class="row"><span class="k">' + esc(k) + '</span><span class="v">' + v + "</span></div>"; }
+  function dot(ok, yes, no) { return '<span class="' + (ok ? "ok" : "bad") + '">' + (ok ? yes : no) + "</span>"; }
+  function hms(sec) {
+    sec = Math.floor(sec || 0);
+    var d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+    return (d ? d + "d " : "") + h + "h " + m + "m";
+  }
+  function set(id, html) { document.getElementById(id).innerHTML = html; }
+
+  function render(d) {
+    set("c-bridge",
+      row("version", '<span class="mono">' + esc(d.bridge.version) + "</span>") +
+      row("uptime", hms(d.bridge.uptimeSec)) +
+      row("pid", '<span class="mono">' + esc(d.bridge.pid) + "</span>") +
+      row("ws clients", esc(d.bridge.clients || d.clients)));
+    var m = d.mqtt || {};
+    set("c-mqtt",
+      row("connected", dot(m.connected, "connected", "DISCONNECTED")) +
+      row("identity", '<span class="mono">' + esc(m.clientId || "?") + "</span>") +
+      row("token", dot(m.tokenLoaded, "loaded", "MISSING")));
+    var hk = d.hook || {};
+    set("c-hook",
+      row("version", hk.version ? '<span class="mono">' + esc(hk.version) + "</span>" : "unknown") +
+      row("kill-switch", hk.killSwitch ? '<span class="warn">PRESENT — hook disabled</span>' : '<span class="ok">absent (hook armed)</span>') +
+      row("watchdog", dot(hk.watchdogAlive, "alive", "not running")));
+    var dep = d.bridge || {};
+    set("c-deploy", row("binary md5", '<span class="mono">' + esc(dep.binaryMd5 || "?") + "</span>"));
+    var tv = d.tv || {};
+    var ifaces = "";
+    var list = tv.interfaces || {};
+    for (var name in list) {
+      if (!Object.prototype.hasOwnProperty.call(list, name)) continue;
+      ifaces += row(name, '<span class="mono">' + esc(list[name].join(", ")) + "</span>");
+    }
+    set("c-tv",
+      row("model", esc(tv.model || "?")) +
+      row("firmware", esc(tv.firmware || "?")) +
+      row("SoC", esc(tv.soc || "?")) +
+      row("tv uptime", hms(tv.uptimeSec)) + ifaces);
+  }
+
+  function tick() {
+    fetch("/api/debug", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (d) {
+      document.getElementById("err").style.display = "none";
+      document.getElementById("stamp").textContent = new Date().toLocaleTimeString();
+      render(d);
+    }).catch(function (e) {
+      var el = document.getElementById("err");
+      el.style.display = "block";
+      el.textContent = "fetch failed: " + e + " — is the bridge still up?";
+    });
+  }
+  tick();
+  setInterval(tick, 10000);
+})();
+</script></body></html>

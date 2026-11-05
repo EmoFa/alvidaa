@@ -16,6 +16,7 @@ type Config struct {
 	Shortcuts  []Shortcut        `json:"shortcuts"`
 	AutoSwitch bool              `json:"autoSwitch"`
 	Watcher    Watcher           `json:"watcher"`
+	Tv         map[string]string `json:"tv"` // optional identity for /api/debug (model/firmware/soc)
 }
 
 type Input struct {
@@ -61,6 +62,9 @@ func loadConfig(path string) Config {
 	}
 	if user.Shortcuts != nil {
 		cfg.Shortcuts = user.Shortcuts
+	}
+	if user.Tv != nil {
+		cfg.Tv = user.Tv
 	}
 	cfg.AutoSwitch = user.AutoSwitch
 	if user.Watcher.App != "" {

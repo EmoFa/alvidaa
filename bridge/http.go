@@ -1,13 +1,18 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -82,6 +87,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.URL.Path == "/api/probe":
 		h.probe(w, r)
+		return
+	case r.URL.Path == "/api/debug":
+		h.serveDebug(w, r)
 		return
 	case strings.HasPrefix(r.URL.Path, "/api/doom"):
 		h.json(w, map[string]any{"ok": false, "error": "doom is not supported by the on-TV daemon"})
@@ -313,4 +321,128 @@ func toStr(v any) string {
 		return s
 	}
 	return ""
+}
+
+// serveDebug backs the Root Status page: everything the supervisor used to
+// guess from pid deltas and log tails, in one read-only JSON document.
+func (h *Handler) serveDebug(w http.ResponseWriter, r *http.Request) {
+	cfg := h.b.config()
+
+	binaryMd5 := ""
+	if exe, err := os.Readlink("/proc/self/exe"); err == nil {
+		if b, err := os.ReadFile(exe); err == nil {
+			sum := md5.Sum(b)
+			binaryMd5 = hex.EncodeToString(sum[:])
+		}
+	}
+
+	connected := h.b.mc != nil && h.b.mc.Connected()
+	clientID := ""
+	if h.b.mc != nil {
+		clientID = h.b.mc.ClientID
+	}
+	tokenLoaded := false
+	if b, err := os.ReadFile(h.b.tokens); err == nil {
+		var t struct {
+			AccessToken string `json:"accessToken"`
+		}
+		if json.Unmarshal(b, &t) == nil && t.AccessToken != "" {
+			tokenLoaded = true
+		}
+	}
+
+	hookVersion, killSwitch, watchdogAlive := hookState()
+
+	ifaces := map[string][]string{}
+	if list, err := net.Interfaces(); err == nil {
+		for _, ifc := range list {
+			addrs, err := ifc.Addrs()
+			if err != nil || len(addrs) == 0 {
+				continue
+			}
+			var ips []string
+			for _, a := range addrs {
+				ips = append(ips, a.String())
+			}
+			ifaces[ifc.Name] = ips
+		}
+	}
+
+	h.json(w, map[string]any{
+		"bridge": map[string]any{
+			"version":   version,
+			"startedAt": h.b.started.UTC().Format(time.RFC3339),
+			"uptimeSec": int(time.Since(h.b.started).Seconds()),
+			"pid":       os.Getpid(),
+			"binaryMd5": binaryMd5,
+		},
+		"mqtt": map[string]any{
+			"connected":   connected,
+			"clientId":    clientID,
+			"tokenLoaded": tokenLoaded,
+		},
+		"hook": map[string]any{
+			"version":       hookVersion,
+			"killSwitch":    killSwitch,
+			"watchdogAlive": watchdogAlive,
+		},
+		"tv": map[string]any{
+			"model":      cfg.Tv["model"],
+			"firmware":   cfg.Tv["firmware"],
+			"soc":        cfg.Tv["soc"],
+			"uptimeSec":  tvUptimeSec(),
+			"interfaces": ifaces,
+		},
+		"clients": h.b.hub.Count(),
+		"ok":      true,
+	})
+}
+
+// hookState reads the hook version, kill-switch and watchdog liveness from
+// the filesystem. The bridge runs as root via the hook, so these are
+// readable; every failure degrades to a zero-value rather than an error.
+func hookState() (version string, killSwitch, watchdogAlive bool) {
+	for _, f := range []string{"/var/local/hook.off", "/var/local/otaTest.off"} {
+		if _, err := os.Stat(f); err == nil {
+			killSwitch = true
+		}
+	}
+	if b, err := os.ReadFile("/var/local/otaTest.sh"); err == nil {
+		if m := regexp.MustCompile(`# alvidaa root hook (v\d+)`).FindSubmatch(b); m != nil {
+			version = string(m[1])
+		}
+	}
+	if entries, err := os.ReadDir("/proc"); err == nil {
+		for _, e := range entries {
+			if !isDigitName(e.Name()) {
+				continue
+			}
+			if cmd, err := os.ReadFile(filepath.Join("/proc", e.Name(), "cmdline")); err == nil && strings.Contains(string(cmd), "otaTest.sh") {
+				watchdogAlive = true
+				break
+			}
+		}
+	}
+	return
+}
+
+func isDigitName(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func tvUptimeSec() float64 {
+	b, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0
+	}
+	f, _ := strconv.ParseFloat(strings.Fields(string(b))[0], 64)
+	return f
 }

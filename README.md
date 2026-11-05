@@ -3,7 +3,9 @@
 ![alvidaa launcher, live on a Hisense VIDAA TV — clock, inputs with live
 signal, and real app icons, captured from the TV itself](docs/img/launcher-home.png)
 
-Two projects in one repo, one weekend, one TV:
+Two projects in one repo. Both started on one TV over a single weekend; the
+root half now runs on seven different chips, and the launcher no longer
+needs a server at all.
 
 1. **A launcher** — a self-installed, self-hosted home screen for Hisense
    **VIDAA** TVs: a clock, your HDMI inputs with live signal, your real

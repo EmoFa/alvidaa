@@ -57,7 +57,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.URL.Path == "/api/health":
 		connected := h.b.mc != nil && h.b.mc.Connected()
-		h.json(w, map[string]any{"ok": true, "mqtt": connected, "clients": h.b.hub.Count()})
+		h.json(w, map[string]any{"ok": true, "version": version, "mqtt": connected, "clients": h.b.hub.Count()})
 		return
 	case r.URL.Path == "/api/launch":
 		h.json(w, h.b.launch(r.URL.Query().Get("name")))

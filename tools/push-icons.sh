@@ -23,7 +23,7 @@ MAPPING=(
   "3|youtube.png|image/png"           # YouTube  (vendor app-service img)
   "16|browser.png|image/png"          # Browser  (vendor app-service TVBrowser)
   "2256|spotify.jpg|image/jpeg"       # Spotify  (official brand icon, Play Store listing)
-  "vidahrecon|recon.png|image/png"    # Recon    (project icon)
+  "vidaarecon|recon.png|image/png"    # Recon    (project icon; safeAppID drops the dash)
 )
 
 WORK="$(mktemp -d)"
@@ -47,7 +47,7 @@ for entry in "${MAPPING[@]}"; do
   IFS='|' read -r id file ctype <<<"$entry"
   raw="$id"
   # reconstruct the original appId for the URL: safe id only strips non-alnum
-  case "$id" in vidahrecon) raw="vidaa-recon" ;; esac
+  case "$id" in vidaarecon) raw="vidaa-recon" ;; esac
   printf '  /icon/%-12s -> ' "$raw"
   curl -s --max-time 6 -o /dev/null -w '%{http_code} %{content_type}\n' \
     "http://$TV:8770/icon/$raw"

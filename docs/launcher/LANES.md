@@ -39,7 +39,8 @@ in `docs/models/50A51HUV/09.01O.P0813/findings/` and LAUNCHER_V2.md.
 
 ## Lane 2 — native on-TV (rooted)
 
-Boot chain (hook v12, canonical template `tools/otaTest-hook.sh`, all under
+Boot chain (hook v13 in repo — template + installer; the running TV hook
+is v12 until redeploy, all under
 `/var/local/`): network wait → `tvtools`
 (static busybox/dropbear) → dropbear on :2222 → **`alvidaa-bridge`**
 (`bridge/`, static armv7 Go, `tools/build-bridge.sh`): HTTP static + WS hub

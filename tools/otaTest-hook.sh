@@ -1,11 +1,23 @@
 #!/bin/sh
-# alvidaa root hook v12 — CANONICAL TEMPLATE (tools/otaTest-hook.sh)
+# alvidaa root hook v13 — CANONICAL TEMPLATE (tools/otaTest-hook.sh)
 #
 # This is the exact script the installer (launcher/hookinstall.html) writes
 # to /var/local/otaTest.sh, where it runs as root at every boot. The
 # installer injects the install timestamp into the header line below.
 #
 # Changelog
+#   v13 (2026-11-05, ds41-acked design; NOT yet deployed to the TV):
+#     - Watchdog loop unbound: 40x30s (~20 min) -> immortal, so dropbear/
+#       telnetd/alvidaa-bridge keep getting resurrected for the life of the
+#       boot instead of only the first ~20 minutes.
+#     - KILL-SWITCH RE-CHECKED PER ITERATION: v12 checks /var/local/hook.off
+#       once at script start, so an immortal loop would bypass it forever.
+#       The loop body now exits cleanly the moment the flag appears —
+#       hook.off still disarms everything without editing the hook (resurrect
+#       ions stop immediately; already-running daemons wind down at next
+#       boot). sleep 30 cadence kept — no busy spin. The kill -9
+#       $(pidof dropbear) line is unchanged (separate known issue, out of
+#       scope per ds41).
 #   v12 (2026-11-04, live on 50A51HUV 09.01O.P0813, md5 of the running copy
 #        fde595a0251cf4ef6b964f9f6ffb72ed — its header/footer still say
 #        "v11" cosmetically; this template is the corrected canonical):
@@ -28,7 +40,7 @@
 # Remove entirely: rm -rf /var/local/otaTest.sh /var/local/tvtools /var/local/roothome
 # Kill-switch: touch /var/local/hook.off (this script exits 0 before anything).
 [ -f /var/local/hook.off ] && exit 0
-# alvidaa root hook v12 — installed <ISO timestamp injected by hookinstall.html>
+# alvidaa root hook v13 — installed <ISO timestamp injected by hookinstall.html>
 # remove: rm -rf /var/local/otaTest.sh /var/local/tvtools /var/local/roothome
 exec > /var/local/otaTest.log 2>&1
 chmod 644 /var/local/otaTest.log
@@ -90,7 +102,9 @@ md5sum /var/local/tvtools/dropbear /var/local/roothome/authorized_keys
 kill -9 $(pidof dropbear) 2>/dev/null
 /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s > /var/local/dropbear.log 2>&1 &
 sleep 1; chmod 644 /var/local/dropbear.log; pgrep -f dropbear > /dev/null && echo DROPBEAR-OK-2222
-(i=0; while [ $i -lt 40 ]; do sleep 30; pgrep -f 'dropbear -F' > /dev/null || { kill -9 $(pidof dropbear) 2>/dev/null; /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s >> /var/local/dropbear.log 2>&1 & chmod 644 /var/local/dropbear.log; }; pidof telnetd > /dev/null || /var/local/tvtools/busybox telnetd -p 2323 -l /bin/sh; [ -f /var/local/alvidaa/alvidaa-bridge ] && { pidof alvidaa-bridge > /dev/null || /var/local/alvidaa/alvidaa-bridge -keys /var/local/alvidaa/keys -assets /var/local/alvidaa/launcher -config /var/local/alvidaa/config.json -addr 0.0.0.0:8770 -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 & }; i=$((i+1)); done) &
+# v13 watchdog: immortal, but the kill-switch is re-checked every iteration
+# so /var/local/hook.off still disarms it without editing the hook.
+(while [ 1 = 1 ]; do sleep 30; [ -f /var/local/hook.off ] && exit 0; pgrep -f 'dropbear -F' > /dev/null || { kill -9 $(pidof dropbear) 2>/dev/null; /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s >> /var/local/dropbear.log 2>&1 & chmod 644 /var/local/dropbear.log; }; pidof telnetd > /dev/null || /var/local/tvtools/busybox telnetd -p 2323 -l /bin/sh; [ -f /var/local/alvidaa/alvidaa-bridge ] && { pidof alvidaa-bridge > /dev/null || /var/local/alvidaa/alvidaa-bridge -keys /var/local/alvidaa/keys -assets /var/local/alvidaa/launcher -config /var/local/alvidaa/config.json -addr 0.0.0.0:8770 -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 & }; done) &
 D=/var/local/rootdumps; mkdir -p $D; chmod 755 $D; chmod 644 $D/* 2>/dev/null
 ps
 iptables -L -n 2>&1 | head -60
@@ -109,4 +123,4 @@ if [ -f /var/local/alvidaa/alvidaa-bridge ] && ! pidof alvidaa-bridge > /dev/nul
     -mqtt 127.0.0.1:36669 > /var/local/alvidaa/bridge.log 2>&1 &
 fi
 
-echo 'hook v12 done'
+echo 'hook v13 done'

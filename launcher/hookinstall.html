@@ -15,7 +15,7 @@
 <script>
 (function () {
   "use strict";
-  // Installs root-hook v12 to /var/local/otaTest.sh (runs as root at boot):
+  // Installs root-hook v13 to /var/local/otaTest.sh (runs as root at boot):
   // fetches tvtools.tar.gz (busybox + static dropbear) from the Pi over
   // bash /dev/tcp, starts telnetd on 2323 and dropbear on 2222 (keys only,
   // authorized_keys on rw /var/local/roothome via dropbear -D).
@@ -23,6 +23,8 @@
   // after tvrc/tvfw, ~15s boot instead of ~2min), `&& ! pidof` on the late
   // bridge block so early+late can never double-start, and bridge keepalive
   // + port 8770 in the watchdog.
+  // v13 makes that watchdog immortal, with the /var/local/hook.off
+  // kill-switch RE-CHECKED every iteration so it still disarms everything.
   // Canonical template: tools/otaTest-hook.sh — keep the two in sync.
   // Backs up the existing hook first. Fast: two bridge calls + POST.
 
@@ -55,10 +57,10 @@
 
   var HOOK_PATH = "../var/local/otaTest.sh";
 
-  var HOOK_V12 = [
+  var HOOK_V13 = [
     "#!/bin/sh",
     "[ -f /var/local/hook.off ] && exit 0",
-    "# alvidaa root hook v12 — installed " + rep.started,
+    "# alvidaa root hook v13 — installed " + rep.started,
     "# remove: rm -rf /var/local/otaTest.sh /var/local/tvtools /var/local/roothome",
     "exec > /var/local/otaTest.log 2>&1",
     "chmod 644 /var/local/otaTest.log",
@@ -120,7 +122,9 @@
     "kill -9 $(pidof dropbear) 2>/dev/null",
     "/var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s > /var/local/dropbear.log 2>&1 &",
     "sleep 1; chmod 644 /var/local/dropbear.log; pgrep -f dropbear > /dev/null && echo DROPBEAR-OK-2222",
-    "(i=0; while [ $i -lt 40 ]; do sleep 30; pgrep -f 'dropbear -F' > /dev/null || { kill -9 $(pidof dropbear) 2>/dev/null; /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s >> /var/local/dropbear.log 2>&1 & chmod 644 /var/local/dropbear.log; }; pidof telnetd > /dev/null || /var/local/tvtools/busybox telnetd -p 2323 -l /bin/sh; [ -f /var/local/alvidaa/alvidaa-bridge ] && { pidof alvidaa-bridge > /dev/null || /var/local/alvidaa/alvidaa-bridge -keys /var/local/alvidaa/keys -assets /var/local/alvidaa/launcher -config /var/local/alvidaa/config.json -addr 0.0.0.0:8770 -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 & }; i=$((i+1)); done) &",
+    "# v13 watchdog: immortal, but the kill-switch is re-checked every iteration",
+    "# so /var/local/hook.off still disarms it without editing the hook.",
+    "(while [ 1 = 1 ]; do sleep 30; [ -f /var/local/hook.off ] && exit 0; pgrep -f 'dropbear -F' > /dev/null || { kill -9 $(pidof dropbear) 2>/dev/null; /var/local/tvtools/dropbear -F -E -p 2222 -r /var/local/tvtools/host_ed25519 -D /var/local/roothome -s >> /var/local/dropbear.log 2>&1 & chmod 644 /var/local/dropbear.log; }; pidof telnetd > /dev/null || /var/local/tvtools/busybox telnetd -p 2323 -l /bin/sh; [ -f /var/local/alvidaa/alvidaa-bridge ] && { pidof alvidaa-bridge > /dev/null || /var/local/alvidaa/alvidaa-bridge -keys /var/local/alvidaa/keys -assets /var/local/alvidaa/launcher -config /var/local/alvidaa/config.json -addr 0.0.0.0:8770 -mqtt 127.0.0.1:36669 >> /var/local/alvidaa/bridge.log 2>&1 & }; done) &",
     "D=/var/local/rootdumps; mkdir -p $D; chmod 755 $D; chmod 644 $D/* 2>/dev/null",
     "ps",
     "iptables -L -n 2>&1 | head -60",
@@ -139,7 +143,7 @@
     "    -mqtt 127.0.0.1:36669 > /var/local/alvidaa/bridge.log 2>&1 &",
     "fi",
     "",
-    "echo 'hook v12 done'"
+    "echo 'hook v13 done'"
   ].join("\n") + "\n";
 
   // 1. back up whatever hook is installed
@@ -153,15 +157,15 @@
     rep.backup = { backed_up: false, reason: String(cur.msg).slice(0, 100) };
   }
 
-  // 2. install v12
-  var w = hiCall("fileWrite", { path: HOOK_PATH, mode: 6, writedata: HOOK_V12 });
+  // 2. install v13
+  var w = hiCall("fileWrite", { path: HOOK_PATH, mode: 6, writedata: HOOK_V13 });
   rep.write = { ok: isOk(w.ret), result: String(w.msg).slice(0, 100) };
-  line("hook v12 write: " + (isOk(w.ret) ? "OK" : "FAILED " + String(w.msg).slice(0, 80)),
+  line("hook v13 write: " + (isOk(w.ret) ? "OK" : "FAILED " + String(w.msg).slice(0, 80)),
     isOk(w.ret) ? "ok" : "err");
 
   if (isOk(w.ret)) {
     var rb = hiCall("fileRead", { path: HOOK_PATH, mode: 6 });
-    rep.write.readback_ok = isOk(rb.ret) && rb.msg.indexOf("v12") !== -1;
+    rep.write.readback_ok = isOk(rb.ret) && rb.msg.indexOf("v13") !== -1;
     line("readback: " + rep.write.readback_ok, rep.write.readback_ok ? "ok" : "err");
   }
 

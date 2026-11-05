@@ -98,22 +98,21 @@ $SSH 'kill $(pidof alvidaa-bridge) 2>/dev/null; sleep 1
 Re-verify `/api/health` reports the OLD version. Never leave the TV
 without a working bridge without saying so in the bulletin.
 
-## Watchdog gap (PROPOSAL — awaiting ack, hook untouched)
+## Watchdog gap (ACKED — landed as hook v13 in the repo, TV redeploy pending)
 
-Hook v12 (`tools/otaTest-hook.sh`) keeps the bridge alive only inside
-two bounded loops: the early-start retry (~2 min, 60×2s) and the
-watchdog (~20 min, 40×30s). After minute ~20 the loop exits; if the
-bridge dies after that — crash, OOM, MQTT identity fight, bad config on
-a manual restart — **nothing restarts it until the next reboot**, and
-the same bounded loop is all that guards dropbear/telnetd (ssh access
-itself expires at the same mark).
+Hook v12 (`tools/otaTest-hook.sh`) kept the bridge alive only inside two
+bounded loops: the early-start retry (~2 min, 60×2s) and the watchdog
+(~20 min, 40×30s). After minute ~20 the loop exited; if the bridge died
+after that — crash, OOM, MQTT identity fight, bad config on a manual
+restart — **nothing restarted it until the next reboot**, and the same
+bounded loop was all that guarded dropbear/telnetd (ssh access itself
+expired at the same mark).
 
-**Proposed minimal fix (one token):** unbind the watchdog loop —
-`while [ $i -lt 40 ]` → `while [ 1 = 1 ]` in both the canonical template
-(`tools/otaTest-hook.sh`) and the installer embed
-(`launcher/hookinstall.html`). The loop body is already pidof-guarded
-and idempotent (iptables `-C` checks), so an immortal loop costs one
-sleeping shell process and cannot double-start anything. If the loop
-itself dies we are no worse off than today. Heavier alternative
-(APM/supervisor entry) touches vendor infra for no extra coverage.
-Do not bump the hook to v13 until ds41 acks this.
+**Landed as hook v13** (template + installer embed, together): the
+watchdog loop is immortal (`while [ 1 = 1 ]`), and per ds41's required
+condition the `/var/local/hook.off` kill-switch is **re-checked every
+iteration** (v12 checked it once at script start, so an immortal loop
+would have bypassed it forever). `sleep 30` cadence kept — no busy
+spin; the `kill -9 $(pidof dropbear)` line is unchanged (separate known
+issue, out of scope). The v13 hook is not yet deployed to the TV — the
+running TV hook is still v12 until a coordinated redeploy window.

@@ -83,7 +83,7 @@ use. Installing the hook changes your TV's boot behavior.
 | Doc | What it is |
 | --- | --- |
 | [docs/](docs/README.md) | Documentation map — models, research, launcher, project |
-| [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40 and 100U7Q |
+| [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40, 100U7Q and 75UR9S |
 | [50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md) | The original MTK9602 root chain, stage by stage |
 | [50A51HUV findings](docs/models/50A51HUV/09.01O.P0813/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |
 | [EXPLOITS.md](docs/research/EXPLOITS.md) | Method inventory: tested devices, evidence, outcomes and limits |

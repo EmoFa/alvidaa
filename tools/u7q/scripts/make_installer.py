@@ -75,9 +75,17 @@ mkdir -p "$D" 2>/dev/null
 
   echo "--- step: start dropbear ---"
   cd "$D" || exit 0
-  # no -s: this build has no password auth compiled in (key-only by design)
-  ./dropbear-root -r "$D/hostkey_ed25519" -p 8008 -P "$D/dropbear.pid"
+  # -s is only a valid option when password auth is compiled in. Builds with
+  # DROPBEAR_SVR_PASSWORD_AUTH 0 reject it ("Invalid option") and never start,
+  # so try -s first and fall back. Keeps the key-only guarantee on both.
+  rm -f "$D/dropbear.pid"
+  ./dropbear-root -s -r "$D/hostkey_ed25519" -p 8008 -P "$D/dropbear.pid" 2>/dev/null
   sleep 1
+  if [ ! -s "$D/dropbear.pid" ]; then
+      echo "no -s: this build has no password auth compiled in"
+      ./dropbear-root -r "$D/hostkey_ed25519" -p 8008 -P "$D/dropbear.pid"
+      sleep 1
+  fi
   echo "pid=$(cat "$D/dropbear.pid" 2>/dev/null)"
   grep -i ':1F48' /proc/net/tcp 2>&1
   grep -E '^(Uid|CapEff):' /proc/self/status 2>&1

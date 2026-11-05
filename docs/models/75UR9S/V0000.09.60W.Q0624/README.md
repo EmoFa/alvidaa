@@ -32,7 +32,7 @@ TV browser page
 | `fetchfile.js` | older | newer axios/AbortController/rate-limit version |
 | `hiutils.fileRead` on a directory | — | returns `{errno:-21, code:"EISDIR"}` object (not a listing); files read fine, base is `/APPS/` |
 | postinst log redirect | `{...} > /APPS/.re_sshd/installer_log.txt` before `mkdir -p` | **latent bug confirmed**: on a clean system the redirect fails, the whole block is silently skipped, `exit 0` still reports success. Fixed: `mkdir -p "$D"` before the redirect |
-| Dropbear start flag | `-s` (disable password auth) | `-s` is `Invalid option` when the build has no password auth compiled in; this build uses `DROPBEAR_SVR_PASSWORD_AUTH 0` (key-only by compile), start without `-s` |
+| Dropbear start flag | `-s` (disable password auth) | `-s` is `Invalid option` when the build has no password auth compiled in; this build uses `DROPBEAR_SVR_PASSWORD_AUTH 0` (key-only by compile). The shared `postinst` now tries `-s` first and retries without it, so both builds stay key-only |
 | iptables | present (50A51HUV lane) | **absent** in `/sbin` — no in-kernel firewall from userspace |
 | Port 8008 | allowed | allowed (answers `Connection refused` while idle) |
 | SELinux | enforcing | enforcing |
@@ -49,7 +49,7 @@ TV browser page
    `TRIGGER_URLS` (basic first); trigger payload now sends
    `uninstall(83)` then `install(82)` in one `list`.
 3. `tools/u7q/scripts/make_installer.py` postinst fixed (mkdir before log
-   redirect, per-step logging, env dump, no `-s`).
+   redirect, per-step logging, env dump, `-s` with a no-`-s` retry).
 4. Result: superwatch reply `90:0` (OK); postinst log shows `pid=5012`,
    `0.0.0.0:8008` LISTEN in `/proc/net/tcp`; `ssh -p 8008 root@<tv>` gives
    `Uid: 0`, `CapEff: 000001ffffffffff`.

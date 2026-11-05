@@ -21,6 +21,19 @@ ssh pi 'cd ~/alvidaa/server && python3 -m venv venv && ./venv/bin/pip install pa
   "+ INSTALL AS APP" (same app Id overwrites the old entry), then
   restart the TV. The self-install also purges stale duplicate "Home"
   entries pointing at dead hosts.
+- **The self-install only rewrites its own entry.** Every other app in
+  `/APPS/websdk/Appinfo.json` keeps whatever host it was installed from,
+  so a host move leaves them pointing at a dead address with no visible
+  error — the tile just opens nothing. Found on 2026-11-05: the Recon
+  tile still pointed at the retired Pi (`192.168.0.85:8770`) long after
+  the launcher had moved to `127.0.0.1:8770`. After any host move, read
+  the registry and check every `URL`/`IconURL`:
+  `server/tv 'cat /APPS/websdk/Appinfo.json'`. Back it up before editing
+  (`Appinfo.json.bak-<date>`), keep the `UhisPhoenix:713` ownership and
+  `660` mode, and write through a temp file plus `mv`.
+- **`only` beats `hidden`.** `visible_apps()` skips the hidden check
+  whenever `only` is non-empty, so an app listed in both is shown, not
+  hidden. Remove it from `only` to make `hidden` take effect.
 - The dev server on a Mac is fine for building, but the author's Mac
   sleeping once broke every button — the Pi exists so the launcher
   survives your laptop.

@@ -16,11 +16,11 @@ fail=0
 
 step() { printf '\n==> %s\n' "$*"; }
 
-step "1/4 generated tables vs JSON sources"
+step "1/5 generated tables vs JSON sources"
 python3 scripts/gen-inventory.py --check || fail=1
 python3 scripts/gen-exploits.py --check || fail=1
 
-step "2/4 python syntax"
+step "2/5 python syntax"
 python3 - <<'PY' || fail=1
 import ast, subprocess, sys
 
@@ -39,7 +39,7 @@ print("\n".join(bad) if bad else f"   {len(files)} files parsed")
 sys.exit(1 if bad else 0)
 PY
 
-step "3/4 shell syntax"
+step "3/5 shell syntax"
 shells=0
 while IFS= read -r f; do
   shells=$((shells + 1))
@@ -47,7 +47,7 @@ while IFS= read -r f; do
 done < <(git ls-files '*.sh')
 echo "   $shells scripts checked"
 
-step "4/4 relative markdown links"
+step "4/5 relative markdown links"
 python3 - <<'PY' || fail=1
 import pathlib, re, subprocess, sys
 
@@ -76,6 +76,13 @@ for doc in files:
 print("\n".join(bad) if bad else f"   {len(files)} markdown files checked")
 sys.exit(1 if bad else 0)
 PY
+
+step "5/5 docs site (needs: pip install markdown)"
+if python3 -c "import markdown" 2>/dev/null; then
+  python3 scripts/gen-site.py --check || fail=1
+else
+  echo "   skipped — python3 -m pip install markdown"
+fi
 
 if [ "$fail" -eq 0 ]; then
   printf '\nOK — repo checks clean\n'

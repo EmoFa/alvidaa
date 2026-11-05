@@ -46,6 +46,7 @@ Two lanes share one TV:
 | `docs/project/` | the project story, AI prompt ladder and blog draft |
 | `docs/research/` | cross-model inventory, method catalogue, tested-models guide and playbook |
 | `scripts/check.sh` | read-only health check: generated tables vs JSON, python/shell syntax, relative doc links |
+| `scripts/gen-site.py` | renders the markdown in place into `site/` for GitHub Pages (`.github/workflows/pages.yml`) |
 | `TODO.md` | open work, ordered — loose ends and the catalogue refactor plan |
 | `firmware/ENDPOINTS.md` | live endpoint/kill-list working copy (gitignored) |
 

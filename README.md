@@ -17,6 +17,11 @@ step is designed to be undone. Built with — and designed for — AI coding
 sessions: point your agent at [AGENTS.md](AGENTS.md); the prompt ladder
 that worked is in [the prompt ladder](docs/project/HACK-YOUR-OWN.md).
 
+**Read it as a site:** <https://carteakey.github.io/alvidaa/> — the same
+markdown, rendered with the tested-model matrix, the model guides and the
+method catalogue in one place. Generated from the repo by
+[`scripts/gen-site.py`](scripts/gen-site.py); nothing is moved or duplicated.
+
 ## The two lanes
 
 ```
@@ -83,6 +88,7 @@ use. Installing the hook changes your TV's boot behavior.
 | Doc | What it is |
 | --- | --- |
 | [docs/](docs/README.md) | Documentation map — models, research, launcher, project |
+| [Docs site](https://carteakey.github.io/alvidaa/) | The same pages rendered, with a filterable index — built by `scripts/gen-site.py` |
 | [docs/models/](docs/models/) | **Model- and firmware-specific guides** — 50A51HUV, HE40, 100U7Q, 75UR9S and 43Q60SEVS |
 | [50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md) | The original MTK9602 root chain, stage by stage |
 | [50A51HUV findings](docs/models/50A51HUV/09.01O.P0813/findings/) | The lab notebook, split into twelve modules (MQTT auth wall → Cobalt runtime & overlay traps) |

@@ -10,6 +10,10 @@ without a device observation stays labelled as a claim.
 
 ## Now — correctness
 
+- [ ] **Enable GitHub Pages** (Settings → Pages → Source: *GitHub Actions*).
+      The workflow is `.github/workflows/pages.yml` and the site is built by
+      `scripts/gen-site.py`; until Pages is switched on, the build job runs but
+      the deploy step has nowhere to publish.
 - [ ] **43Q60SEVS: record the `serviceList.json` backup path.** The guide says
       rollback is "full overwrite + file zeroing" but never says where the
       pristine copy lives. Reversibility is the design law — write the path

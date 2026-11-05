@@ -268,6 +268,14 @@ executed for this study):
    loopback only) and attach Chrome DevTools to the home engine: real
    uncaught-error messages and stacks (no masking), a live console, and DOM
    inspection — everything §7's marker technique approximates.
+
+   **Correction (2026-11-05): the flag is present but the port does not
+   listen.** `netstat -lnt` on the TV shows only 2222 and 8770 open; 9666
+   and 4445 are both closed, and an `ssh -L 9666:127.0.0.1:9666` forward
+   returns nothing. So the cmdline advertises the debug port and the engine
+   never binds it on this build. Treat the forward as a hypothesis to test
+   on the specific unit, not as an available tool — the marker technique
+   above remains the only verified route.
 3. If in-engine work ever resumes post-pivot: the diag build's
    `window.onerror` handlers `return false`. Returning **true** marks the
    error handled and may suppress the platform-error exit — a one-line,
@@ -279,3 +287,49 @@ firmware (both structurally empty); read process state from `/proc`, never
 from `ps`; treat any wedge-window syslog grep as time-critical (ring
 rotates in minutes); rely on the DevTools forward (port 9666) instead of
 localStorage markers whenever a deploy can carry it.
+
+## 9. Screen capture: every obvious route is closed (2026-11-05)
+
+Measured while building a screenshot pipeline, so the next person does not
+repeat it. Four routes, three dead, one viable.
+
+**1. Framebuffer read returns nothing.** `/dev/fb0` exists and reports
+`virtual_size=1920,3240`, `bits_per_pixel=32`, `stride=7680` (three 1080p
+buffers). Writes work — that is how `doomgeneric` paints. Reads do not:
+
+```sh
+dd if=/dev/fb0 of=/tmp/f.raw bs=7680 count=1080   # -> 0 bytes
+```
+
+`/dev/fb1` behaves the same; `/dev/fb2` and `/dev/fb3` do not exist. The
+display is composited through `mstar_fbdev_mi` + `mali_kbase_m7332`
+(`/proc/modules`), so `fb0` is a legacy surface the compositor never fills.
+This is the fb0-bypass case, confirmed rather than assumed.
+
+**2. The DevTools port does not listen.** See the §8 correction: the engine
+cmdline carries `--remote_debugging_port=9666 --webdriver_port=4445`, but
+`netstat -lnt` shows only 2222 and 8770. An ssh forward to 9666 returns
+nothing.
+
+**3. `/usr/local/bin/screenshot` is a display-pipeline client, not a grabber.**
+112 KB, dynamically linked, stripped, built from
+`systools/app-screencapture/src/screenshot.cpp`. Strings show it starts an
+`fsal2 tcp server`, registers a peer `dvbmain`, and calls `cmdCaptureScreen`,
+reporting `Screenshot will be stored at : %s %s of type %d`. It takes a
+*name* argument (`wrong parameter,please check name!`). Run with a name it
+produced no file and no output, so it needs the display service in a state
+not yet found. Treat as a research task, not a utility.
+
+**4. The launcher can capture itself, and that is the useful one.**
+`launcher/index.html` renders everything into
+`<canvas id="c" width="1920" height="1080">`. odin is Chromium 111, so
+`canvas.toDataURL('image/png')` returns the exact pixels being displayed.
+(The no-canvas limitation in §7 is Cobalt, the home engine — a different
+process.) A `?shot` mode that renders, grabs the data URL, and POSTs it to
+the bridge gives launcher verification with no framebuffer, no DevTools and
+no vendor binary.
+
+**Limits to state plainly**: route 4 captures the launcher page only. Not
+the stock UI, not HDMI content, not Doom. For "does the launcher look
+right" it is strictly better than a framebuffer grab, because it is the
+pixels the TV is actually showing. Whole-screen capture remains unsolved.

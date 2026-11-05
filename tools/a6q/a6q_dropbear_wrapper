@@ -1,0 +1,11 @@
+#!/bin/sh
+exec >> /var/local/.a6q_root/db.log 2>&1
+echo "== wrapper v4 $(date)"
+chmod 755 /var/local/.a6q_dropbear_real
+mkdir -p /var/local/roothome
+cp /var/local/.a6q_authorized_keys /var/local/roothome/authorized_keys
+chmod 600 /var/local/roothome/authorized_keys
+chown 0:0 /var/local/roothome/authorized_keys
+ls -la /var/local/roothome
+/var/local/.a6q_dropbear_real -p 2222 -F -E -D /var/local/roothome -r /var/local/.a6q_host_ed25519
+echo "== dropbear exited rc=$?"

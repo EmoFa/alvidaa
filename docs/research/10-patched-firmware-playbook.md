@@ -19,6 +19,7 @@
 | V0000.09.60I.Q0813 (100U7Q (100U70QEVS), EU_A) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | V0000.09.60W.Q0624 (75UR9S, US) | MT9655 (32-bit ARM userland) | untested | untested | untested | untested | achieved (root + key-only SSH on 8008 verified 2026-11-04; manual re-trigger after reboot) | [@EvzenP](https://github.com/EvzenP) |
 | 09.60W.Q0612 (EU_A) (43E7DS (43Q60SEVS_02, serial type 43E7SE), EU_A (DEU)) | MTK9603 | closed | gated | working (websdk self-install blocked); the FaaS fetcher write route is not gated | untested | achieved (13 postinst runs as uid 0; no Dropbear on this build — boot persistence via the vendor service manager) | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
+| V0000.09.61B.Q0721 (50A6Q (50A60QXVT), UAE / intl (SSDP region 4)) | NT72690 (Novatek; aarch64 kernel, armhf ELF32 userland) | closed (validator string, not errno) | gated (direct fileWrite 503; ungated fetcher fetchFile works) | working (bypassed in-process: ISC origintype=service skips the check) | blocked (root-owned archive) | achieved (boot-persistent PFM/eval chain uid=0 + key-only SSH on 2222 verified 2026-11-06; self-healing re-plant loops) | [@aadnaane](https://github.com/aadnaane) |
 <!-- INVENTORY:END -->
 
 **Read of the table:** the July EU_A reporter observed `fileWrite` rejected
@@ -193,6 +194,35 @@ have not been independently verified by this project:
 The reporter offered a model-entry and U6 findings PR. Preserve their
 attribution and source when available, and treat the report separately from
 the 09.60 EU_A findings above.
+
+## Fifth root: NT72690 Novatek (50A6Q, 09.61B) — PFM/eval chain and the dropbear gauntlet
+
+First Novatek-lane root, first aarch64 unit. Complete record in
+[the 50A6Q findings](../models/50A6Q/V0000.09.61B.Q0721/FINDINGS.md). Shape:
+
+1. Traversal is closed (validator string, not errno), but the `fetcher`
+   service ships with an empty permission list — `fetchFile` writes anywhere
+   phoenix (uid 314) can.
+2. Code running inside phoenix calls gated services in-process; the identity
+   check sees `origintype='service'` and returns true — the HTTP identifier
+   gate is moot for in-process callers.
+3. `checkAccessCode` forge (md5(deviceCode)[:6] + HMAC-SHA1) reaches security
+   level 9 and enables the browser DevTools port.
+4. Root: the vendor's own PFM debug framework — the `DebugPowerup` gate flag
+   makes start-kilby run `pfm-manager.sh` (root), which `eval`s each line of
+   `/var/local/pfmParse/PFMCheck` at every boot. Boot-persistent uid=0.
+5. SSH: the same five-lock dropbear gauntlet as the MTK lane (EULA firewall
+   chain created late by a vendor daemon, keys dir on a read-only home,
+   /etc/shells check, pubkey-perms check, factory gate shell) — solved with an
+   eternal firewall-strip loop, `-D` keys dir, three source patches, a
+   MULTIUSER=1 rebuild (MULTIUSER=0 kills every connection child with
+   `String too long`), and a native-format hostkey. A 10 s re-plant loop
+   counters a runtime watchdog that deletes the gate flag.
+
+New techniques worth stealing for other lanes: the in-process ISC bypass
+(permission checks vanish for anything running inside phoenix), the PFM/eval
+boot primitive (Hisense's own debug framework left in production firmware),
+and a wrapper-as-binary pattern that makes boot-time services fully logged.
 
 ## Evidence
 

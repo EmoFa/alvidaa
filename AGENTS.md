@@ -45,7 +45,8 @@ Two lanes share one TV:
 | `docs/launcher/` | launcher deployment, the on-TV launcher v2 roadmap, and the two-lane architecture (LANES.md) |
 | `docs/project/` | the project story, AI prompt ladder and blog draft |
 | `docs/research/` | cross-model inventory, method catalogue, tested-models guide and playbook |
-| `scripts/check.sh` | read-only health check: generated tables vs JSON, python/shell syntax, relative doc links |
+| `scripts/check.sh` | read-only health check: generated tables vs JSON, python/shell syntax, relative doc links, duplicate firmware rows |
+| `scripts/report.py` | tested-model report scaffolder: validates the firmware id, refuses duplicates, scaffolds the guide tree, appends the inventory row, runs the generators + check |
 | `scripts/gen-site.py` | renders the markdown in place into `site/` for GitHub Pages (`.github/workflows/pages.yml`) |
 | `TODO.md` | open work, ordered — loose ends and the catalogue refactor plan |
 | `firmware/ENDPOINTS.md` | live endpoint/kill-list working copy (gitignored) |

@@ -5,6 +5,10 @@
 #   2. every tracked python file parses
 #   3. every tracked shell script passes `bash -n`
 #   4. every relative markdown link resolves
+#   5. docs site renders
+#   6. every model guide is indexed
+#   7. no secrets or vendor binaries
+#   8. no duplicate firmware rows in the inventory
 #
 # Usage: scripts/check.sh          (from any directory)
 # Exit 0 = clean, 1 = at least one failure. Writes nothing to the tree.
@@ -16,11 +20,11 @@ fail=0
 
 step() { printf '\n==> %s\n' "$*"; }
 
-step "1/7 generated tables vs JSON sources"
+step "1/8 generated tables vs JSON sources"
 python3 scripts/gen-inventory.py --check || fail=1
 python3 scripts/gen-exploits.py --check || fail=1
 
-step "2/7 python syntax"
+step "2/8 python syntax"
 python3 - <<'PY' || fail=1
 import ast, subprocess, sys
 
@@ -39,7 +43,7 @@ print("\n".join(bad) if bad else f"   {len(files)} files parsed")
 sys.exit(1 if bad else 0)
 PY
 
-step "3/7 shell syntax"
+step "3/8 shell syntax"
 shells=0
 while IFS= read -r f; do
   shells=$((shells + 1))
@@ -47,7 +51,7 @@ while IFS= read -r f; do
 done < <(git ls-files '*.sh')
 echo "   $shells scripts checked"
 
-step "4/7 relative markdown links"
+step "4/8 relative markdown links"
 python3 - <<'PY' || fail=1
 import pathlib, re, subprocess, sys
 
@@ -77,14 +81,14 @@ print("\n".join(bad) if bad else f"   {len(files)} markdown files checked")
 sys.exit(1 if bad else 0)
 PY
 
-step "5/7 docs site (needs: pip install markdown)"
+step "5/8 docs site (needs: pip install markdown)"
 if python3 -c "import markdown" 2>/dev/null; then
   python3 scripts/gen-site.py --check || fail=1
 else
   echo "   skipped — python3 -m pip install markdown"
 fi
 
-step "6/7 model guides are indexed"
+step "6/8 model guides are indexed"
 python3 - <<'PY' || fail=1
 import pathlib, sys
 
@@ -97,7 +101,7 @@ print("\n".join(missing) if missing else f"   {len(guides)} guides indexed")
 sys.exit(1 if missing else 0)
 PY
 
-step "7/7 no secrets or vendor binaries"
+step "7/8 no secrets or vendor binaries"
 python3 - <<'PY' || fail=1
 import pathlib, subprocess, sys
 
@@ -133,6 +137,63 @@ for raw in files:
             bad.append(f"   FAIL {path}: contains '{pat.decode()}'")
             break
 print("\n".join(bad) if bad else f"   {len(files)} files scanned")
+sys.exit(1 if bad else 0)
+PY
+
+step "8/8 no duplicate firmware rows"
+python3 - <<'PY' || fail=1
+# Two layers, both hard failures (this is how 43Q60SEVS nearly landed as a
+# second entry for 09.60W.Q0612):
+#   a) normalized id collision — lowercase + whitespace collapse;
+#   b) same base firmware (id minus a trailing parenthetical qualifier) with
+#      model-alias strings (one normalized model contains the other).
+import json, re, sys
+
+def norm_id(s):
+    return re.sub(r"\s+", " ", s.strip().lower())
+
+def base_fw(s):
+    base = norm_id(re.sub(r"\(.*$", "", s).strip())
+    # the vendor V-string and the shorthand are the same firmware:
+    # V0000.09.60W.Q0612 == 09.60W.Q0612
+    return re.sub(r"^v\d{2,4}\.", "", base)
+
+def norm_model(s):
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+try:
+    inv = json.load(open("docs/research/inventory.json", encoding="utf-8"))
+except (OSError, ValueError) as e:
+    print(f"   FAIL inventory.json unreadable: {e}")
+    sys.exit(1)
+
+rows = []
+for f in inv.get("firmwares", []):
+    rid = f.get("id", "")
+    nm = norm_model(f.get("model", ""))
+    rows.append((norm_id(rid), base_fw(rid), nm, rid, f.get("model", "?")))
+
+bad = []
+seen = {}
+for nid, _base, _nm, rid, _rm in rows:
+    if nid in seen:
+        bad.append(f"   FAIL duplicate firmware id {rid!r} — already present as {seen[nid]!r}")
+    else:
+        seen[nid] = rid
+
+by_base = {}
+for _nid, base, nm, _rid, rm in rows:
+    if nm:
+        by_base.setdefault(base, []).append((nm, rm))
+for base, models in by_base.items():
+    for i in range(len(models)):
+        for j in range(i + 1, len(models)):
+            a, b = models[i][0], models[j][0]
+            if a in b or b in a:
+                bad.append(f"   FAIL firmware {base!r}: model alias collision — "
+                           f"{models[i][1]!r} vs {models[j][1]!r}")
+
+print("\n".join(bad) if bad else f"   {len(rows)} rows, no collisions")
 sys.exit(1 if bad else 0)
 PY
 

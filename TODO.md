@@ -10,15 +10,20 @@ without a device observation stays labelled as a claim.
 
 ## Now — correctness
 
-- [ ] **`scripts/report.py`** — a scaffolder for the report flow: prompt for
+- [x] **`scripts/report.py`** — a scaffolder for the report flow: prompt for
       model / firmware / SoC / region, validate the firmware string, append to
       `inventory.json`, run both generators, run `check.sh`. Turns a 40-minute
       review into a 2-minute one, and stops the three mistakes both #7 and #8
       made (wrong tree layout, duplicate firmware row, mislabelled fields).
-- [ ] **Duplicate-firmware detection in `check.sh`.** Nothing currently says
+      *(done 2026-11-05 — id grammar validated against all 10 recorded ids,
+      duplicate guard mirrors check.sh, full scaffold demonstrated in a
+      throwaway clone)*
+- [x] **Duplicate-firmware detection in `check.sh`.** Nothing currently says
       "this firmware already has a row" — which is how 43Q60SEVS nearly landed
       as a second entry for `09.60W.Q0612`. Normalise the string and fail on a
-      collision.
+      collision. *(done 2026-11-05 — step 8/8: normalized-id collision +
+      base-firmware model-alias layers; demonstrated exit 1 on a seeded
+      duplicate, exit 0 on the clean tree)*
 - [ ] **43Q60SEVS: record the `serviceList.json` backup path.** The guide says
       rollback is "full overwrite + file zeroing" but never says where the
       pristine copy lives. Reversibility is the design law — write the path

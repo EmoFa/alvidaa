@@ -60,7 +60,8 @@ level because they belong to the launcher or to one-off device work.
 | Path | Purpose | Notes |
 |---|---|---|
 | [`deploy-overlay.sh`](deploy-overlay.sh) | Build the launcher overlay locally and push it to a rooted TV in one batch. | Writes the TV's UI file, clears cache, reboots. Requires the root channel and `server/keys/`; pass `<tv-ip> <bridge-url>` or set `TV_HOST` / `BRIDGE_URL`. |
-| [`tvshell.py`](tvshell.py) | Send commands to the TV's busybox `telnetd` root shell on port 2323. | Plain TCP, no authentication of its own; root-equivalent. Requires `TV_HOST=<tv-ip>`. |
+| [`alvidaa.py`](alvidaa.py) (shim: [`alvidaa`](alvidaa)) | One CLI for the TV: `sys`, `logs`, `net`, `doctor`, `open`, `apps`, `sources`. `doctor` gives a one-line verdict per check (bridge, MQTT, hook, SSH, OTA kill-list, disk, launcher) with SSH-relay fallback when the direct path flaps. | Bridge calls go to `http://<tv>:8770`; root calls ride `server/tv`; never proxied; degrades gracefully. Requires `TV_HOST=<tv-ip>`. |
+| [`tvshell.py`](tvshell.py) | **LEGACY** — send commands to the TV's busybox `telnetd` root shell on port 2323. | Plain TCP, no authentication of its own; root-equivalent. Requires `TV_HOST=<tv-ip>`. Superseded by dropbear on 2222 (use [`server/tv`](../server/tv)) and by [`alvidaa.py`](alvidaa.py) for structured commands — two shell paths is one too many; retained only for pre-root firmware triage. |
 | [`make_bg.py`](make_bg.py) | Generate the launcher's 960x540 PNG wallpapers. | Stdlib only; writes into `launcher/bg/`. |
 | [`fbcat.c`](fbcat.c) | Read `/dev/fb0` and write the framebuffer to stdout. | Read-only framebuffer dump; build for the TV's ARM userland. |
 | [`doomgeneric_fb.c`](doomgeneric_fb.c) | Doomgeneric framebuffer/input backend for the TV. | Needs the Doomgeneric sources; not a standalone game. |

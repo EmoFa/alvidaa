@@ -91,6 +91,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/api/debug":
 		h.serveDebug(w, r)
 		return
+	case r.URL.Path == "/api/apps":
+		h.json(w, map[string]any{"ok": true, "apps": h.b.visibleApps()})
+		return
+	case r.URL.Path == "/api/sources":
+		h.json(w, map[string]any{"ok": true, "sources": h.b.visibleSources()})
+		return
 	case strings.HasPrefix(r.URL.Path, "/api/doom"):
 		h.json(w, map[string]any{"ok": false, "error": "doom is not supported by the on-TV daemon"})
 		return

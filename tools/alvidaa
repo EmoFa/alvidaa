@@ -1,0 +1,4 @@
+#!/bin/sh
+# alvidaa — one CLI for the TV. Thin shim over alvidaa.py so the command
+# reads naturally; all logic lives in alvidaa.py (check.sh AST-gates it).
+exec python3 "$(dirname "$0")/alvidaa.py" "$@"

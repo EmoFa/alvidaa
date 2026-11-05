@@ -11,6 +11,20 @@ boot-time home. Ownership: this document and everything under `launcher/` +
 > external-server path and the rooted native path. The split, and what must
 > stay in sync between them, is documented in [LANES.md](LANES.md).
 
+## Status snapshot (2026-11-05)
+
+| Phase | State |
+|---|---|
+| R0 guardrails / R1 root persistence | done — hook v12 (early bridge start, pidof-guarded late start), captured in `hookinstall.html` |
+| R2 / R2b / R2c home plumbing maps | done — boot chain, service gateway, APM launcher config (§ below) |
+| R3 telemetry + ads kill | done at the kernel layer (tvfw) + AdGuard; service-level list in findings |
+| R4 bridge daemon | achieved — `bridge/` on TV at `127.0.0.1:8770`, loopback MQTT, full API incl. `/api/debug` |
+| R4b screen pivot | live — odin lane: watcher bounce → dark-glass page, 5/5 icons, wallpapers, Root Status tile; the home shell stays pristine |
+| R5 boot-slot suppression | superseded by the odin lane for this firmware; revisit on any firmware change |
+| R6 native DOM launcher | groundwork — `HOME-UI-INTERNALS.md` (UI-bundle RE) is the gate; canvas is impossible (findings 12 §7), DOM is the path |
+| Canvas hypothesis (§ below) | resolved — findings 12 §7: no `HTMLCanvasElement` in this Cobalt build |
+| Post-mortem/recovery runbook (§ below) | superseded by [LANES.md](LANES.md) recovery recipe + the Root Status page (`/debug.html`) |
+
 ## Where v1.3 stands (the baseline v2 builds on)
 
 - Server: Python (`server/vidaa_server.py`) on the Pi (`alvidaa.service`,

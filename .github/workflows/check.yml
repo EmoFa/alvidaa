@@ -1,0 +1,35 @@
+name: check
+
+# Runs the same read-only health check the repo asks contributors to run
+# locally (scripts/check.sh): generated tables vs JSON, python/shell syntax,
+# relative links, the docs site build, the model index, and a guard against
+# secrets and vendor binaries. Nothing here writes to the tree.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install markdown (for the docs-site step)
+        run: python3 -m pip install --disable-pip-version-check markdown==3.9
+
+      - name: scripts/check.sh
+        run: ./scripts/check.sh

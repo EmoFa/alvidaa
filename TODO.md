@@ -10,6 +10,15 @@ without a device observation stays labelled as a claim.
 
 ## Now — correctness
 
+- [ ] **`scripts/report.py`** — a scaffolder for the report flow: prompt for
+      model / firmware / SoC / region, validate the firmware string, append to
+      `inventory.json`, run both generators, run `check.sh`. Turns a 40-minute
+      review into a 2-minute one, and stops the three mistakes both #7 and #8
+      made (wrong tree layout, duplicate firmware row, mislabelled fields).
+- [ ] **Duplicate-firmware detection in `check.sh`.** Nothing currently says
+      "this firmware already has a row" — which is how 43Q60SEVS nearly landed
+      as a second entry for `09.60W.Q0612`. Normalise the string and fail on a
+      collision.
 - [ ] **43Q60SEVS: record the `serviceList.json` backup path.** The guide says
       rollback is "full overwrite + file zeroing" but never says where the
       pristine copy lives. Reversibility is the design law — write the path
@@ -78,6 +87,11 @@ without a device observation stays labelled as a claim.
 
 ## Later
 
+- [ ] **CODEOWNERS + a written definition of "verified".** Path ownership so
+      regulars can merge their own model's docs; a short statement of what
+      evidence clears the "verified" bar so reviewers are not re-litigating it.
+- [ ] **Tag the launcher** (`launcher-v1.x`) and keep a short `CHANGELOG.md`.
+      There is no version anywhere today, so nobody can pin or roll back.
 - [ ] **Site: split the matrix.** The README table mixes verified rows with
       community reports; the site could render "verified" and "unconfirmed" as
       two tables from the same JSON, and the README could keep only the

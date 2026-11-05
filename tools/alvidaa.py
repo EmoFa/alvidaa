@@ -132,8 +132,17 @@ def cmd_apps(args):
         return 2
     if not apps:
         print("(applist empty — press Home once so the framework populates it)")
+        return 0
+    # appId only exists on bridges built after 2026-11-05; an older daemon
+    # sends name+icon only. Degrade to a name list rather than a column of
+    # question marks.
+    show_id = any(a.get("appId") is not None for a in apps)
     for a in apps:
-        print("%-14s %s" % (a.get("appId", "?"), a.get("name", "?")))
+        if show_id:
+            print("%-14s %s" % (a.get("appId", "-"), a.get("name", "?")))
+        else:
+            print(a.get("name", "?"))
+    return 0
 
 
 def cmd_sources(args):

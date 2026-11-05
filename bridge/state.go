@@ -278,6 +278,11 @@ func (b *Bridge) visibleApps() []map[string]any {
 		if r, ok := rename[key]; ok {
 			entry["name"] = r
 		}
+		// appId is what the CLI and any scripting consumer needs; the page
+		// only reads name and icon, so this is additive.
+		if id, ok := a["appId"]; ok {
+			entry["appId"] = id
+		}
 		if iconURL(a) != "" {
 			entry["icon"] = fmt.Sprintf("/icon/%v", a["appId"])
 		}

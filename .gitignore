@@ -9,7 +9,7 @@ __pycache__/
 *.pyc
 .DS_Store
 firmware/
-research/
+/research/
 
 # native bridge build output
 bridge/dist/

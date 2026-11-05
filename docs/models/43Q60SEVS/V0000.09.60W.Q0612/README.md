@@ -60,6 +60,11 @@ another study. Later alignment is documented here.
 Rollback paths, all measured: `83` uninstall, `serviceList.json` full
 overwrite, unarm-overwrite disarm of every module (the FaaS directory has no
 delete primitive, so cleanup is overwrite-with-zero by convention).
+Pristine `serviceList.json` source: the vendor package ships the original
+inside the unit's backup image — `apps/opt-pkgs/backup/tv.vidaa.jsservice.basic_*.ipk`
+(extract the ipk, take `CHA/serviceList.json`). Future appends must first
+stash an on-device copy (`cp CHA/serviceList.json CHA/serviceList.json.pristine`)
+so rollback never depends on unpacking the vendor ipk.
 
 ## System map (read-only findings)
 

@@ -175,7 +175,7 @@ def gh_url(rel: str) -> str:
     return f"{REPO}/{kind}/{BRANCH}/{rel}"
 
 
-def rewrite_links(html: str, src_rel: str, pages: dict) -> str:
+def rewrite_links(html: str, src_rel: str, pages: dict, asset_set=frozenset()) -> str:
     src_dir = Path(src_rel).parent.as_posix()
 
     def fix(match):
@@ -193,6 +193,11 @@ def rewrite_links(html: str, src_rel: str, pages: dict) -> str:
             dest = pages[target]
         elif (target + "/README.md") in pages:
             dest = pages[target + "/README.md"]
+        elif attr == "src" and target in asset_set:
+            # a copied asset: keep it local instead of sending the reader to
+            # a GitHub blob page, which is HTML and renders as a broken image
+            rel = os.path.relpath(target, src_dir or ".").replace(os.sep, "/")
+            return f'{attr}="{rel}"'
         elif (ROOT / target).exists():
             return f'{attr}="{gh_url(target)}"'
         else:
@@ -200,7 +205,14 @@ def rewrite_links(html: str, src_rel: str, pages: dict) -> str:
         rel = os.path.relpath(dest, src_dir or ".").replace(os.sep, "/")
         return f'{attr}="{rel}{("#" + frag) if frag else ""}"'
 
-    return re.sub(r'(href|src)="([^"]*)"', fix, html)
+    # Leave code samples alone: a `src="..."` inside <code> is documentation,
+    # not a link, and rewriting it corrupts the example.
+    parts = re.split(r"(<pre\b.*?</pre>|<code\b.*?</code>)", html, flags=re.S)
+    for i, part in enumerate(parts):
+        if part.startswith(("<pre", "<code")):
+            continue
+        parts[i] = re.sub(r'(href|src)="([^"]*)"', fix, part)
+    return "".join(parts)
 
 
 def build_tree(pages: dict) -> list:
@@ -232,14 +244,14 @@ def build_tree(pages: dict) -> list:
     return out
 
 
-def render(page_rel: str, pages: dict, nav: list) -> str:
+def render(page_rel: str, pages: dict, nav: list, asset_set=frozenset()) -> str:
     text = (ROOT / page_rel).read_text(encoding="utf-8", errors="ignore")
     md = markdown.Markdown(
         extensions=["tables", "fenced_code", "sane_lists", "toc"],
         extension_configs={"toc": {"slugify": slugger(), "permalink": False}},
     )
     body = md.convert(text)
-    body = rewrite_links(body, page_rel, pages)
+    body = rewrite_links(body, page_rel, pages, asset_set)
 
     url = pages[page_rel]
     depth = url.count("/")
@@ -289,6 +301,33 @@ def render(page_rel: str, pages: dict, nav: list) -> str:
 """
 
 
+def assets() -> set:
+    """Repo-relative paths of images referenced by published pages.
+
+    The site is HTML only; without this, any `![](path)` in the markdown
+    renders as a broken image because the asset is never copied into the
+    output tree.
+    """
+    md_img = re.compile(r"!\[[^\]]*\]\(([^)\s]+)")
+    html_img = re.compile(r"<img[^>]+src=[\"']([^\"']+)[\"']", re.I)
+    found = set()
+    for rel in published():
+        text = (ROOT / rel).read_text(encoding="utf-8", errors="ignore")
+        base = (ROOT / rel).parent
+        for m in list(md_img.finditer(text)) + list(html_img.finditer(text)):
+            ref = m.group(1).split("#")[0].split("?")[0]
+            if not ref or "://" in ref or ref.startswith("data:"):
+                continue
+            target = (base / ref).resolve()
+            try:
+                relp = target.relative_to(ROOT)
+            except ValueError:
+                continue
+            if target.is_file():
+                found.add(relp.as_posix())
+    return found
+
+
 def build(out: Path) -> int:
     pages = {rel: page_url(rel) for rel in published()}
     nav = build_tree(pages)
@@ -296,10 +335,15 @@ def build(out: Path) -> int:
         shutil.rmtree(out)
     out.mkdir(parents=True)
     (out / ".nojekyll").write_text("", encoding="utf-8")
+    asset_set = assets()
     for rel, url in pages.items():
         dest = out / url
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(render(rel, pages, nav), encoding="utf-8")
+        dest.write_text(render(rel, pages, nav, asset_set), encoding="utf-8")
+    for rel in sorted(asset_set):
+        dest = out / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, dest)
     return len(pages)
 
 

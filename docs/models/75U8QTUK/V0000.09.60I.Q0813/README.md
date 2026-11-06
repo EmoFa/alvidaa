@@ -1,16 +1,21 @@
 # 75U8QTUK (UK) — V0000.09.60I.Q0813 — VIDAA U9 on MTK9655
 
-**Status (2026-11-06):** fingerprint captured; pairing confirmed (Sidee,
-profile `modern`); launcher GET-delivery confirmed; Phoenix FaaS confirmed
-present. **Root chain is a DEAD END on this build** — bridge recon
-(findings/04) showed the `fetcher` rejects every file read with
-`invalid path`, so the 100U7Q traversal/write primitive the chain hinges on
-does **not** transplant. The chain was halted at step 4 per the stop
-condition; no `postinst`/root step was attempted and nothing persisted on
-the TV. Same firmware *version string* as the 100U7Q, but a path-validating
-fetcher, so the "byte-for-byte identical build" assumption does not hold for
-the fetcher surface here. Do not treat this page as a recipe; it's the lab
-notebook's cover sheet.
+**Status (2026-11-06, updated after findings/07): ROOT ARMED.** fingerprint
+captured; pairing confirmed (Sidee, profile `modern`); launcher GET-delivery
+confirmed; Phoenix FaaS confirmed present. The earlier "dead end"
+(findings/04) was a **false negative**: that probe used the `hiutils` read
+surface with a bare-string path, and never started `basic/fetcher`. Re-probed
+with the chain's actual primitive, `fetchFile` returned `ret:true, "download
+finished"` for writes to `/APPS` **and** the `tv.vidaa.jsservice.basic/CHA/`
+package tree ([findings/05](findings/05-fetcher-recheck.md)). All four
+build-dependent prerequisites were then measured ([findings/06](findings/06-superwatch-gate.md)),
+and the chain was armed on 2026-11-06
+([findings/07](findings/07-root-armed.md)): the IPK `postinst` ran as
+**uid 0 / `CapEff 000001ffffffffff`**, and `ssh -p 8008 root@10.0.0.173`
+(via `server/keys/vidaa_75u8qtuk_ed25519`) gives uid 0 with a working PTY.
+No reboot and **no boot persistence** — re-arm with commands `83` + `82`
+after a reboot. `/` and `/application` remain read-only; dm-verity untouched.
+Do not treat this page as a recipe; it's the lab notebook's cover sheet.
 
 **Contributor:** [@kingpandacc](https://github.com/kingpandacc) (issue thread TBD).
 **Region:** UK (`GBR`, language `en-GB`). The existing `V0000.09.60I.Q0813`
@@ -20,8 +25,7 @@ on the MQTT pairing profile.
 > **The chain this guide expects to apply is written up in full on the
 > 100U7Q:** [`../../100U7Q/V0000.09.60I.Q0813/README.md`](../../100U7Q/V0000.09.60I.Q0813/README.md).
 > Read that first. This page tracks only the deltas this specific unit shows,
-> and which of the chain's four build-dependent prerequisites still need
-> to be confirmed on this TV.
+> and which of the chain's build-dependent prerequisites are confirmed here.
 
 ## Device fingerprint
 
@@ -35,7 +39,7 @@ on the MQTT pairing profile.
 | RC version | `ERF6H66V1.03` | About |
 | SoC (vendor-reported) | **`MTK9655`** | `Hisense_GetChipSetName()` |
 | Kernel | **aarch64** (Linux, 64-bit) | `navigator.platform = "Linux aarch64"` |
-| Userland arch | expected **32-bit ARM** (`EM_ARM`) — matches 100U7Q build | inferred from identical firmware id; **unverified on this unit** |
+| Userland arch | **32-bit ARM** (`EM_ARM`) | in-process FaaS probe: `process.arch: "arm"`, phoenix worker (findings/06) |
 | VIDAA OS | `U09.60` | firmware id class + `Q0813` tag |
 | Browser | Chromium 111 "WebViewer/1.2.1" (odin class) | `navigator.userAgent` |
 | UA string | `Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 WebViewer/1.2.1 Safari/537.36` | on-device readout |
@@ -62,35 +66,42 @@ PORT       STATE     SERVICE     VERSION
 ```
 
 Consistent with the expected VIDAA LAN posture (MQTT-over-TLS on **36669**
-only; phoenix on `9009` is localhost-only). Dropbear on 8008 would appear here
-*after* the root chain is armed and would be visible only until the next
-reboot — not currently present, as expected before any work.
+only; phoenix on `9009` is localhost-only). **After arming (findings/07),
+TCP 8008 is now open LAN-wide** and appears in a fresh nmap; Dropbear listens
+on `0.0.0.0:8008`, key-only. It does not survive a reboot (no autostart).
 
-## Why we think the 100U7Q chain transplants
+## Chain prerequisites on this unit
 
 | Chain prerequisite | 100U7Q record | 75U8QTUK observation | State |
 |---|---|---|---|
-| **Same firmware build** (not just the same version string) | `V0000.09.60I.Q0813` on MT9655 | `V0000.09.60I.Q0813` on `MTK9655` | matches — strong |
-| **aarch64 kernel + 32-bit ARM userland** | kernel `5.15.192`, ELF `EM_ARM` | aarch64 kernel confirmed (UA + `platform`); userland arch unverified | matches kernel; **confirm userland on-device** |
+| **Same firmware id** (not necessarily the same build) | `V0000.09.60I.Q0813` on MT9655 | `V0000.09.60I.Q0813` on `MTK9655` | matches — strong |
+| **aarch64 kernel + 32-bit ARM userland** | kernel `5.15.192`, ELF `EM_ARM` | aarch64 kernel confirmed (UA + `platform`); **userland ARM32 confirmed** (`process.arch: "arm"`, phoenix binary; findings/06) | **CONFIRMED live** |
 | **Chromium 111 webview** | Chromium 111 (odin) | Chrome/111 WebViewer/1.2.1 | matches |
 | **Phoenix FaaS stack present** (`http://localhost:9009`, `wss://localhost:9888`) | yes | **confirmed** — `9009` GET→200 (`sdkVersion 1.5.0`), `9888` WS opens (findings/03) | **CONFIRMED live** |
-| **`fetcher` file read/traversal primitive** (the whole chain hinges on this) | yes | **BLOCKED** — fetcher returns `invalid path` for all reads incl. `../` (findings/04) | **FAILED — chain dead-ends here** |
-| **`/var/run/superwatch_socket` reachable from app uid 314 (group 616)** | yes | unverified | **confirm with a `ls -l` via bridge if read works** |
-| **`/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/` writable by uid 314** | yes (write primitive) | unverified | **confirm before pushing** |
+| **`basic/fetcher` `fetchFile` write primitive** (the keystone) | yes (`"permission": {}`) | **OPEN** — `ret:true, "download finished"`; markers written to `/APPS` and `…/basic/CHA/` (findings/05) | **CONFIRMED live** |
+| **`/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/` writable by uid 314** | yes (write primitive) | **CONFIRMED** — marker write into `…/basic/CHA/` succeeded (findings/05) | **CONFIRMED live** |
+| **`hiutils.fileRead` traversal** (recon/logs; not required to write) | yes, string path | **OPEN with array path** — `path:["../proc/uptime"]` reads; bare string → `invalid path` (findings/05) | **CONFIRMED live (array form)** |
+| **`/var/run/superwatch_socket` reachable from app uid 314 (group 616)** | yes | **CONFIRMED** — uid 314 groups include 616; `connect()` OK; command `85` → `901:0` (findings/06) | **CONFIRMED live** |
+| **`/var/local` writable by uid 314** (not required by the 100U7Q chain; widens options) | not writable by uid 314 on 100U7Q | **writable** — write/read/unlink of `/var/local/.recon_write_test` succeeded (findings/06) | **CONFIRMED live** |
 
-Three of the four build-dependent properties sit inside the firmware image and
-are therefore inherited from the same build; the fourth (group membership of
-the app uid) is governed by the same init boot path on the same SoC class.
-Odds strongly favour drop-in applicability, but every one of them has to be
-checked before the install step runs. That's the next session's work (see
-[Next up](#next-up)).
+All four 100U7Q chain prerequisites were measured on this unit: the FaaS
+write, the package-tree writability, the superwatch socket (group 616 +
+command `85` → `0`), and 32-bit ARM userland. The chain was then armed on
+2026-11-06 — `postinst` as uid 0 with full capabilities, root SSH on 8008
+with the dedicated key, PTY working. See
+[findings/07](findings/07-root-armed.md) for the artifacts, hashes,
+verification transcript and rollback.
 
 ## Deltas from 100U7Q that this unit will show
 
-- **Region:** UK (`GBR`) vs EU_A. The `pair.py` credential profile cascade
-  needs the same walk as a fresh TV; `remotenow` / `standard` / `modern` may
-  fall differently. Language locale `en-GB` affects the on-screen pairing
-  dialog text only.
+- **Country vs region:** country code `GBR`, but internal region is `EU_A`
+  — the same region class as the 100U7Q reference. The credential cascade
+  this page expected to re-walk already resolved: Sidee paired on `modern`
+  (findings/02, findings/03).
+- **`hiutils` path arg shape:** bare-string paths containing `../` are
+  rejected `invalid path`; the same path in a one-element array traverses
+  (`path:["../proc/uptime"]`). The 100U7Q examples that pass strings do not
+  transplant verbatim — use the array form (findings/05).
 - **Panel / SKU:** 75″ U8Q vs 100″ U7Q. HDMI count, panel driver, input list
   and the launcher tile layout differ. None of that touches the root chain.
 - **Build-tag suffix:** the About screen shows the build id
@@ -115,52 +126,59 @@ Per [AGENTS.md](../../../../AGENTS.md):
 
 ## Next up
 
-In order, per the AGENTS.md onboarding ladder. Two helpers landed on the
-same branch to make step 1 one command each:
+In order, per the AGENTS.md onboarding ladder. Steps 1–5 are done on this
+unit; root is armed but does not survive a reboot.
 
-1. **Capture the SSDP descriptor.** Pi-side:
-   `tools/ssdp-descriptor.sh` (auto-discover) or
-   `tools/ssdp-descriptor.sh <tv-ip>` (direct). Read-only — UDP M-SEARCH
-   + HTTP GET. Record `transport_protocol=`, `UDN`, `modelName` into the
-   inventory row and [`findings/01-ssdp.md`](findings/). Expect
-   `transport_protocol ≥ 3290` on this U09.60 build (3290+ selects the
-   2024 app-style pairing path in `pair.py`).
-2. **Load the full fingerprint page on the TV.** From the TV browser app,
-   open `http://<pi>:8770/fingerprint-full.html` (also reachable via
-   `/api/open?url=…` once the server is up). Read-only — every probe is
-   a passive connection test: sweeps every `Hisense_*` and `WebSDK_*`
-   function on `window`, dumps `navigator`/`screen`/`location`, and
-   checks `http://localhost:9009/` + `wss://localhost:9888` *without*
-   sending any fetcher command. Screenshot the JSON and the page
-   auto-POSTs to `/api/recon` if the server is running.
-3. **Launcher lane.** `server/pair.py <tv-ip>` (set `HISENSE_HOST` or
-   pass the IP); confirm the 4-digit PIN; verify actions (`state`,
-   `sourcelist`, `applist`, `launchapp`) respond. If the `standard`
-   credential profile fails CONNACK, walk the cascade like the 65U7H
-   work. Country code from step 2 decides which profile to try first.
-4. **Bridge recon with writes.** ✅ Done 2026-11-06 (findings/04) —
-   `recon.html` loaded in the TV Browser app. **Result: the fetcher
-   rejects every file read with `invalid path`; the traversal/write
-   primitive is unavailable on this build.** Chain halted here per the
-   stop condition. Nothing persisted.
-5. **Root lane.** ❌ **Not attempted — chain dead-ended at step 4.** The
-   100U7Q `postinst` path presupposes the fetcher file bridge, which this
-   build does not provide. Root here would require a *different* primitive
-   (new research, not a transplant). If revisited, first explicitly
-   register a phoenix session before re-probing the fetcher (findings/04
-   caveat) to rule out a registration issue before declaring the primitive
-   permanently patched.
+1. **SSDP descriptor.** ✅ Done 2026-11-06 (findings/01). The descriptor on
+   `:3366` is a 417-byte stub — no `transport_protocol`, empty
+   `serviceList`, `modelName` `75U8QE`. Pairing was handled by Sidee
+   (profile `modern`), so the cascade it would steer is moot.
+2. **Full fingerprint.** ✅ Done 2026-11-06 (findings/03). Phoenix FaaS
+   present (`9009` GET 200, `9888` WS opens), `Hisense_*` sweep captured,
+   region `EU_A`, country `GBR`, full model `75U85QEVS`.
+3. **Launcher lane.** GET delivery is ✅ (a served page loads in the TV
+   webview, findings/03); the self-installing tile (`hookinstall.html` /
+   `Appinfo.json`) is still **untested**. `server/pair.py` was not run —
+   Sidee holds the single MQTT session.
+4. **Bridge recon with writes.** ✅ Done and **corrected 2026-11-06**
+   ([findings/05](findings/05-fetcher-recheck.md),
+   [findings/06](findings/06-superwatch-gate.md)). The FaaS `basic/fetcher`
+   `fetchFile` write returned `ret:true, "download finished"` to two paths,
+   including `…/basic/CHA/`; `hiutils.fileRead` traversal works with the
+   array path form. findings/04's dead end is superseded. The two markers
+   were deleted by the findings/06 probe; the probe and cleanup functions
+   self-deleted.
+5. **Root lane.** ✅ **ARMED 2026-11-06** ([findings/07](findings/07-root-armed.md)).
+   Built a fresh static ARM32 Dropbear 2022.83 + minimal IPK
+   (`tools/u7q/scripts/make_min_installer.py`), wrote it with `fetchFile`,
+   and sent `83` then `82` through `sw2.js`. `postinst` ran as uid 0 with
+   `CapEff 000001ffffffffff`; verified:
+   `ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173`
+   → uid 0, full caps, **PTY OK**, `/etc/shadow` and `/data` readable.
+   `/` and `/application` are still `erofs ro`. No reboot, no boot
+   persistence: re-arm with the same `83` + `82` sequence (the IPK remains at
+   `/APPS/installer.ipk`). Rollback is in findings/07.
 
 Each discovery, bug, trap, errno gets a dated note in
 [`findings/`](findings/) the same hour it happens — AGENTS.md discipline rule.
 
 ## Open questions
 
-- Does the UK SKU ship the same `fetcher` FaaS permission block the EU_A
-  100U7Q had, or did a region-specific patch change it? (**the whole chain
-  hangs on this answer**)
+- ~~Does the UK SKU ship the same `fetcher` FaaS permission block the EU_A
+  100U7Q had?~~ **Resolved (findings/05):** yes — `fetchFile` writes
+  succeeded (`ret:true, "download finished"`), so the block is empty/open.
+- ~~**Is `/var/run/superwatch_socket` reachable from the app uid (group
+  616) on this unit?**~~ **Resolved (findings/06):** yes — uid 314's
+  supplementary groups include 616, `connect()` succeeded, and command `85`
+  returned `901:0` (code `0`).
+- ~~Is the userland 32-bit ARM (`EM_ARM`) like the 100U7Q?~~ **Resolved
+  (findings/06):** yes — the phoenix Node worker reports
+  `process.arch: "arm"`.
 - Is the `/data` partition writable by the app uid on this unit? (Was not
   on the 100U7Q — if that changed on the UK build, it widens options.)
+- Why does `websdk/Appinfo.json` read back as `{"AppInfo":[]}`? Possibly
+  the wrong registry file or a genuinely empty tile list; it matters for
+  the launcher tile lane, not the root lane (findings/05).
 - ~~`Hisense_GetCountryCode()` output — `GBR`?~~ **Resolved (findings/03):**
   `GBR`, region `EU_A`. The SSDP descriptor carries no `transport_protocol`
   digit on this build (findings/01), and Sidee already paired on profile

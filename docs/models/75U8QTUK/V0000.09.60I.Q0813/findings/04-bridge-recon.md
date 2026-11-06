@@ -1,5 +1,14 @@
 # 04 — Bridge recon: fetcher traversal BLOCKED → chain dead-ends here (2026-11-06)
 
+> **SUPERSEDED 2026-11-06 by [findings/05](05-fetcher-recheck.md).** This
+> probe tested `hiutils.fileRead`/`fileWrite` (a different surface) with a
+> bare-string path, and never started `basic/fetcher`. The chain's actual
+> write primitive — `basic/fetcher` `fetchFile` — was measured working in
+> findings/05 (`ret:true`, "download finished"), and traversal reads work
+> when the path is passed as a one-element array. **The dead-end conclusion
+> below is wrong; root is viable again.** Kept as the historical record of
+> the false negative.
+
 Loaded `launcher/recon.html` in the TV Browser app
 (`http://10.0.0.157:8770/recon.html`). This is the first non-write-free
 probe — it drives the phoenix `fetcher` to read files and to place a

@@ -325,8 +325,8 @@
     {
       "id": "V0000.09.60I.Q0813 (UK)",
       "model": "75U8QTUK",
-      "region": "UK (GBR)",
-      "soc": "MTK9655 (aarch64 kernel; 32-bit ARM userland expected per 100U7Q same-build)",
+      "region": "UK (GBR; internal region EU_A)",
+      "soc": "MTK9655 (aarch64 kernel; 32-bit ARM userland confirmed on-device: phoenix worker process.arch=arm, 2026-11-06)",
       "vidaa_os": "U09.60",
       "transport_protocol": "not-exposed-over-SSDP (dd.xml stub on :3366; SSDP modelName reports 75U8QE; pairing handled by Sidee, profile 'modern')",
       "browser": "Chromium 111 \"WebViewer/1.2.1\" (odin, aarch64 UA)",
@@ -337,12 +337,12 @@
       "capabilities": {
         "pairing": "confirmed (Sidee, profile 'modern', applist round-trip 2026-11-06)",
         "launcher": "untested",
-        "file_bridge_traversal": "blocked (fetcher returns 'invalid path' for all reads incl. ../ traversal; 2026-11-06, findings/04)",
-        "file_bridge_write": "not demonstrated (recon marker never established on pkg CHA dir; findings/04)",
+        "file_bridge_traversal": "open with array path (hiutils.fileRead path:['../proc/uptime'] -> ret:true, 2026-11-06, findings/05); bare-string paths rejected 'invalid path'",
+        "file_bridge_write": "open via FaaS fetcher (basic/fetcher fetchFile ret:true 'download finished'; markers written to /APPS and /APPS/pkgs/tv.vidaa.jsservice.basic/CHA/, 2026-11-06, findings/05)",
         "identity_gate": "untested",
         "euladpp_untar": "untested",
-        "root": "DEAD END via the 100U7Q chain (2026-11-06): the fetcher file read/traversal primitive the chain hinges on is unavailable on this build — all reads rejected 'invalid path'; halted at bridge recon per stop condition, no root step attempted. Phoenix FaaS is present (9009/9888) but the fetcher validates paths unlike the 100U7Q. Root here would need a different primitive, not a transplant. See findings/04.",
-        "notes": "Model guide: docs/models/75U8QTUK/V0000.09.60I.Q0813/. Fingerprint captured 2026-11-06 (owner-verified): firmware, Extended/Minor/RC versions, SoC, kernel arch, UA, locale, LAN nmap posture — see findings/00-fingerprint.md. Byte-for-byte identical firmware id to the EU_A 100U7Q row (V0000.09.60I.Q0813); UK/GBR region is the headline delta, so the pair.py credential-profile cascade needs a fresh walk. Launcher GET-delivery path works (pages served off-LAN load in the TV browser; findings/03). Root chain is a DEAD END on this build: bridge recon (findings/04) showed the fetcher rejects all file reads with 'invalid path', so the 100U7Q traversal/write primitive does not transplant — halted at step 4, no root step attempted; the only write attempted (a recon marker) never persisted."
+        "root": "ACHIEVED 2026-11-06 (owner-authorized): the 100U7Q chain was armed; the IPK postinst ran as uid 0 with CapEff 000001ffffffffff, and `ssh -p 8008 root@10.0.0.173` (dedicated ed25519 key in server/keys/, gitignored) gives uid 0 + PTY. No reboot, no boot persistence; re-arm with superwatch 83+82. Rolling back is documented in findings/07.",
+        "notes": "Model guide: docs/models/75U8QTUK/V0000.09.60I.Q0813/. Fingerprint captured 2026-11-06 (owner-verified): firmware, Extended/Minor/RC versions, SoC, kernel arch, UA, locale, LAN nmap posture — see findings/00-fingerprint.md. Same firmware id as the EU_A 100U7Q row (V0000.09.60I.Q0813); country GBR but internal region EU_A. Launcher GET-delivery works (pages served off-LAN load in the TV browser; findings/03); the self-installing tile is untested. Root is NOT a dead end: findings/04 tested hiutils.fileRead/fileWrite with bare-string paths and never started basic/fetcher. findings/05 re-probed the chain's actual primitive: basic/fetcher fetchFile returned ret:true 'download finished' for writes to /APPS and /APPS/pkgs/tv.vidaa.jsservice.basic/CHA/, and hiutils fileRead traverses ../proc/uptime when the path is a one-element array (bare strings get 'invalid path'). findings/06 placed and invoked a self-deleting FaaS function: uid 314 / gid 314 with supplemental group 616, socket /var/run/superwatch_socket stat 0660 root:616, connect OK, command 85 -> 901:0 (code 0), process.arch 'arm', and /var/local writable by uid 314. findings/07 armed the chain: fresh static ARM32 Dropbear 2022.83 (zig musl) + minimal IPK (tools/u7q/scripts/make_min_installer.py), written via fetchFile and installed with superwatch 83+82. postinst log shows POSTINST_RAN, Uid 0, CapEff 000001ffffffffff; ssh on 8008 is key-only with a dedicated ed25519 key (server/keys/, gitignored), PTY works, /etc/shadow and /data are readable as root. State left: /APPS/.re_sshd, /APPS/shell, /APPS/installer.ipk, the sw2.js FaaS helper, package re.installer, ptmx 0666, one FIREWALL_IN_EULAON ACCEPT dpt:8008. No reboot and no boot persistence; rollback/re-arm in findings/07."
       }
     }
   ]

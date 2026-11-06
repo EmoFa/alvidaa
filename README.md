@@ -134,7 +134,7 @@ model and firmware.
 | 55A60LEVS | EU_A | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07 EU_A) | 3290 | Chromium 111.5563.5.1 | untested | blocked-at-fileWrite | [u/Affectionate-End-601](https://reddit.com/user/Affectionate-End-601) |
 | 43A60LEVS | EU | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07) | 3290 | Chromium 111 "Odin" (111.5563.x) | untested | untested | [u/Wing-Tsit-Chong](https://reddit.com/user/Wing-Tsit-Chong) |
 | ? | ? | MTK9603 | 9.0 | 09.60V.Q0612 (build date unconfirmed) | ? | ? | untested | untested | [u/____dls](https://reddit.com/user/____dls) |
-| 65U7H | India | MTK9900 | U6 (exact version after update unconfirmed) | V0000.06.29X.P0813 | 3160 | Chromium 88 Odin | untested | in progress | [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) |
+| 65U8HAU (65E83GAVT, serial type 65U8H / intl 65U8HQ) / 65U7H | AU (EM_C / AUS, SSDP region 0) / India | MTK9900 (aarch64) | U06.29 | V0000.06.29X.P0813 | 3160 | Chrome 88.0.4324.182 (Linux aarch64, Odin) | working (web UI + WS + server-side install/watcher bounce; Appinfo.json self-install gated) | blocked-at-origin-gate (/file/* and /hiSecurity/* return empty body from LAN HTTP origins; TCP 2222/2323/8008 closed) | [@MewX](https://github.com/MewX), [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) |
 | HE40E5600FFWTS | ? (EU, German-language docs) | MT53xx / MT5863 class (armv7 Cortex-A53) | pre-9 (Linux 3.18.25, glibc 2.18, BusyBox 1.18.5, sysvinit) | V0100.01.00A.N0410 | untested (vector did not use MQTT) | hisenseUI (Chromium 59.0.3071.115, opera4x) + hisense_browser (separate process, DevTools 9224, --disable-web-security) | custom-UI templates shipped (start-UI.sh + /3rd_rw/UI/index.html, PIXI); not verified end-to-end | achieved (root + key-only SSH; boot persistence owner-verified across multiple reboots, 2026-11-04) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | 100U7Q (100U70QEVS) | EU_A | MT9655 (32-bit ARM userland) | U09.60 | V0000.09.60I.Q0813 | untested | untested | untested | achieved (SSH and PTY verified; manual re-trigger after reboot) | [@oOHiyoriOo](https://github.com/oOHiyoriOo) |
 | 75UR9S | EU (Czech Republic) | MT9655 (32-bit ARM userland) | U09.0 | V0000.09.60W.Q0624 | untested | untested | untested | achieved (root + key-only SSH on 8008 verified 2026-11-04; boot persistence verified 2026-11-06 — re_sshd serviceList autostart re-arms dropbear at every cold boot) | [@EvzenP](https://github.com/EvzenP) |
@@ -152,6 +152,7 @@ model and firmware.
 <a href="https://github.com/oOHiyoriOo" title="oOHiyoriOo — HE40 and 100U7Q guides and tooling"><img src="https://github.com/oOHiyoriOo.png?size=96" width="56" height="56" alt="oOHiyoriOo"></a>
 <a href="https://github.com/EvzenP" title="EvzenP — 75UR9S / V0000.09.60W.Q0624"><img src="https://github.com/EvzenP.png?size=96" width="56" height="56" alt="EvzenP"></a>
 <a href="https://github.com/ryjr2ddznn-lab" title="ryjr2ddznn-lab — 43E7DS / 43Q60SEVS, MTK9603"><img src="https://github.com/ryjr2ddznn-lab.png?size=96" width="56" height="56" alt="ryjr2ddznn-lab"></a>
+<a href="https://github.com/MewX" title="MewX — 65U8HAU / V0000.06.29X.P0813, MTK9900 (VIDAA U6)"><img src="https://github.com/MewX.png?size=96" width="56" height="56" alt="MewX"></a>
 </p>
 
 Community reports: [u/pavanjadhaw](https://reddit.com/user/pavanjadhaw) ·

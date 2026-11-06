@@ -38,6 +38,7 @@ ICONCACHE = os.path.join(HERE, "iconcache")
 ROOT = os.path.join(HERE, "..", "launcher")
 KEYS = os.path.join(HERE, "keys")
 TOKENS_FILE = os.path.join(KEYS, "tokens.json")
+LAUNCHER_FILE = os.path.join(KEYS, "launcher.json")
 CONFIG_FILE = os.path.join(HERE, "config.json")
 RECON_FILE = os.path.join(HERE, "recon-report.json")
 HOST = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("HISENSE_HOST", "")
@@ -121,7 +122,7 @@ def save_tokens(t):
 
 def load_config():
     cfg = {"hidden": [], "rename": {}, "inputs": {}, "only": [], "shortcuts": [],
-           "autoSwitch": False,
+           "autoSwitch": False, "installed": False, "launcherUrl": "",
            "watcher": {"enabled": True, "app": "Home", "interval": 3, "cooldown": 6}}
     try:
         with open(CONFIG_FILE) as f:
@@ -140,6 +141,20 @@ def load_config():
             cfg["only"] = user["only"]
         if "autoSwitch" in user:
             cfg["autoSwitch"] = bool(user.get("autoSwitch"))
+        if "installed" in user:
+            cfg["installed"] = bool(user.get("installed"))
+        if isinstance(user.get("launcherUrl"), str):
+            cfg["launcherUrl"] = user["launcherUrl"]
+    except (OSError, ValueError):
+        pass
+    try:
+        with open(LAUNCHER_FILE) as f:
+            st = json.load(f)
+        if isinstance(st, dict):
+            if "installed" in st:
+                cfg["installed"] = bool(st.get("installed"))
+            if isinstance(st.get("launcherUrl"), str) and st["launcherUrl"]:
+                cfg["launcherUrl"] = st["launcherUrl"]
     except (OSError, ValueError):
         pass
     return cfg
@@ -477,9 +492,9 @@ class TVBridge:
                              if sc.get("name") and sc.get("url")]}
         try:
             apps_raw = self.apps_list()
-            out["installed"] = any(a.get("appId") == "vidaa-home" for a in apps_raw)
+            out["installed"] = any(a.get("appId") == "vidaa-home" for a in apps_raw) or bool(cfg.get("installed", False))
         except Exception as e:
-            out["installed"], out["apps"], out["apps_error"] = False, None, str(e)
+            out["installed"], out["apps"], out["apps_error"] = bool(cfg.get("installed", False)), None, str(e)
         try:
             out["apps"] = self.visible_apps()
         except Exception as e:
@@ -489,6 +504,19 @@ class TVBridge:
         except Exception as e:
             out["sources"], out["sources_error"] = None, str(e)
         return out
+
+    def register_launcher(self, url=""):
+        os.makedirs(KEYS, exist_ok=True)
+        st = {"installed": True}
+        if url:
+            st["launcherUrl"] = url
+        try:
+            with open(LAUNCHER_FILE, "w") as f:
+                json.dump(st, f, indent=2)
+                f.write("\n")
+        except OSError as e:
+            return {"t": "installed", "ok": False, "error": str(e)}
+        return {"t": "installed", "ok": True, "url": url}
 
     def _maybe_bounce_home(self):
         cfg = load_config()
@@ -511,6 +539,17 @@ class TVBridge:
         if app is None:
             app = next((a for a in apps if a.get("name", "").lower() == name.lower()), None)
         if app is None:
+            cfg = load_config()
+            lurl = cfg.get("launcherUrl")
+            if lurl:
+                self.call("ui_service", "launchapp",
+                          {"appId": "vidaa-home", "name": "Home",
+                           "url": lurl, "urlType": "1", "storeType": "custom"})
+                return {"ok": True, "launched": "Home (custom)", "url": lurl}
+            tvb = next((a for a in apps if a.get("name", "").lower() == "tv browser"), None)
+            if tvb is not None:
+                self.call("ui_service", "launchapp", {k: tvb[k] for k in ("appId", "name", "url", "urlType", "storeType") if k in tvb})
+                return {"ok": True, "launched": tvb.get("name"), "url": tvb.get("url")}
             return {"ok": False, "error": "launcher app not found in applist"}
         self.call("ui_service", "launchapp", {k: app[k] for k in ("appId", "name", "url", "urlType", "storeType") if k in app})
         return {"ok": True, "launched": app.get("name"), "url": app.get("url")}
@@ -526,9 +565,10 @@ class TVBridge:
                 cfg = load_config()
                 w = cfg.get("watcher", {})
                 if self.connected.is_set():
-                    # poll gettvstate as fallback; _on_message handles instant bounce on reply/push
-                    self.call("ui_service", "gettvstate")
-                    self._maybe_bounce_home()
+                    if w.get("enabled", True):
+                        # poll gettvstate as fallback; _on_message handles instant bounce on reply/push
+                        self.call("ui_service", "gettvstate")
+                        self._maybe_bounce_home()
                     # live source signal refresh every ~9s
                     if cycle % 3 == 0:
                         try:
@@ -686,6 +726,8 @@ class Handler(SimpleHTTPRequestHandler):
                     ws.send_text(json.dumps(self.bridge.launch(m.get("name", ""))))
                 elif m.get("t") == "source":
                     ws.send_text(json.dumps(self.bridge.source(m.get("id", ""))))
+                elif m.get("t") == "install":
+                    ws.send_text(json.dumps(self.bridge.register_launcher(m.get("url", ""))))
             try:
                 self.bridge.listeners.remove(push)
             except ValueError:
@@ -729,6 +771,17 @@ class Handler(SimpleHTTPRequestHandler):
             except (OSError, ValueError):
                 return self._json({"ok": False,
                                    "error": "no recon report yet — open /recon.html on the TV"})
+        if u.path == "/api/reload":
+            self.bridge._emit({"t": "reload"})
+            return self._json({"ok": True, "reloading": True})
+        if u.path == "/api/browser":
+            res = self.bridge.launch("TV Browser")
+            if not res.get("ok"):
+                self.bridge.call("ui_service", "launchapp",
+                                 {"appId": "16", "name": "TV Browser",
+                                  "url": "url16", "storeType": 100})
+                res = {"ok": True, "launched": "TV Browser"}
+            return self._json(res)
         if u.path == "/api/open":
             url = q.get("url", "")
             if not url.startswith("http"):

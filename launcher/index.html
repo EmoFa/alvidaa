@@ -88,13 +88,46 @@ function getLastUsed() {
   } catch (e) { return null; }
 }
 
-var BRIDGE = { hiutils: false, legacy: false, checked: false };
+var BRIDGE = { hiutils: false, websdk: false, legacy: false, checked: false };
 function detectBridge() {
   if (BRIDGE.checked) return BRIDGE;
   BRIDGE.checked = true;
   BRIDGE.hiutils = typeof HiUtils_createRequest !== "undefined";
+  BRIDGE.websdk = typeof WebSDK_createFileRequest !== "undefined";
   BRIDGE.legacy = typeof Hisense_installApp !== "undefined";
   return BRIDGE;
+}
+function fileBridgeCall(action, params) {
+  if (typeof HiUtils_createRequest === "function") {
+    return HiUtils_createRequest(action, params);
+  }
+  if (typeof WebSDK_createFileRequest === "function") {
+    // TRAP (VIDAA U6 / V0000.06.29X.P0813): localhost:9009/file/* enforces a
+    // server-side vidaahub.com Origin check AND only has 4 mode bases (0..3).
+    // Calling /file/fileWrite from a raw IP origin or with "[object Object]" /
+    // out-of-bounds mode: 6 wedges the U6 UI handler and freezes the TV remote.
+    if ((location.hostname || "").indexOf("vidaahub.com") === -1) {
+      return { ret: false, msg: "U6 /file/* requires a vidaahub.com origin" };
+    }
+    var p = {};
+    if (params && typeof params === "object") {
+      for (var k in params) {
+        if (Object.prototype.hasOwnProperty.call(params, k)) p[k] = params[k];
+      }
+      if (typeof p.mode === "number" && p.mode > 3) p.mode = 3;
+    }
+    var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
+    if (raw && typeof raw === "object") return raw;
+    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false" && raw.indexOf("Error:") !== 0) {
+      try {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && "ret" in parsed) return parsed;
+      } catch (e) {}
+      return { ret: true, msg: raw };
+    }
+    return { ret: false, msg: raw === "" ? "empty response from WebSDK_createFileRequest" : String(raw) };
+  }
+  return { ret: false, msg: "no file bridge" };
 }
 
 var ROWS = ["inputs", "apps"];
@@ -191,6 +224,22 @@ function connect() {
       saveCache();
       preloadIcons();
       clampFocus(); draw();
+    } else if (m.t === "reload") {
+      location.reload();
+    } else if (m.t === "installed") {
+      S.busy = false;
+      if (m.ok) {
+        S.installed = true;
+        S.serverInstalled = true;
+        saveCache();
+        clampFocus();
+        S.toast = "installed! launcher registered with server";
+        S.toastUntil = Date.now() + 8000;
+      } else {
+        S.toast = "install failed: " + (m.error || "?");
+        S.toastUntil = Date.now() + 5000;
+      }
+      draw();
     } else if (typeof m.ok === "boolean" && S.busy) {
       S.busy = false;
       S.toast = m.ok ? "opening…" : (m.error || "could not open");
@@ -283,7 +332,7 @@ function items(row) {
 function installVisible() {
   if (S.serverInstalled && !/[?&]setup/.test(location.search)) return false;
   var b = detectBridge();
-  return (b.hiutils || b.legacy) && !S.installed;
+  return (b.hiutils || b.websdk || b.legacy) && !S.installed;
 }
 
 function clampFocus() {
@@ -865,6 +914,7 @@ document.addEventListener("keydown", function (e) {
   }
   var rows = installVisible() ? 3 : 2;
   var list = items(S.row);
+  var handled = true;
   if (e.key === "ArrowRight") { S.focusPicked = true; if (S.col < list.length - 1) { S.col++; bumpFocus(); draw(); } }
   else if (e.key === "ArrowLeft") { S.focusPicked = true; if (S.col > 0) { S.col--; bumpFocus(); draw(); } }
   else if (e.key === "ArrowUp") { S.focusPicked = true; if (S.row > 0) { S.row--; clampFocus(); bumpFocus(); draw(); } }
@@ -882,8 +932,10 @@ document.addEventListener("keydown", function (e) {
   } else if (e.key === "0" || e.key === "Home") {
     S.focusPicked = true;
     S.row = 0; S.col = 0; bumpFocus(); draw();
+  } else {
+    handled = false;
   }
-  e.preventDefault();
+  if (handled) e.preventDefault();
 });
 
 function hitAt(cx, cy) {
@@ -922,10 +974,10 @@ var APP_URL = location.href.split("#")[0];
 function installAsApp() {
   var b = detectBridge();
   var icon = APP_URL + "icon.png";
-  if (b.hiutils) {
+  if (b.hiutils || b.websdk) {
     try {
-      var cur = HiUtils_createRequest("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
-      var list = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
+      var cur = fileBridgeCall("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
+      var list = (cur && cur.ret) ? JSON.parse(cur.msg) : { AppInfo: [] };
       if (!list.AppInfo) list.AppInfo = [];
       var kept = [];
       for (var k = 0; k < list.AppInfo.length; k++) {
@@ -947,15 +999,20 @@ function installAsApp() {
         if (list.AppInfo[i].Id === APP_ENTRY_ID) { idx = i; break; }
       }
       if (idx >= 0) list.AppInfo[idx] = entry; else list.AppInfo.push(entry);
-      var res = HiUtils_createRequest("fileWrite", {
+      var res = fileBridgeCall("fileWrite", {
         path: "websdk/Appinfo.json", mode: 6, writedata: JSON.stringify(list)
       });
-      if (res.ret) {
+      if (res && res.ret) {
         S.installed = true;
         S.toast = "installed! restart the TV, then open Home";
         S.toastUntil = Date.now() + 8000;
+      } else if (send({ t: "install", url: APP_URL })) {
+        S.busy = true;
+        S.toast = "registering launcher…";
+        S.toastUntil = Date.now() + 3000;
       } else {
-        S.toast = "install failed: " + (res.msg || "?");
+        var detail = (res && res.msg) ? res.msg : JSON.stringify(res);
+        S.toast = "install failed: " + (detail || "?");
         S.toastUntil = Date.now() + 5000;
       }
     } catch (e) {

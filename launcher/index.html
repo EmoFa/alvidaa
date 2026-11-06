@@ -16,16 +16,24 @@
 // localStorage instant cold-paint cache, smart initial focus (active HDMI signal
 // or last-used tile), optional auto-switch countdown, 1-9 remote hotkeys,
 // idle redraw throttling (once per minute instead of 1Hz), and self-install.
+//
+// [next r2] Apple-TV-ish layout rework (task 989431fd): the INPUTS dock moves
+// to the bottom edge of the landing view (focus starts there via the same
+// smart-pick), and the APPS row + install tile live one view below the fold —
+// ArrowDown pans the single canvas down (~350ms ease), ArrowUp pans back.
+// Wallpaper, status pill, toasts and the auto-switch HUD stay viewport-fixed;
+// content pans over the wallpaper. No new data paths: same WS, cache, icons,
+// hotkeys and A/B flags (?540p/?opaque/?flat) as r1. Review aids: ?pan=0/1
+// pin the view, ?noauto disarms auto-switch. Clicking an off-view tile pans
+// + focuses but does not launch (second click launches).
 
 var cv = document.getElementById("c");
-// Hunt diagnostics (odin black-render, 2026-11-04): OFF by default on the
-// live page. Append ?debug to paint the screen-console (state line, red
-// composite square, error panel); ?flat/?opaque stay available for future
-// raster/compositing tests. Mirrors launcher/next/ (always-debug staging).
-var DEBUG = /[?&]debug/.test(location.search);
+// [next r1] A/B diagnostics for the odin black-render hunt:
+//   ?opaque = getContext("2d", {alpha:false})  (GPU layer/compositing test)
+//   ?flat   = solid fills, zero gradients      (GPU raster/gradient test)
 var OPAQUE = /[?&]opaque/.test(location.search);
 var FLAT = /[?&]flat/.test(location.search);
-var MODE = "r1" + (FLAT ? "+flat" : "") + (OPAQUE ? "+opaque" : "") + (DEBUG ? "+debug" : "");
+var MODE = "r2" + (FLAT ? "+flat" : "") + (OPAQUE ? "+opaque" : "");
 var ctx = cv.getContext("2d", OPAQUE ? { alpha: false } : undefined);
 var W = 960, H = 540;
 var SCALE = /[?&]540p/.test(location.search) ? 1 : 2;
@@ -43,8 +51,12 @@ var S = {
   toast: "", toastUntil: 0,
   busy: false,
   focusPicked: false, liveReceived: false, userInteracted: false,
-  autoSwitchId: null, autoSwitchName: "", autoSwitchAt: 0
+  autoSwitchId: null, autoSwitchName: "", autoSwitchAt: 0,
+  overlay: null              // [r3] { open, col } while the app list is up
 };
+// [r3] review aid: ?apps opens the app list on load, so the overlay can be
+// screenshotted without pressing Enter on the couch.
+var OPEN_APPS_ON_LOAD = /[?&]apps/.test(location.search);
 
 function loadCache() {
   try {
@@ -88,52 +100,22 @@ function getLastUsed() {
   } catch (e) { return null; }
 }
 
-var BRIDGE = { hiutils: false, websdk: false, legacy: false, checked: false };
+var BRIDGE = { hiutils: false, legacy: false, checked: false };
 function detectBridge() {
   if (BRIDGE.checked) return BRIDGE;
   BRIDGE.checked = true;
   BRIDGE.hiutils = typeof HiUtils_createRequest !== "undefined";
-  BRIDGE.websdk = typeof WebSDK_createFileRequest !== "undefined";
   BRIDGE.legacy = typeof Hisense_installApp !== "undefined";
   return BRIDGE;
 }
-function fileBridgeCall(action, params) {
-  if (typeof HiUtils_createRequest === "function") {
-    return HiUtils_createRequest(action, params);
-  }
-  if (typeof WebSDK_createFileRequest === "function") {
-    // TRAP (VIDAA U6 / V0000.06.29X.P0813): localhost:9009/file/* enforces a
-    // server-side vidaahub.com Origin check AND only has 4 mode bases (0..3).
-    // Calling /file/fileWrite from a raw IP origin or with "[object Object]" /
-    // out-of-bounds mode: 6 wedges the U6 UI handler and freezes the TV remote.
-    if ((location.hostname || "").indexOf("vidaahub.com") === -1) {
-      return { ret: false, msg: "U6 /file/* requires a vidaahub.com origin" };
-    }
-    var p = {};
-    if (params && typeof params === "object") {
-      for (var k in params) {
-        if (Object.prototype.hasOwnProperty.call(params, k)) p[k] = params[k];
-      }
-      if (typeof p.mode === "number" && p.mode > 3) p.mode = 3;
-    }
-    var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
-    if (raw && typeof raw === "object") return raw;
-    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false" && raw.indexOf("Error:") !== 0) {
-      try {
-        var parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && "ret" in parsed) return parsed;
-      } catch (e) {}
-      return { ret: true, msg: raw };
-    }
-    return { ret: false, msg: raw === "" ? "empty response from WebSDK_createFileRequest" : String(raw) };
-  }
-  return { ret: false, msg: "no file bridge" };
-}
 
 var ROWS = ["inputs", "apps"];
+var OV_COLS_DEFAULT = 5;
 var PAGE = 5;
 
 function pickInitialFocus(fromLiveHello) {
+  // [next r2] ?pan=0/?pan=1 own the focus: keep it in the pinned view
+  if (PAN_FORCE !== -1) { clampFocus(); panTo(S.row, true); return; }
   if (S.focusPicked && !fromLiveHello) return;
   var srcs = S.sources || [];
   // 1. Prefer the first HDMI/input with an active signal
@@ -150,11 +132,13 @@ function pickInitialFocus(fromLiveHello) {
     S.col = activeIdx;
     S.focusPicked = true;
     // Optional auto-switch when ?autosource is set (or server config enables autoSwitch)
-    if (fromLiveHello && (/[?&]autosource/.test(location.search) || S.autoSwitchCfg) && activeCount === 1 && !S.autoSwitchAt) {
+    if (fromLiveHello && !/[?&]noauto/.test(location.search) &&
+        (/[?&]autosource/.test(location.search) || S.autoSwitchCfg) && activeCount === 1 && !S.autoSwitchAt) {
       S.autoSwitchId = srcs[activeIdx].id;
       S.autoSwitchName = srcs[activeIdx].name || srcs[activeIdx].id;
       S.autoSwitchAt = Date.now() + 3500;
     }
+    panTo(S.row, true); // [next r2] land on the view that owns the focus
     return;
   }
   // 2. Otherwise restore the last-used tile from localStorage
@@ -166,11 +150,13 @@ function pickInitialFocus(fromLiveHello) {
         S.row = last.row;
         S.col = j;
         S.focusPicked = true;
+        panTo(S.row, true); // [next r2]
         return;
       }
     }
   }
   clampFocus();
+  panTo(S.row, true); // [next r2]
 }
 
 function cancelAutoSwitch() {
@@ -224,22 +210,6 @@ function connect() {
       saveCache();
       preloadIcons();
       clampFocus(); draw();
-    } else if (m.t === "reload") {
-      location.reload();
-    } else if (m.t === "installed") {
-      S.busy = false;
-      if (m.ok) {
-        S.installed = true;
-        S.serverInstalled = true;
-        saveCache();
-        clampFocus();
-        S.toast = "installed! launcher registered with server";
-        S.toastUntil = Date.now() + 8000;
-      } else {
-        S.toast = "install failed: " + (m.error || "?");
-        S.toastUntil = Date.now() + 5000;
-      }
-      draw();
     } else if (typeof m.ok === "boolean" && S.busy) {
       S.busy = false;
       S.toast = m.ok ? "opening…" : (m.error || "could not open");
@@ -318,9 +288,14 @@ function items(row) {
                signal: s.signal, glyph: s.glyph || "", val: s.id };
     });
   }
-  var out = (S.apps || []).map(function (a) {
-    return { label: a.name, sub: "", icon: a.icon, val: a.name };
-  });
+  // [r3] ONE door to the apps. The owner does not want every app as its own
+  // tile; the list lives behind this single entry and opens as an overlay.
+  var out = [{
+    label: "Apps",
+    glyph: "\u25A6",
+    sub: (S.apps && S.apps.length) ? (S.apps.length + " apps") : "",
+    val: "__apps__"
+  }];
   var scs = S.shortcuts || [];
   for (var i = 0; i < scs.length; i++) {
     out.push({ label: scs[i].name, glyph: scs[i].glyph || "\u2605",
@@ -329,10 +304,23 @@ function items(row) {
   return out;
 }
 
+// [r3] overlay state for the app list
+function overlayOpen() { return !!(S.overlay && S.overlay.open); }
+function overlayApps() { return S.apps || []; }
+function openOverlay() {
+  S.overlay = { open: true, col: 0 };
+  draw();
+}
+if (OPEN_APPS_ON_LOAD) { setTimeout(openOverlay, 600); }
+function closeOverlay() {
+  if (S.overlay) S.overlay.open = false;
+  draw();
+}
+
 function installVisible() {
   if (S.serverInstalled && !/[?&]setup/.test(location.search)) return false;
   var b = detectBridge();
-  return (b.hiutils || b.websdk || b.legacy) && !S.installed;
+  return (b.hiutils || b.legacy) && !S.installed;
 }
 
 function clampFocus() {
@@ -385,6 +373,36 @@ function bumpFocus() {
     else rafPending = false;
   }
   requestAnimationFrame(tick);
+}
+
+// [next r2] two-view vertical pan: view 1 = header + inputs dock, view 2 =
+// apps row + install tile. panCur is the stage offset in logical px (0 or
+// PAN_VIEW); panning animates with the same ease as the focus bump.
+// ?pan=0 / ?pan=1 pin the view (review/screenshot aid, ?pan=1 also focuses
+// the apps row); ?noauto disarms the auto-switch countdown while reviewing.
+var PAN_VIEW = 540;
+var PAN_FORCE = /[?&]pan=0/.test(location.search) ? 0
+  : (/[?&]pan=1/.test(location.search) ? 1 : -1);
+var panCur = 0, panStart = 0, panEnd = 0, panT0 = 0, panRaf = false;
+function panTargetFor(row) {
+  if (PAN_FORCE === 0) return 0;
+  if (PAN_FORCE === 1) return PAN_VIEW;
+  return row === 0 ? 0 : PAN_VIEW;
+}
+function panTo(row, instant) {
+  var target = panTargetFor(row);
+  if (instant) { panCur = panStart = panEnd = target; panRaf = false; return; }
+  if (panEnd === target && panCur === target) return;
+  panStart = panCur; panEnd = target; panT0 = Date.now();
+  if (!panRaf) { panRaf = true; requestAnimationFrame(panTick); }
+}
+function panTick() {
+  if (!panRaf) return;
+  var t = Math.min(1, (Date.now() - panT0) / 350);
+  panCur = panStart + (panEnd - panStart) * easeOut(t);
+  draw();
+  if (t < 1) requestAnimationFrame(panTick);
+  else { panCur = panEnd; panRaf = false; }
 }
 
 function drawTile(x, y, focused, it, hotkeyNum) {
@@ -686,6 +704,80 @@ function drawRow(idx, y, title) {
 
 var lastDrawnMinute = -1;
 
+// ---------------------------------------------------------------- overlay
+// [r3] The app list, behind one door. Drawn last so it sits above the panned
+// stage, the status pill and the toasts. Navigation is a simple grid; the
+// window scrolls so the focused row is always visible.
+var OV_COLS = 5;
+function ovVisibleRows(panelH) {
+  return Math.max(1, Math.floor((panelH - 64) / 96));
+}
+function drawOverlay() {
+  var apps = overlayApps();
+  var n = apps.length;
+
+  ctx.fillStyle = "rgba(3, 5, 9, 0.86)";
+  ctx.fillRect(0, 0, W, H);
+
+  var panelX = left() - 24, panelW = W - 2 * (left() - 24);
+  var panelY = 140, panelH = H - 280;
+
+  ctx.fillStyle = "rgba(14, 18, 26, 0.97)";
+  roundRect(panelX, panelY, panelW, panelH, 24); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1;
+  roundRect(panelX, panelY, panelW, panelH, 24); ctx.stroke();
+
+  ctx.font = F.label; ctx.fillStyle = "#64748b";
+  ctx.fillText("APPS", panelX + 28, panelY + 34);
+  ctx.font = F.tiny; ctx.fillStyle = "#475569"; ctx.textAlign = "right";
+  ctx.fillText("OK to open \u00b7 BACK to close", panelX + panelW - 28, panelY + 34);
+  ctx.textAlign = "left";
+
+  if (n === 0) {
+    ctx.font = F.mid; ctx.fillStyle = "#475569";
+    ctx.fillText("no apps reported", panelX + 28, panelY + 84);
+    return;
+  }
+
+  var gx0 = panelX + 28, gy0 = panelY + 64;
+  var cw = (panelW - 56) / OV_COLS, ch = 96;
+  var visRows = ovVisibleRows(panelH);
+  var firstRow = Math.max(0, Math.floor(S.overlay.col / OV_COLS) - visRows + 1);
+  var first = firstRow * OV_COLS;
+
+  for (var i = first; i < n; i++) {
+    var r = Math.floor((i - first) / OV_COLS), c = i % OV_COLS;
+    if (r >= visRows) break;
+    var x = gx0 + c * cw, y = gy0 + r * ch;
+    var focused = (S.overlay.col === i);
+
+    ctx.fillStyle = focused ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.04)";
+    roundRect(x + 4, y + 4, cw - 8, ch - 12, 14); ctx.fill();
+    if (focused) {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+      roundRect(x + 4, y + 4, cw - 8, ch - 12, 14); ctx.stroke();
+    }
+
+    var a = apps[i], im = a.icon && ICONS[a.icon], ih = 36;
+    if (im && im.complete && im.naturalWidth) {
+      var sc = Math.min(ih / im.naturalWidth, ih / im.naturalHeight);
+      ctx.drawImage(im, x + cw / 2 - im.naturalWidth * sc / 2, y + 26,
+                    im.naturalWidth * sc, im.naturalHeight * sc);
+    } else {
+      ctx.fillStyle = "rgba(148,163,184,0.45)";
+      roundRect(x + cw / 2 - ih / 2, y + 26, ih, ih, 8); ctx.fill();
+    }
+
+    ctx.font = F.tiny;
+    ctx.fillStyle = focused ? "#f8fafc" : "#94a3b8";
+    ctx.textAlign = "center";
+    var nm = a.name || "";
+    if (nm.length > 18) nm = nm.slice(0, 17) + "\u2026";
+    ctx.fillText(nm, x + cw / 2, y + ch - 20);
+    ctx.textAlign = "left";
+  }
+}
+
 function draw() {
   HIT = [];
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
@@ -724,6 +816,11 @@ function draw() {
   ctx.fillRect(0, 0, W, H);
   }
 
+  // [next r2] content stage pans over the fixed wallpaper: view 1 = clock +
+  // inputs dock (bottom edge), view 2 = apps row + install tile.
+  ctx.save();
+  ctx.translate(0, -panCur);
+
   // Refined Header: Light typography clock with hours/minutes hierarchy & clean uppercase date
   var now = new Date();
   lastDrawnMinute = now.getMinutes();
@@ -750,6 +847,33 @@ function draw() {
   var mons = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
   var dateStr = days[now.getDay()] + " · " + mons[now.getMonth()] + " " + now.getDate();
   ctx.fillText(dateStr, left() + 2, 98);
+
+  // [next r2] row geometry: the dock lives at the bottom edge of view 1,
+  // apps + install live one view down (stage y + PAN_VIEW).
+  drawRow(0, 424, "INPUTS & SOURCES");
+  drawRow(1, 636, "APPS");
+
+  // [next r2] scroll affordance on view 1: apps exist below the fold
+  if (!S.autoSwitchAt && Date.now() >= S.toastUntil && items(1).length) {
+    ctx.font = F.tiny;
+    ctx.fillStyle = "#475569";
+    ctx.textAlign = "center";
+    ctx.fillText("\u25BC  APPS", W / 2, 536);
+    ctx.textAlign = "left";
+  }
+
+  if (typeof installVisible === "function" && installVisible()) {
+    var iy = 800;
+    ctx.font = F.label;
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("SYSTEM SETUP", left(), iy - 12);
+    var focused = (S.row === 2);
+    drawTile(left(), iy, focused,
+      { label: "INSTALL AS APP", install: true, sub: "", icon: null, val: null }, 0);
+    HIT.push({ x: left(), y: iy, w: tileW(), h: tileH(), row: 2, col: 0 });
+  }
+
+  ctx.restore(); // [next r2] end panned stage — below stays viewport-fixed
 
   // Top-Right Glass Capsule Status Pill
   var pillW = 132, pillH = 26, pillX = W - left() - pillW, pillY = 54;
@@ -785,20 +909,6 @@ function draw() {
   ctx.font = "600 10px -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif";
   ctx.fillStyle = S.online ? "rgba(255, 255, 255, 0.85)" : "rgba(148, 163, 184, 0.8)";
   ctx.fillText(S.online ? "ALVIDAA · LIVE" : (S.hello ? "RECONNECTING" : "OFFLINE"), pillX + 26, pillY + pillH / 2 + 3.5);
-
-  drawRow(0, 168, "INPUTS & SOURCES");
-  drawRow(1, 298, "APPS & CHANNELS");
-
-  if (typeof installVisible === "function" && installVisible()) {
-    var iy = 434;
-    ctx.font = F.label;
-    ctx.fillStyle = "#64748b";
-    ctx.fillText("SYSTEM SETUP", left(), iy - 12);
-    var focused = (S.row === 2);
-    drawTile(left(), iy, focused,
-      { label: "INSTALL AS APP", install: true, sub: "", icon: null, val: null }, 0);
-    HIT.push({ x: left(), y: iy, w: tileW(), h: tileH(), row: 2, col: 0 });
-  }
 
   // Floating Glass HUD for Auto-switch countdown & toasts
   var nowMs = Date.now();
@@ -864,6 +974,9 @@ function draw() {
     ctx.fillText(tmsg, W / 2, tby + 18);
     ctx.textAlign = "left";
   }
+
+  // [r3] the app list sits above everything else
+  if (overlayOpen()) drawOverlay();
 }
 
 // Idle timer: only redraw when the minute ticks over, a toast expires, or auto-switch counts down
@@ -897,6 +1010,7 @@ function activate(row, col) {
   if (row === 2) { installAsApp(); return; }
   var it = items(row)[col];
   if (!it) return;
+  if (it.val === "__apps__") { openOverlay(); return; }
   if (it.shortcut) {
     saveLastUsed(row, it.shortcut);
     location.href = it.shortcut;
@@ -907,6 +1021,27 @@ function activate(row, col) {
 
 document.addEventListener("keydown", function (e) {
   S.userInteracted = true;
+
+  // [r3] the app overlay owns the remote while it is open
+  if (overlayOpen()) {
+    var ovApps = overlayApps(), ovN = ovApps.length;
+    if (e.key === "ArrowRight") { S.overlay.col = Math.min(ovN - 1, S.overlay.col + 1); }
+    else if (e.key === "ArrowLeft") { S.overlay.col = Math.max(0, S.overlay.col - 1); }
+    else if (e.key === "ArrowDown") { S.overlay.col = Math.min(ovN - 1, S.overlay.col + OV_COLS); }
+    else if (e.key === "ArrowUp") { S.overlay.col = Math.max(0, S.overlay.col - OV_COLS); }
+    else if (e.key === "Enter") {
+      var ovA = ovApps[S.overlay.col];
+      if (ovA) { S.overlay.open = false; act("launch", ovA.name); }
+    }
+    else if (e.key === "Escape" || e.key === "Backspace" ||
+             e.key === "GoBack" || e.key === "BrowserBack" || e.key === "Back") {
+      closeOverlay();
+    }
+    draw();
+    e.preventDefault();
+    return;
+  }
+
   if (S.autoSwitchAt) {
     cancelAutoSwitch();
     e.preventDefault();
@@ -914,11 +1049,10 @@ document.addEventListener("keydown", function (e) {
   }
   var rows = installVisible() ? 3 : 2;
   var list = items(S.row);
-  var handled = true;
   if (e.key === "ArrowRight") { S.focusPicked = true; if (S.col < list.length - 1) { S.col++; bumpFocus(); draw(); } }
   else if (e.key === "ArrowLeft") { S.focusPicked = true; if (S.col > 0) { S.col--; bumpFocus(); draw(); } }
-  else if (e.key === "ArrowUp") { S.focusPicked = true; if (S.row > 0) { S.row--; clampFocus(); bumpFocus(); draw(); } }
-  else if (e.key === "ArrowDown") { S.focusPicked = true; if (S.row < rows - 1) { S.row++; clampFocus(); bumpFocus(); draw(); } }
+  else if (e.key === "ArrowUp") { S.focusPicked = true; if (S.row > 0) { S.row--; clampFocus(); bumpFocus(); panTo(S.row); draw(); } }
+  else if (e.key === "ArrowDown") { S.focusPicked = true; if (S.row < rows - 1) { S.row++; clampFocus(); bumpFocus(); panTo(S.row); draw(); } }
   else if (e.key === "Enter") { activate(S.row, S.col); }
   else if (e.key >= "1" && e.key <= "9") {
     var idx = e.key.charCodeAt(0) - 49;
@@ -931,17 +1065,15 @@ document.addEventListener("keydown", function (e) {
     }
   } else if (e.key === "0" || e.key === "Home") {
     S.focusPicked = true;
-    S.row = 0; S.col = 0; bumpFocus(); draw();
-  } else {
-    handled = false;
+    S.row = 0; S.col = 0; bumpFocus(); panTo(0); draw();
   }
-  if (handled) e.preventDefault();
+  e.preventDefault();
 });
 
 function hitAt(cx, cy) {
   var r = cv.getBoundingClientRect();
   var x = (cx - r.left) * (W / r.width);
-  var y = (cy - r.top) * (H / r.height);
+  var y = (cy - r.top) * (H / r.height) + panCur; // [next r2] stage coords
   for (var i = 0; i < HIT.length; i++) {
     var t = HIT[i];
     if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return t;
@@ -954,12 +1086,17 @@ cv.addEventListener("click", function (e) {
   var t = hitAt(e.clientX, e.clientY);
   if (!t) return;
   S.focusPicked = true;
-  S.row = t.row; S.col = t.col; draw();
+  S.row = t.row; S.col = t.col;
+  // [next r2] an off-view tile gets pan + focus only — no surprise launch
+  if (t.y < panCur || t.y + t.h > panCur + H) { panTo(t.row); draw(); return; }
+  draw();
   activate(t.row, t.col);
 });
 cv.addEventListener("mousemove", function (e) {
   var t = hitAt(e.clientX, e.clientY);
-  if (t && t.row !== 2 && (S.row !== t.row || S.col !== t.col)) {
+  // [next r2] hover only claims tiles fully inside the current view
+  var inView = t && t.y >= panCur && t.y + t.h <= panCur + H;
+  if (inView && t.row !== 2 && (S.row !== t.row || S.col !== t.col)) {
     S.userInteracted = true;
     if (S.autoSwitchAt) cancelAutoSwitch();
     S.focusPicked = true;
@@ -974,10 +1111,10 @@ var APP_URL = location.href.split("#")[0];
 function installAsApp() {
   var b = detectBridge();
   var icon = APP_URL + "icon.png";
-  if (b.hiutils || b.websdk) {
+  if (b.hiutils) {
     try {
-      var cur = fileBridgeCall("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
-      var list = (cur && cur.ret) ? JSON.parse(cur.msg) : { AppInfo: [] };
+      var cur = HiUtils_createRequest("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
+      var list = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
       if (!list.AppInfo) list.AppInfo = [];
       var kept = [];
       for (var k = 0; k < list.AppInfo.length; k++) {
@@ -999,20 +1136,15 @@ function installAsApp() {
         if (list.AppInfo[i].Id === APP_ENTRY_ID) { idx = i; break; }
       }
       if (idx >= 0) list.AppInfo[idx] = entry; else list.AppInfo.push(entry);
-      var res = fileBridgeCall("fileWrite", {
+      var res = HiUtils_createRequest("fileWrite", {
         path: "websdk/Appinfo.json", mode: 6, writedata: JSON.stringify(list)
       });
-      if (res && res.ret) {
+      if (res.ret) {
         S.installed = true;
         S.toast = "installed! restart the TV, then open Home";
         S.toastUntil = Date.now() + 8000;
-      } else if (send({ t: "install", url: APP_URL })) {
-        S.busy = true;
-        S.toast = "registering launcher…";
-        S.toastUntil = Date.now() + 3000;
       } else {
-        var detail = (res && res.msg) ? res.msg : JSON.stringify(res);
-        S.toast = "install failed: " + (detail || "?");
+        S.toast = "install failed: " + (res.msg || "?");
         S.toastUntil = Date.now() + 5000;
       }
     } catch (e) {
@@ -1034,22 +1166,21 @@ function installAsApp() {
   draw();
 }
 
-// ---------------------------------------------------------------- diagnostics
-// Screen-as-console from the odin black-render hunt. Gated behind ?debug:
-// every draw is still guarded (an error can never wedge the loop) and
-// window.onerror still POSTs to /api/probe, but nothing is painted unless
-// DEBUG is on — the live page stays visually pristine.
+// ---------------------------------------------------------------- diagnostics [next r1]
+// The screen is the console: every draw is guarded, errors are painted ON the
+// canvas (odin has no console reach). Mode tag + state line are always shown.
 var DIAG = { errors: [], draws: 0 };
 
 function diagState() {
   return "ws:" + (S.online ? "up" : "down") + (wsRetry ? "(" + wsRetry + ")" : "") +
     " hello:" + (S.hello ? "y" : "n") +
     " apps:" + (S.apps ? S.apps.length : "null") +
-    " src:" + (S.sources ? S.sources.length : "null");
+    " src:" + (S.sources ? S.sources.length : "null") +
+    " focus:" + S.row + ":" + S.col +
+    " pan:" + Math.round(panCur);
 }
 
 function paintDiag(errText) {
-  if (!DEBUG) return;
   try {
     // Composite-test pixel: if this square is invisible while the page runs,
     // the canvas layer itself is not compositing (GPU) — not a JS bug.
@@ -1059,7 +1190,9 @@ function paintDiag(errText) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
     ctx.font = "600 10px monospace";
     ctx.textAlign = "right";
-    ctx.fillText("NEXT " + MODE + " · " + diagState(), W - left(), 96);
+    // [next r2] bottom-left: the top-right seat collides with the apps-row
+    // pagination counter now that the row lives one view up
+    ctx.fillText("NEXT " + MODE + " · " + diagState(), 12, H - 8);
     ctx.textAlign = "left";
     if (errText) {
       ctx.fillStyle = "rgba(120, 10, 20, 0.92)";
@@ -1105,6 +1238,11 @@ window.onerror = function (msg, src, line) {
   };
 
 try { loadCache(); } catch (e) { DIAG.errors.push("loadCache: " + e.message); }
+if (PAN_FORCE === 1) { // [next r2] review pin: land focused on the apps view
+  S.row = 1; S.col = 0; S.focusPicked = true;
+  clampFocus();
+  panTo(S.row, true);
+}
 try { connect(); } catch (e) { DIAG.errors.push("connect: " + e.message); }
 try { draw(); } catch (e) { paintDiag("kickoff: " + e.message); }
 </script>

@@ -10,7 +10,7 @@
 | Generation | SoC | Traversal (`../`) | `fileWrite` | Identity gate | euladpp | Root | Source |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 09.01O.P0813 (50A51HUV, US/CAN) | MTK9602 | open | open | n-a | armed | achieved | [@carteakey](https://github.com/carteakey) |
-| 09.60X.Q0609 (2026-06) (? (MTK9618 unit), ?) | MTK9618 | untested | untested | untested | untested | achieved | [u/possibly_matt](https://reddit.com/user/possibly_matt) |
+| 09.60X.Q0609 (2026-06) (MTK9618 unit, ?) | MTK9618 | untested | untested | untested | untested | achieved | [u/possibly_matt](https://reddit.com/user/possibly_matt) |
 | 09.60V.Q0612 (2026-07 EU_A) (55A60LEVS, EU_A) | MTK9603 | closed | gated | working | armed | blocked-at-fileWrite | [u/Affectionate-End-601](https://reddit.com/user/Affectionate-End-601) |
 | 09.60V.Q0612 (2026-07) (43A60LEVS, EU) | MTK9603 | untested | untested | untested | untested | untested | [u/Wing-Tsit-Chong](https://reddit.com/user/Wing-Tsit-Chong) |
 | 09.60V.Q0612 (build date unconfirmed) (?, ?) | MTK9603 | closed | untested | untested | untested | untested | [u/____dls](https://reddit.com/user/____dls) |

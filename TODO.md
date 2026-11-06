@@ -45,6 +45,33 @@ without a device observation stays labelled as a claim.
 
 ## Next — the launcher
 
+- [ ] **Audio: probe the ALSA capture path before promising anything.**
+      The TV has a usable-looking kernel side — card 0 (`MStar-MAD`), five
+      `mad_pcm` devices, each `playback 1 : capture 1`, with
+      `/dev/snd/pcmC0D0{c,p}` present (`root:mi 660`). What it does not have
+      is a userspace layer: **no `libasound` anywhere** (`/usr/lib`, `/lib`,
+      `/opt`), no `aplay`/`amixer`, nothing in busybox. glibc 2.31 is present,
+      so a dynamic build could work if the lib ships, but static is the safer
+      path (Dropbear and Doom both went that way).
+
+      **The cheap test that decides everything:** a ~50-line static C program
+      that opens `pcmC0D0c`, reads two seconds while the TV plays something,
+      and dumps to a file. The question is whether capture taps the **final
+      mix** (what the room hears, volume included) or the decoder output
+      before the TV's DSP — if it is the latter, a streamed copy will not
+      match the speakers and the whole idea is much less useful. Silent output
+      kills it in ten minutes instead of after a day of fighting boost.
+
+      Only if that passes:
+      - **`snapclient` is the natural direction** — the TV becomes a multiroom
+        speaker. Shares the gate with the librespot task (issue #19), so one
+        probe answers both.
+      - **`snapserver` on the TV** is the odd one: it is a *source* aggregator,
+        so it means "stream what the living room is playing to the kitchen".
+        Legitimate, but it needs the capture tap above to be the real mix.
+      - **Build cost is real**: `snapserver` is C++17 with boost, alsa, vorbis,
+        flac and opus. Static armv7 via `zig cc` is possible but boost makes it
+        a multi-hour job, not an afternoon.
 - [ ] **Status app.** Replace the recon tile's everyday job with
       `launcher/status.html`: bridge up, MQTT paired, Dropbear on 8008, hook
       version, OTA blocked, DNS sinkhole, TV IP/model/firmware, launcher

@@ -1,6 +1,11 @@
 # 75U8QTUK (UK) — V0000.09.60I.Q0813 — VIDAA U9 on MTK9655
 
-**Status (2026-11-06, updated after findings/08): ROOT ARMED, RE-ARM TESTED.**
+**Status (2026-11-06, updated after findings/09): ROOT ARMED, RE-ARM TESTED,
+NATIVE HOME INSTALLED AND OWNER-VERIFIED.** The alvidaa DOM launcher now
+replaces the stock Home via a component-only swap in the writable
+operation-ui module; apps, inputs, TV Settings and app launch were all
+confirmed on screen. Rollback is one command
+([findings/09](findings/09-native-home.md)).
 A real reboot confirmed there is **no automatic autostart**; the documented
 `83` + `82` sequence restored uid-0 SSH afterwards with no re-download
 ([findings/08](findings/08-reboot-rearm.md)). Initial arm: fingerprint
@@ -141,9 +146,12 @@ unit; root is armed but does not survive a reboot.
    present (`9009` GET 200, `9888` WS opens), `Hisense_*` sweep captured,
    region `EU_A`, country `GBR`, full model `75U85QEVS`.
 3. **Launcher lane.** GET delivery is ✅ (a served page loads in the TV
-   webview, findings/03); the self-installing tile (`hookinstall.html` /
-   `Appinfo.json`) is still **untested**. `server/pair.py` was not run —
-   Sidee holds the single MQTT session.
+   webview, findings/03). The **native DOM Home is now installed** ✅
+   (findings/09): a component-only `/Launcher` route swap in operation-ui
+   `app.js`, verified by the owner for apps, inputs, TV Settings and app
+   launch. The older browser/canvas tile self-install (`hookinstall.html` /
+   `Appinfo.json`) is still **untested** and is a separate lane.
+   `server/pair.py` was not run — Sidee holds the single MQTT session.
 4. **Bridge recon with writes.** ✅ Done and **corrected 2026-11-06**
    ([findings/05](findings/05-fetcher-recheck.md),
    [findings/06](findings/06-superwatch-gate.md)). The FaaS `basic/fetcher`

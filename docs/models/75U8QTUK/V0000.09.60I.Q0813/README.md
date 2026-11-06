@@ -1,6 +1,9 @@
 # 75U8QTUK (UK) — V0000.09.60I.Q0813 — VIDAA U9 on MTK9655
 
-**Status (2026-11-06, updated after findings/07): ROOT ARMED.** fingerprint
+**Status (2026-11-06, updated after findings/08): ROOT ARMED, RE-ARM TESTED.**
+A real reboot confirmed there is **no automatic autostart**; the documented
+`83` + `82` sequence restored uid-0 SSH afterwards with no re-download
+([findings/08](findings/08-reboot-rearm.md)). Initial arm: fingerprint
 captured; pairing confirmed (Sidee, profile `modern`); launcher GET-delivery
 confirmed; Phoenix FaaS confirmed present. The earlier "dead end"
 (findings/04) was a **false negative**: that probe used the `hiutils` read
@@ -13,8 +16,9 @@ and the chain was armed on 2026-11-06
 ([findings/07](findings/07-root-armed.md)): the IPK `postinst` ran as
 **uid 0 / `CapEff 000001ffffffffff`**, and `ssh -p 8008 root@10.0.0.173`
 (via `server/keys/vidaa_75u8qtuk_ed25519`) gives uid 0 with a working PTY.
-No reboot and **no boot persistence** — re-arm with commands `83` + `82`
-after a reboot. `/` and `/application` remain read-only; dm-verity untouched.
+No boot persistence — re-arm with commands `83` + `82` after a reboot
+(verified: reboot closed 8008, re-arm reopened it as uid 0).
+`/` and `/application` remain read-only; dm-verity untouched.
 Do not treat this page as a recipe; it's the lab notebook's cover sheet.
 
 **Contributor:** [@kingpandacc](https://github.com/kingpandacc) (issue thread TBD).
@@ -155,9 +159,13 @@ unit; root is armed but does not survive a reboot.
    `CapEff 000001ffffffffff`; verified:
    `ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173`
    → uid 0, full caps, **PTY OK**, `/etc/shadow` and `/data` readable.
-   `/` and `/application` are still `erofs ro`. No reboot, no boot
-   persistence: re-arm with the same `83` + `82` sequence (the IPK remains at
-   `/APPS/installer.ipk`). Rollback is in findings/07.
+   `/` and `/application` are still `erofs ro`. No boot persistence:
+   after a real reboot 8008 was closed; re-sending `83` + `82` through
+   `sw2.js` restored uid-0 SSH with the same host key and a fresh daemon
+   ([findings/08](findings/08-reboot-rearm.md)). Re-arm page:
+   `tools/u7q/web/rearm.html` served by `tools/u7q/web/server.py`. The IPK
+   remains at `/APPS/installer.ipk`, so re-arm downloads nothing. Rollback is
+   in findings/07.
 
 Each discovery, bug, trap, errno gets a dated note in
 [`findings/`](findings/) the same hour it happens — AGENTS.md discipline rule.

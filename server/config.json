@@ -1,10 +1,4 @@
 {
-  "hidden": [],
-  "rename": {
-    "tv channels\u25b6": "Live TV",
-    "tv browser": "Browser"
-  },
-  "inputs": {},
   "only": [
     "Spotify : Music & Podcasts",
     "YouTube",
@@ -12,19 +6,22 @@
     "TV Browser",
     "Recon"
   ],
-  "shortcuts": [
-    {
-      "name": "Doom",
-      "url": "http://127.0.0.1:8770/doom"
-    }
-  ],
-  "autoSwitch": false,
+  "hidden": [],
+  "rename": {
+    "tv channels\u25b6": "Live TV",
+    "tv browser": "Browser"
+  },
+  "inputs": {},
   "watcher": {
     "enabled": false,
     "app": "Home",
     "interval": 3,
     "cooldown": 6
   },
-  "installed": true,
-  "launcherUrl": "http://192.168.86.219:8765/"
+  "shortcuts": [
+    {
+      "name": "Doom",
+      "url": "http://127.0.0.1:8770/doom"
+    }
+  ]
 }

@@ -38,6 +38,7 @@ ICONCACHE = os.path.join(HERE, "iconcache")
 ROOT = os.path.join(HERE, "..", "launcher")
 KEYS = os.path.join(HERE, "keys")
 TOKENS_FILE = os.path.join(KEYS, "tokens.json")
+LAUNCHER_FILE = os.path.join(KEYS, "launcher.json")
 CONFIG_FILE = os.path.join(HERE, "config.json")
 RECON_FILE = os.path.join(HERE, "recon-report.json")
 HOST = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("HISENSE_HOST", "")
@@ -121,7 +122,7 @@ def save_tokens(t):
 
 def load_config():
     cfg = {"hidden": [], "rename": {}, "inputs": {}, "only": [], "shortcuts": [],
-           "autoSwitch": False,
+           "autoSwitch": False, "installed": False, "launcherUrl": "",
            "watcher": {"enabled": True, "app": "Home", "interval": 3, "cooldown": 6}}
     try:
         with open(CONFIG_FILE) as f:
@@ -140,6 +141,20 @@ def load_config():
             cfg["only"] = user["only"]
         if "autoSwitch" in user:
             cfg["autoSwitch"] = bool(user.get("autoSwitch"))
+        if "installed" in user:
+            cfg["installed"] = bool(user.get("installed"))
+        if isinstance(user.get("launcherUrl"), str):
+            cfg["launcherUrl"] = user["launcherUrl"]
+    except (OSError, ValueError):
+        pass
+    try:
+        with open(LAUNCHER_FILE) as f:
+            st = json.load(f)
+        if isinstance(st, dict):
+            if "installed" in st:
+                cfg["installed"] = bool(st.get("installed"))
+            if isinstance(st.get("launcherUrl"), str) and st["launcherUrl"]:
+                cfg["launcherUrl"] = st["launcherUrl"]
     except (OSError, ValueError):
         pass
     return cfg
@@ -491,13 +506,13 @@ class TVBridge:
         return out
 
     def register_launcher(self, url=""):
-        cfg = load_config()
-        cfg["installed"] = True
+        os.makedirs(KEYS, exist_ok=True)
+        st = {"installed": True}
         if url:
-            cfg["launcherUrl"] = url
+            st["launcherUrl"] = url
         try:
-            with open(CONFIG_FILE, "w") as f:
-                json.dump(cfg, f, indent=2)
+            with open(LAUNCHER_FILE, "w") as f:
+                json.dump(st, f, indent=2)
                 f.write("\n")
         except OSError as e:
             return {"t": "installed", "ok": False, "error": str(e)}
@@ -549,10 +564,11 @@ class TVBridge:
             try:
                 cfg = load_config()
                 w = cfg.get("watcher", {})
-                if w.get("enabled", True) and self.connected.is_set():
-                    # poll gettvstate as fallback; _on_message handles instant bounce on reply/push
-                    self.call("ui_service", "gettvstate")
-                    self._maybe_bounce_home()
+                if self.connected.is_set():
+                    if w.get("enabled", True):
+                        # poll gettvstate as fallback; _on_message handles instant bounce on reply/push
+                        self.call("ui_service", "gettvstate")
+                        self._maybe_bounce_home()
                     # live source signal refresh every ~9s
                     if cycle % 3 == 0:
                         try:

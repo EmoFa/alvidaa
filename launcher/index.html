@@ -929,7 +929,7 @@ document.addEventListener("keydown", function (e) {
       draw();
       activate(S.row, idx);
     }
-  } else if (e.key === "0") {
+  } else if (e.key === "0" || e.key === "Home") {
     S.focusPicked = true;
     S.row = 0; S.col = 0; bumpFocus(); draw();
   } else {

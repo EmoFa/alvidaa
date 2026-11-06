@@ -45,33 +45,22 @@ without a device observation stays labelled as a claim.
 
 ## Next — the launcher
 
-- [ ] **Audio: probe the ALSA capture path before promising anything.**
-      The TV has a usable-looking kernel side — card 0 (`MStar-MAD`), five
-      `mad_pcm` devices, each `playback 1 : capture 1`, with
-      `/dev/snd/pcmC0D0{c,p}` present (`root:mi 660`). What it does not have
-      is a userspace layer: **no `libasound` anywhere** (`/usr/lib`, `/lib`,
-      `/opt`), no `aplay`/`amixer`, nothing in busybox. glibc 2.31 is present,
-      so a dynamic build could work if the lib ships, but static is the safer
-      path (Dropbear and Doom both went that way).
-
-      **The cheap test that decides everything:** a ~50-line static C program
-      that opens `pcmC0D0c`, reads two seconds while the TV plays something,
-      and dumps to a file. The question is whether capture taps the **final
-      mix** (what the room hears, volume included) or the decoder output
-      before the TV's DSP — if it is the latter, a streamed copy will not
-      match the speakers and the whole idea is much less useful. Silent output
-      kills it in ten minutes instead of after a day of fighting boost.
-
-      Only if that passes:
-      - **`snapclient` is the natural direction** — the TV becomes a multiroom
-        speaker. Shares the gate with the librespot task (issue #19), so one
-        probe answers both.
-      - **`snapserver` on the TV** is the odd one: it is a *source* aggregator,
-        so it means "stream what the living room is playing to the kitchen".
-        Legitimate, but it needs the capture tap above to be the real mix.
-      - **Build cost is real**: `snapserver` is C++17 with boost, alsa, vorbis,
-        flac and opus. Static armv7 via `zig cc` is possible but boost makes it
-        a multi-hour job, not an afternoon.
+- [x] **Audio: the ALSA capture path was probed — the lane is dead on this
+      model.** Result 2026-11-06 (`tools/audio/README.md` has the full
+      record): `hw:0,0` opens, set_params and start succeed, then every
+      `snd_pcm_readi` returns EIO. During playback **all ten PCMs stay
+      `closed`** in `/proc/asound/card0/pcm*/sub0/status` — on optical
+      (S-PDIF) and on the internal speakers alike. The TV's audio never
+      enters a userspace ALSA stream: the `mad_pcm` nodes are the MStar
+      decoder's internal interface, not the output mix. That kills
+      **snapcast and librespot through ALSA on this model** — an
+      architecture answer, not a build one, so the librespot task
+      (issue #19) needs a different door or a different model. The probe
+      and build script stay in `tools/audio/` as evidence and may behave
+      differently on another SoC. One path is untested and labelled as
+      such: audio played **in the TV browser** — odin declares
+      `--alsa-output-device=default;hw:0,0;...`, so a web page might open
+      a PCM a native app does not.
 - [ ] **Status app.** Replace the recon tile's everyday job with
       `launcher/status.html`: bridge up, MQTT paired, Dropbear on 8008, hook
       version, OTA blocked, DNS sinkhole, TV IP/model/firmware, launcher

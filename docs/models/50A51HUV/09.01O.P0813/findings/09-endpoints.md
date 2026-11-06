@@ -99,3 +99,30 @@ chain listed, not the script read.
 bounded-waits for `iptables` to exist, uses absolute paths, retries DNS
 instead of trusting boot-time resolution, and re-applies a freeze from a
 state sidecar. Acceptance is a rule *count*, not a successful source.
+
+## `nslookup` returns `0.0.0.0` for a blocked host, and scripts rule-ify it (2026-11-05)
+
+Found while verifying that Tier 1 actually applied. The policy resolves each
+telemetry hostname and REJECTs the resulting addresses. Once AdGuard
+NXDOMAIN-pins those hosts, busybox `nslookup` answers **`0.0.0.0`** rather
+than failing, so the pipeline produced:
+
+```sh
+iptables -I OUTPUT 1 -d 0.0.0.0 -j REJECT
+```
+
+A rule that can never match a real destination, sitting in the chain
+looking like protection. It was only visible because the acceptance test
+counted rules instead of trusting "applied".
+
+**The general trap:** any script that resolves a hostname and acts on the
+answer must filter `0.0.0.0` and `::` explicitly. A resolver that returns a
+null address for a blocked name is indistinguishable from a resolver that
+returned a real one unless you check.
+
+**Second-order trap, and the reason this is written down:** once the
+resolver blocks everything, "Tier 1 added zero rules" becomes the *correct*
+outcome — but it was a *bug* an hour earlier. A status line that prints
+only the count cannot distinguish "the resolver is doing the work" from
+"the loop silently failed again". Report which case it is, not just the
+number.

@@ -130,7 +130,7 @@ model and firmware.
 | Model | Region | SoC | VIDAA OS | Firmware | `transport_protocol` | Browser | Launcher | Root chain | Tested by |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 50A51HUV | US/CAN | MTK9602 | U09.01 | 09.01O.P0813 | 3290 | Chromium 111 "odin" | working | achieved | [@carteakey](https://github.com/carteakey) |
-| MTK9618 unit | ? | MTK9618 | ? | 09.60X.Q0609 (2026-06) | ? | ? | untested | achieved | [u/possibly_matt](https://reddit.com/user/possibly_matt) |
+| 55S7NEVS (MT9618 unit; S7N board family — same build covers 55U75LEVS / 65S7NAVS / 75S7NAVS) | EU | MTK9618 | U09.60 | 09.60X.Q0609 (2026-06) | ? | Chromium 111 | untested | achieved | [u/possibly_matt](https://reddit.com/user/possibly_matt) |
 | 55A60LEVS | EU_A | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07 EU_A) | 3290 | Chromium 111.5563.5.1 | untested | blocked-at-fileWrite | [u/Affectionate-End-601](https://reddit.com/user/Affectionate-End-601) |
 | 43A60LEVS | EU | MTK9603 | 9.0 | 09.60V.Q0612 (2026-07) | 3290 | Chromium 111 "Odin" (111.5563.x) | untested | untested | [u/Wing-Tsit-Chong](https://reddit.com/user/Wing-Tsit-Chong) |
 | ? | ? | MTK9603 | 9.0 | 09.60V.Q0612 (build date unconfirmed) | ? | ? | untested | untested | [u/____dls](https://reddit.com/user/____dls) |

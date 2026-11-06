@@ -37,13 +37,13 @@
     },
     {
       "id": "09.60X.Q0609 (2026-06)",
-      "model": "MTK9618 unit",
-      "region": "?",
+      "model": "55S7NEVS (MT9618 unit; S7N board family — same build covers 55U75LEVS / 65S7NAVS / 75S7NAVS)",
+      "region": "EU",
       "soc": "MTK9618",
-      "vidaa_os": "?",
+      "vidaa_os": "U09.60",
       "transport_protocol": "?",
-      "browser": "?",
-      "build_date": "possibly 2026-06",
+      "browser": "Chromium 111",
+      "build_date": "2026-06-09",
       "tested_by": [
         "reddit:possibly_matt"
       ],
@@ -56,7 +56,7 @@
         "euladpp_untar": "untested",
         "devtools_forge": "untested",
         "root": "achieved",
-        "notes": "root code exec via IPK post-install script (rc.local otaTest hook absent on this build); telnet root shell; write-up pending, sharing privately (patch-risk concern); 48h agent campaign"
+        "notes": "boot-persistent root code exec (cold-boot re-fire verified 2026-11-03: postinst at uptime ~11s, uid-0 SSH shortly after; deep mirror in /vendor/persist survives app-area wipes); chain = fetcher.fetchFile arbitrary write (empty permission list) + hooked UpgradeReport.js + superwatch install message -> vendor opkg -> postinst uid 0 — same family as the 100U7Q chain, MTK9618/mt5879 aarch64 generation, kernel 5.4.302. Contributed by possibly_matt as a private bundle (2026-11-05); adapted docs-only with the author's permission per the bundle's own disclosure (docs publishable, payload and exact procedure stay private) — guide: docs/models/55S7NEVS/V0000.09.60X.Q0609/. Repo lanes (pairing/launcher/file-bridge) not exercised on this unit."
       }
     },
     {

@@ -86,7 +86,7 @@
       }
       if (typeof WebSDK_createFileRequest === "function") {
         if ((location.hostname || "").indexOf("vidaahub.com") === -1) {
-          return { ret: false, msg: "U6 /file/* requires a vidaahub.com origin" };
+          return { ret: false, blocked: true, msg: "U6 /file/* requires a vidaahub.com origin" };
         }
         var p = {};
         if (params && typeof params === "object") {
@@ -97,7 +97,19 @@
         }
         var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
         if (raw && typeof raw === "object") return { ret: raw.ret, msg: normMsg(raw.msg) };
-        return { value: trunc(raw, 2000) };
+        if (typeof raw === "string") {
+          if (raw.length === 0 || raw === "null" || raw === "false" || raw.indexOf("Error:") === 0) {
+            return { ret: false, msg: raw || "empty response from WebSDK_createFileRequest" };
+          }
+          try {
+            var parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object" && "ret" in parsed) {
+              return { ret: parsed.ret, msg: normMsg(parsed.msg) };
+            }
+          } catch (e) {}
+          return { ret: true, msg: trunc(raw, 2000) };
+        }
+        return { ret: false, msg: trunc(raw, 2000) };
       }
       return { error: "no bridge" };
     } catch (e) {
@@ -141,6 +153,13 @@
     var status = document.getElementById("hook");
     // refuse if one already exists (never blindly overwrite)
     var cur = hiCall("fileRead", { path: "../var/local/otaTest.sh", mode: 6 });
+    if (cur.error || cur.exception || cur.blocked) {
+      status.textContent = "hook read blocked: " + trunc(cur.msg || cur.error || cur.exception, 120);
+      status.style.color = "#f88";
+      report.hook = { status: "blocked", result: cur };
+      save("hook");
+      return;
+    }
     if (isOk(cur.ret) && cur.msg.indexOf("alvidaa root hook") === -1) {
       status.textContent = "otaTest.sh EXISTS (foreign) — not overwriting";
       status.style.color = "#f88";
@@ -221,7 +240,12 @@
       var base = location.href.replace(/recon\.html.*$/, "");
       var icon = base + "icon.png";
       var cur = hiCall("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
-      var list = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
+      if (cur.error || cur.exception || cur.blocked) {
+        status.textContent = "install blocked: " + trunc(cur.msg || cur.error || cur.exception, 80);
+        status.style.color = "#f88";
+        return;
+      }
+      var list = isOk(cur.ret) ? JSON.parse(cur.msg) : { AppInfo: [] };
       list.AppInfo = list.AppInfo.filter(function (a) { return a.Id !== "vidaa-recon"; });
       list.AppInfo.push({
         Id: "vidaa-recon", AppName: "Recon", Title: "Recon",

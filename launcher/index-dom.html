@@ -77,7 +77,7 @@ function fileBridgeCall(action, params) {
     }
     var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
     if (raw && typeof raw === "object") return raw;
-    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false") {
+    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false" && raw.indexOf("Error:") !== 0) {
       try {
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object" && "ret" in parsed) return parsed;
@@ -106,6 +106,15 @@ function connect() {
       S.apps = m.apps || []; S.sources = m.sources || []; S.state = m.state;
       S.installed = !!m.installed; S.busy = false;
       clampFocus(); render(); preloadIcons();
+    } else if (m.t === "installed") {
+      S.busy = false;
+      if (m.ok) {
+        S.installed = true; S.installedNow = true;
+        clampFocus(); renderRows();
+        toast("installed! launcher registered with server");
+      } else {
+        toast("install failed: " + (m.error || "?"));
+      }
     } else if (m.t === "tvstate") { S.state = m.state; renderStatus(); }
     else if (m.t === "sources") { S.sources = m.sources || S.sources; clampFocus(); renderRows(); }
     else if (m.t === "apps") { S.apps = m.apps || S.apps; clampFocus(); renderRows(); }
@@ -116,7 +125,10 @@ function connect() {
 function scheduleReconnect() {
   setTimeout(connect, Math.min(8000, 1000 * Math.pow(2, wsRetry++)));
 }
-function send(obj) { if (S.online && ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function send(obj) {
+  if (S.online && ws && ws.readyState === 1) { ws.send(JSON.stringify(obj)); return true; }
+  return false;
+}
 function act(type, val) {
   if (S.busy) return;
   S.busy = true; toast("…");
@@ -145,11 +157,6 @@ function items(row) {
     return { label: a.name, sub: "", icon: a.icon || "", val: a.name };
   });
   return out;
-}
-function installVisible() {
-  if (S.installed === true && !/[?&]setup/.test(location.search)) return false;
-  var b = detectBridge();
-  return (b.hiutils || b.legacy) && !S.installedNow;
 }
 function rowCount() { return installVisible() ? 3 : 2; }
 function clampFocus() {
@@ -293,7 +300,16 @@ function installAsApp() {
       var res = fileBridgeCall("fileWrite", {
         path: "websdk/Appinfo.json", mode: 6, writedata: JSON.stringify(list)
       });
-      toast((res && res.ret) ? "installed! restart the TV" : "install failed: " + ((res && res.msg) || "?"));
+      if (res && res.ret) {
+        S.installed = true; S.installedNow = true;
+        clampFocus(); renderRows();
+        toast("installed! restart the TV");
+      } else if (send({ t: "install", url: APP_URL })) {
+        S.busy = true;
+        toast("registering launcher…");
+      } else {
+        toast("install failed: " + ((res && res.msg) || "?"));
+      }
     } catch (e) { toast("install error: " + e); }
   } else if (b.legacy) {
     try {

@@ -44,7 +44,7 @@
       }
       if (typeof WebSDK_createFileRequest === "function") {
         if ((location.hostname || "").indexOf("vidaahub.com") === -1) {
-          return { ret: false, msg: "U6 /file/* requires a vidaahub.com origin" };
+          return { ret: false, blocked: true, msg: "U6 /file/* requires a vidaahub.com origin" };
         }
         var p = {};
         if (params && typeof params === "object") {
@@ -54,7 +54,20 @@
           if (typeof p.mode === "number" && p.mode > 3) p.mode = 3;
         }
         var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
-        return raw && typeof raw === "object" ? { ret: raw.ret, msg: normMsg(raw.msg) } : { value: String(raw) };
+        if (raw && typeof raw === "object") return { ret: raw.ret, msg: normMsg(raw.msg) };
+        if (typeof raw === "string") {
+          if (raw.length === 0 || raw === "null" || raw === "false" || raw.indexOf("Error:") === 0) {
+            return { ret: false, msg: raw || "empty response from WebSDK_createFileRequest" };
+          }
+          try {
+            var parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === "object" && "ret" in parsed) {
+              return { ret: parsed.ret, msg: normMsg(parsed.msg) };
+            }
+          } catch (e) {}
+          return { ret: true, msg: raw };
+        }
+        return { ret: false, msg: normMsg(raw) };
       }
       return { error: "no bridge" };
     } catch (e) { return { exception: String(e) }; }
@@ -165,25 +178,32 @@
 
   // 1. back up whatever hook is installed
   var cur = hiCall("fileRead", { path: HOOK_PATH, mode: 6 });
+  var canWrite = !(cur.error || cur.exception || cur.blocked);
   if (isOk(cur.ret)) {
     var b = hiCall("fileWrite", { path: "../var/local/otaTest.v1.bak", mode: 6,
                                   writedata: cur.msg });
     rep.backup = { backed_up: isOk(b.ret), bytes: cur.msg.length };
     line("backup of previous hook: " + (isOk(b.ret) ? "ok" : "FAILED"), isOk(b.ret) ? "ok" : "err");
+    if (!isOk(b.ret)) canWrite = false;
   } else {
-    rep.backup = { backed_up: false, reason: String(cur.msg).slice(0, 100) };
+    rep.backup = { backed_up: false, reason: String(cur.msg || cur.error || cur.exception || "").slice(0, 100) };
   }
 
   // 2. install v13
-  var w = hiCall("fileWrite", { path: HOOK_PATH, mode: 6, writedata: HOOK_V13 });
-  rep.write = { ok: isOk(w.ret), result: String(w.msg).slice(0, 100) };
-  line("hook v13 write: " + (isOk(w.ret) ? "OK" : "FAILED " + String(w.msg).slice(0, 80)),
-    isOk(w.ret) ? "ok" : "err");
+  if (canWrite) {
+    var w = hiCall("fileWrite", { path: HOOK_PATH, mode: 6, writedata: HOOK_V13 });
+    rep.write = { ok: isOk(w.ret), result: String(w.msg).slice(0, 100) };
+    line("hook v13 write: " + (isOk(w.ret) ? "OK" : "FAILED " + String(w.msg).slice(0, 80)),
+      isOk(w.ret) ? "ok" : "err");
 
-  if (isOk(w.ret)) {
-    var rb = hiCall("fileRead", { path: HOOK_PATH, mode: 6 });
-    rep.write.readback_ok = isOk(rb.ret) && rb.msg.indexOf("v13") !== -1;
-    line("readback: " + rep.write.readback_ok, rep.write.readback_ok ? "ok" : "err");
+    if (isOk(w.ret)) {
+      var rb = hiCall("fileRead", { path: HOOK_PATH, mode: 6 });
+      rep.write.readback_ok = isOk(rb.ret) && rb.msg.indexOf("v13") !== -1;
+      line("readback: " + rep.write.readback_ok, rep.write.readback_ok ? "ok" : "err");
+    }
+  } else {
+    rep.write = { ok: false, skipped: true, reason: rep.backup.reason || "backup failed" };
+    line("hook v13 write: SKIPPED (" + rep.write.reason + ")", "err");
   }
 
   line("== posting ==", "warn");

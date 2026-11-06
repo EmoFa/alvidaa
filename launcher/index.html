@@ -118,7 +118,7 @@ function fileBridgeCall(action, params) {
     }
     var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
     if (raw && typeof raw === "object") return raw;
-    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false") {
+    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false" && raw.indexOf("Error:") !== 0) {
       try {
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object" && "ret" in parsed) return parsed;

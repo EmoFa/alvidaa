@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- recon follow-up: superwatch/FaaS surface for 55A7KAU. Read-only.
+     Captures error objects raw via JSON.stringify. -->
+<html><head><meta charset="utf-8"><title>recon-sw</title></head>
+<body><pre id="out">probing…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), ua: navigator.userAgent, files: {}, browser: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path, mode) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: (mode || 6) });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 12000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  report.files.serviceList_basic = raw("../APPS/pkgs/tv.vidaa.jsservice.basic/CHA/services/serviceList.json");
+  report.files.serviceList_system = raw("../APPS/pkgs/tv.vidaa.jsservice.system/current/services/serviceList.json");
+  report.files.sw2_basic_fetch = raw("../APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/sw2.js");
+  report.files.system_current_phoenix = raw("../APPS/pkgs/tv.vidaa.jsservice.system/current/phoenix.server.js");
+  report.files.superwatch_socket = raw("../var/run/superwatch_socket");
+  report.files.fetcher_basic_dir = raw("../APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions");
+  report.browser.vowOS = (typeof vowOS === "undefined") ? "(absent)" : (typeof vowOS.service === "object" || typeof vowOS.service === "function") ? "present" : String(typeof vowOS);
+  // can the page open the phoenix FaaS websocket?
+  report.browser.ws9888 = "pending";
+  try {
+    var ws = new WebSocket("wss://localhost:9888");
+    var done = false;
+    ws.onopen = function () { done = true; report.browser.ws9888 = "open"; try { ws.close(); } catch (e) {} save("ws"); };
+    ws.onerror = function () { if (!done) { done = true; report.browser.ws9888 = "error"; save("ws"); } };
+    setTimeout(function () { if (!done) { done = true; report.browser.ws9888 = "timeout"; save("ws"); } }, 6000);
+  } catch (e) { report.browser.ws9888 = "EXC " + e.message; save("ws"); }
+  try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {}
+  save("sw"); setTimeout(function () { save("sw-end"); }, 8000);
+})();
+</script></body></html>

@@ -275,6 +275,29 @@
         "root": "achieved (boot-persistent PFM/eval chain uid=0 + key-only SSH on 2222 verified 2026-11-06; self-healing re-plant loops)",
         "notes": "Model guide: docs/models/50A6Q/V0000.09.61B.Q0721/. First Novatek entry, first aarch64 unit. Traversal closed; fetcher (empty permission block) is the writer; in-process ISC bypasses all gated APIs; the PFM debug framework evals PFMCheck lines as root at boot; dropbear gauntlet same five locks as MTK, patched at source (MULTIUSER=0 builds kill every connection child with 'String too long' — ship MULTIUSER=1); hostkeys must be dropbear-native format; a runtime watchdog deletes the gate flag and the old IPK lane clobbered PFMCheck — both countered by a 10 s re-plant loop."
       }
+    },
+    {
+      "id": "V0000.09.09O.P1015",
+      "model": "55A7KAU (internal 55U66GAVT)",
+      "region": "AU (AUS; GetCountryCode AUS, SSDP region 6)",
+      "soc": "MTK9602",
+      "vidaa_os": "U09.09",
+      "transport_protocol": "3290",
+      "browser": "Chromium 111 \"odin\"",
+      "build_date": "?",
+      "tested_by": [
+        "owner (this session)"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "working",
+        "file_bridge_traversal": "working",
+        "file_bridge_write": "untested",
+        "identity_gate": "untested",
+        "euladpp_untar": "untested",
+        "root": "achieved + boot-persistent (2026-11-06; re_sshd serviceList autostart, offline re-arm; see 02-root-ssh.md)",
+        "notes": "paired + launcher live 2026-11-06; client cert only accepted with colon-formatted TV MAC; broker validates client-cert CA at TLS layer (stricter than 50A51HUV); no rc.local hook lane; superwatch ids 53/54 not 82/83"
+      }
     }
   ]
 }

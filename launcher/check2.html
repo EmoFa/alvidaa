@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- paced read: /tmp/ipk_install_result content + .re_sshd log. -->
+<html><head><meta charset="utf-8"><title>check2</title></head>
+<body><pre id="out">reading…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), files: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 6000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var T = ["../tmp/ipk_install_result", "../APPS/.re_sshd/installer_log.txt"];
+  var i = 0;
+  function next() {
+    if (i >= T.length) { try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {} save("check2-end"); return; }
+    report.files["t" + i] = { path: T[i], r: raw(T[i]) };
+    save("check2-" + i);
+    i++;
+    setTimeout(next, 3500);
+  }
+  next();
+})();
+</script></body></html>

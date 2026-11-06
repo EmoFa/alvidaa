@@ -133,10 +133,19 @@ fetch_and_print() {
 
 if [[ -z "$TV" ]]; then
   echo "SSDP M-SEARCH (~2-3 s)..."
-  mapfile -t LOCS < <(discover)
+  # macOS still ships bash 3.2, which has no mapfile/readarray. while-read
+  # works on bash 3.2+ and zsh (which macOS now defaults /bin/bash users to
+  # when they run .sh under /bin/bash explicitly as we do with the shebang).
+  LOCS=()
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && LOCS+=("$line")
+  done < <(discover)
   if [[ ${#LOCS[@]} -eq 0 ]]; then
     echo "No SSDP responders. Make sure this host is on the same subnet as the TV,"
     echo "and that no local firewall is dropping multicast on 239.255.255.250:1900."
+    echo "On a multi-interface host (Mac with Wi-Fi + Ethernet + VPN tunnels),"
+    echo "the kernel may send the M-SEARCH out the wrong NIC — pass the TV IP"
+    echo "directly instead:  $0 <tv-ip>"
     exit 1
   fi
   echo "Responders:"

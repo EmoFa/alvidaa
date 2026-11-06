@@ -1,11 +1,16 @@
 # 75U8QTUK (UK) — V0000.09.60I.Q0813 — VIDAA U9 on MTK9655
 
-**Status:** fingerprint captured (2026-11-06); the firmware string, SoC, kernel
-architecture and browser class match the **100U7Q** record byte-for-byte, so
-the 100U7Q root chain is expected to apply here. **Nothing on this unit has
-been exercised yet beyond the fingerprint readout — launcher, pairing, bridge
-and root are all UNVERIFIED until on-device probes land.** Do not treat this
-page as a recipe; it's the lab notebook's cover sheet.
+**Status (2026-11-06):** fingerprint captured; pairing confirmed (Sidee,
+profile `modern`); launcher GET-delivery confirmed; Phoenix FaaS confirmed
+present. **Root chain is a DEAD END on this build** — bridge recon
+(findings/04) showed the `fetcher` rejects every file read with
+`invalid path`, so the 100U7Q traversal/write primitive the chain hinges on
+does **not** transplant. The chain was halted at step 4 per the stop
+condition; no `postinst`/root step was attempted and nothing persisted on
+the TV. Same firmware *version string* as the 100U7Q, but a path-validating
+fetcher, so the "byte-for-byte identical build" assumption does not hold for
+the fetcher surface here. Do not treat this page as a recipe; it's the lab
+notebook's cover sheet.
 
 **Contributor:** [@kingpandacc](https://github.com/kingpandacc) (issue thread TBD).
 **Region:** UK (`GBR`, language `en-GB`). The existing `V0000.09.60I.Q0813`
@@ -36,7 +41,10 @@ on the MQTT pairing profile.
 | UA string | `Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 WebViewer/1.2.1 Safari/537.36` | on-device readout |
 | Language | `en-GB` | `navigator.language` |
 | `secureContext` | `false` on the loaded page | expected — TV browser served the page over plain HTTP |
-| `transport_protocol` (SSDP) | **pending** | SSDP descriptor XML not yet captured |
+| `transport_protocol` (SSDP) | **not exposed** | TV `dd.xml` on :3366 is a 417-byte stub, no such field (findings/01) |
+| Region (`Hisense_GetRegion`) | **`EU_A`** | on-TV probe — same region class as 100U7Q, not UK-specific (findings/03) |
+| Country (`Hisense_GetCountryCode`) | **`GBR`** | on-TV probe (findings/03) |
+| Full model (`Hisense_GetModelName`) | **`75U85QEVS`** | on-TV probe; `GetSerialType`=`75U8QE`, sticker `75U8QTUK` (findings/03) |
 | Serial number / internal board code | owner-redacted / pending `Hisense_GetSerialType()` | |
 | Netflix ESN, Device ID | owner-redacted (not committed) | PII; kept in private notes |
 
@@ -65,8 +73,8 @@ reboot — not currently present, as expected before any work.
 | **Same firmware build** (not just the same version string) | `V0000.09.60I.Q0813` on MT9655 | `V0000.09.60I.Q0813` on `MTK9655` | matches — strong |
 | **aarch64 kernel + 32-bit ARM userland** | kernel `5.15.192`, ELF `EM_ARM` | aarch64 kernel confirmed (UA + `platform`); userland arch unverified | matches kernel; **confirm userland on-device** |
 | **Chromium 111 webview** | Chromium 111 (odin) | Chrome/111 WebViewer/1.2.1 | matches |
-| **Phoenix FaaS stack present** (`http://localhost:9009`, `wss://localhost:9888`) | yes | unverified; `9009` LAN-filtered as expected | **confirm via browser probe** |
-| **`fetcher` FaaS at `/service/basic/fetcher` with empty permission block** | yes | unverified | **the whole chain hinges on this; probe first** |
+| **Phoenix FaaS stack present** (`http://localhost:9009`, `wss://localhost:9888`) | yes | **confirmed** — `9009` GET→200 (`sdkVersion 1.5.0`), `9888` WS opens (findings/03) | **CONFIRMED live** |
+| **`fetcher` file read/traversal primitive** (the whole chain hinges on this) | yes | **BLOCKED** — fetcher returns `invalid path` for all reads incl. `../` (findings/04) | **FAILED — chain dead-ends here** |
 | **`/var/run/superwatch_socket` reachable from app uid 314 (group 616)** | yes | unverified | **confirm with a `ls -l` via bridge if read works** |
 | **`/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/` writable by uid 314** | yes (write primitive) | unverified | **confirm before pushing** |
 
@@ -130,15 +138,18 @@ same branch to make step 1 one command each:
    `sourcelist`, `applist`, `launchapp`) respond. If the `standard`
    credential profile fails CONNACK, walk the cascade like the 65U7H
    work. Country code from step 2 decides which profile to try first.
-4. **Bridge recon with writes.** Only after steps 1–3 are green: load
-   `launcher/recon.html` via `/api/open?url=…` to probe the writable
-   paths and the `fetcher` permission block actively. A non-empty block
-   on this UK build stops the chain cold and needs its own writeup.
-5. **Only then, root lane.** Apply the 100U7Q `postinst` path verbatim.
-   Expected endpoint: key-only Dropbear on `0.0.0.0:8008`, no automatic
-   boot persistence. Consider the 75UR9S `re_sshd`-via-serviceList
-   boot-persistence adapter later; its payload is in-tree at
-   `docs/models/75UR9S/V0000.09.60W.Q0624/source/re_sshd/`.
+4. **Bridge recon with writes.** ✅ Done 2026-11-06 (findings/04) —
+   `recon.html` loaded in the TV Browser app. **Result: the fetcher
+   rejects every file read with `invalid path`; the traversal/write
+   primitive is unavailable on this build.** Chain halted here per the
+   stop condition. Nothing persisted.
+5. **Root lane.** ❌ **Not attempted — chain dead-ended at step 4.** The
+   100U7Q `postinst` path presupposes the fetcher file bridge, which this
+   build does not provide. Root here would require a *different* primitive
+   (new research, not a transplant). If revisited, first explicitly
+   register a phoenix session before re-probing the fetcher (findings/04
+   caveat) to rule out a registration issue before declaring the primitive
+   permanently patched.
 
 Each discovery, bug, trap, errno gets a dated note in
 [`findings/`](findings/) the same hour it happens — AGENTS.md discipline rule.
@@ -150,8 +161,10 @@ Each discovery, bug, trap, errno gets a dated note in
   hangs on this answer**)
 - Is the `/data` partition writable by the app uid on this unit? (Was not
   on the 100U7Q — if that changed on the UK build, it widens options.)
-- `Hisense_GetCountryCode()` output — `GBR`? That decides the SSDP region
-  digit used by the pairing cascade.
+- ~~`Hisense_GetCountryCode()` output — `GBR`?~~ **Resolved (findings/03):**
+  `GBR`, region `EU_A`. The SSDP descriptor carries no `transport_protocol`
+  digit on this build (findings/01), and Sidee already paired on profile
+  `modern`, so the cascade this would have steered is moot.
 
 ## References
 

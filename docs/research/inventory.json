@@ -328,21 +328,21 @@
       "region": "UK (GBR)",
       "soc": "MTK9655 (aarch64 kernel; 32-bit ARM userland expected per 100U7Q same-build)",
       "vidaa_os": "U09.60",
-      "transport_protocol": "untested (SSDP descriptor not yet captured)",
+      "transport_protocol": "not-exposed-over-SSDP (dd.xml stub on :3366; SSDP modelName reports 75U8QE; pairing handled by Sidee, profile 'modern')",
       "browser": "Chromium 111 \"WebViewer/1.2.1\" (odin, aarch64 UA)",
       "build_date": "2026-07-31",
       "tested_by": [
         "gh:kingpandacc"
       ],
       "capabilities": {
-        "pairing": "untested",
+        "pairing": "confirmed (Sidee, profile 'modern', applist round-trip 2026-11-06)",
         "launcher": "untested",
-        "file_bridge_traversal": "untested",
-        "file_bridge_write": "untested",
+        "file_bridge_traversal": "blocked (fetcher returns 'invalid path' for all reads incl. ../ traversal; 2026-11-06, findings/04)",
+        "file_bridge_write": "not demonstrated (recon marker never established on pkg CHA dir; findings/04)",
         "identity_gate": "untested",
         "euladpp_untar": "untested",
-        "root": "untested (expected to inherit the 100U7Q fetcher+postinst chain — same firmware id, same SoC class, same browser class; four build-dependent prerequisites still to re-confirm on this unit)",
-        "notes": "Model guide: docs/models/75U8QTUK/V0000.09.60I.Q0813/. Fingerprint captured 2026-11-06 (owner-verified): firmware, Extended/Minor/RC versions, SoC, kernel arch, UA, locale, LAN nmap posture — see findings/00-fingerprint.md. Byte-for-byte identical firmware id to the EU_A 100U7Q row (V0000.09.60I.Q0813); UK/GBR region is the headline delta, so the pair.py credential-profile cascade needs a fresh walk. Launcher lane and root chain are UNVERIFIED on this physical unit — no writes to the TV have occurred."
+        "root": "DEAD END via the 100U7Q chain (2026-11-06): the fetcher file read/traversal primitive the chain hinges on is unavailable on this build — all reads rejected 'invalid path'; halted at bridge recon per stop condition, no root step attempted. Phoenix FaaS is present (9009/9888) but the fetcher validates paths unlike the 100U7Q. Root here would need a different primitive, not a transplant. See findings/04.",
+        "notes": "Model guide: docs/models/75U8QTUK/V0000.09.60I.Q0813/. Fingerprint captured 2026-11-06 (owner-verified): firmware, Extended/Minor/RC versions, SoC, kernel arch, UA, locale, LAN nmap posture — see findings/00-fingerprint.md. Byte-for-byte identical firmware id to the EU_A 100U7Q row (V0000.09.60I.Q0813); UK/GBR region is the headline delta, so the pair.py credential-profile cascade needs a fresh walk. Launcher GET-delivery path works (pages served off-LAN load in the TV browser; findings/03). Root chain is a DEAD END on this build: bridge recon (findings/04) showed the fetcher rejects all file reads with 'invalid path', so the 100U7Q traversal/write primitive does not transplant — halted at step 4, no root step attempted; the only write attempted (a recon marker) never persisted."
       }
     }
   ]

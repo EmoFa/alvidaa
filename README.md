@@ -183,6 +183,24 @@ Built on the shoulders of [Bananamafia's hisensehax](https://bananamafia.dev/pos
 [Zfinix/vidaa-launcher](https://github.com/Zfinix/vidaa-launcher) (mechanism
 reference only — this is an independent implementation).
 
+### How this was produced
+
+This project was built in AI coding sessions, and it seems dishonest not to
+say so plainly. The main models were **DeepSeek** and **GLM 5.3 Flash**, with
+others used for smaller pieces along the way.
+
+The division of labour matters more than the model list. The models proposed
+chains, wrote the tooling, and did the reading; the owner drove the TV, made
+every judgement call, and verified each claim on the device. Every result in
+the model guides was run on real hardware, and anything that was not measured
+is labelled as a claim rather than a finding. Where a model got something
+wrong — and several did, including a screenshot route declared dead after a
+bad probe — the correction is recorded in the findings rather than quietly
+edited out.
+
+The negative results are credited to the same sessions, because knowing what
+does not work is the part that saves the next person time.
+
 No system partitions were written during this research; verified boot stayed
 locked and green. Changes were designed to be reversible, but a complete
 teardown has not been verified: it also requires restoring any edited UI files

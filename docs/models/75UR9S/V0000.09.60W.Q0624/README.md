@@ -235,16 +235,3 @@ Everything else (dropbear, IPK, trigger) is the standard rollback above.
   the other candidates (`appinfo.json`, `run_phoenix.sh`, systemserver) are
   untested and no longer needed.
 - `gettvstate`/launcher lane untested on this unit.
-
-## How this was produced
-
-The chain was worked out in AI coding sessions alongside the owner. The main
-models were **DeepSeek** and **GLM 5.3 Flash**; the owner drove the device,
-made every judgement call, and verified each claim on the TV. Every command
-in this guide was run on the unit. The models proposed, the owner tested,
-and anything that was not measured is labelled as such above.
-
-The negative results in this guide (the SUID dead ends, the latent
-`mkdir`-after-redirect bug, the invalid `-s` flag) came from those sessions
-too, and they are kept because knowing what does not work is the part that
-saves the next person time.

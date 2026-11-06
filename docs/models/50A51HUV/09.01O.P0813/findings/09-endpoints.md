@@ -126,3 +126,33 @@ outcome — but it was a *bug* an hour earlier. A status line that prints
 only the count cannot distinguish "the resolver is doing the work" from
 "the loop silently failed again". Report which case it is, not just the
 number.
+
+## The layered status, measured live (2026-11-06 — `alvidaa privacy status`)
+
+Issue #15 turned the manual measurement into `alvidaa privacy status|hits|doh`
+(read-only, tools/alvidaa.py). First live run caught the layered design
+doing exactly what it was built to catch:
+
+- **Kernel layer empty this boot.** tvfw's marker says "applied at T+6s",
+  but `iptables -L OUTPUT` holds zero rules at T+47480s — the rules were
+  applied and have since vanished. The vendor's late firewall re-init is
+  the suspect (our INPUT ACCEPT holes for 8770/2323/2222 survived, so a
+  full flush is unlikely; nobody has re-run tvfw since). Unproven which
+  mechanism — the status command exists so the next boot either reproduces
+  it or clears it.
+- **Resolver layer carried the whole load meanwhile.** All 7 Tier-1 hosts
+  NXDOMAIN-pin via AdGuard (192.168.0.85) — `0.0.0.0`/`::` answers. The
+  kill-list held at DNS even with the kernel backstop gone. That is the
+  design assumption holding in practice, and the reason "0 rules" needed
+  the per-case wording from the section above.
+- **The wiretap has been disarmed since the `.11` move.** No LOG rules in
+  any chain, `dmesg` carries zero TVOUT/TVDNS lines, and every one of the
+  1198 lines in `wiretap.log` has `SRC=192.168.0.12` (the pre-move era);
+  not one line exists from `.11`. The file's mtime keeps advancing while
+  its size is static — mtime proves nothing; armed means LOG rules in the
+  kernel, which is what the command checks.
+- **Correction to the Oct 30 window record above:** the "447 DoH bootstrap
+  attempts to 8.8.8.8:443" were **port 53** — plain DNS aimed straight at
+  dns.google, bypassing the LAN resolver, not DoH-over-443. Tier 0 blocks
+  :443 only, so the hardcoded-resolver :53 lane is a separate leak if it
+  recurs. `alvidaa privacy doh` reports the two transports separately.

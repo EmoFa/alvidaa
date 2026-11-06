@@ -29,13 +29,19 @@ BUSYBOX=/var/local/tvtools/busybox
 
 (
     # Bounded wait for the system to be ready (iptables mounted). At ~7s
-    # boot time it is not; at ~30-60s it is.
+    # boot time it is not; at ~30-60s it is. The applied marker records the
+    # deferral window (ds41 condition 2): `alvidaa ota status` reads it and
+    # reports "tvfw applied at T+Ns" so the gap is measured, not assumed.
     n=0
     while [ $n -lt 60 ]; do
         [ -x "$IPTABLES" ] && break
         sleep 5; n=$((n+1))
     done
     [ -x "$IPTABLES" ] || exit 1
+    APPLIED_T=$(awk '{print int($1)}' /proc/uptime 2>/dev/null)
+    echo "tvfw: applied at T+${APPLIED_T}s (waited $n cycles)"
+    date +%s > /var/local/tvfw.applied 2>/dev/null
+    echo "$APPLIED_T" > /var/local/tvfw.applied_at_boot 2>/dev/null
 
     # --- Tier 0: DoH bootstrap (dns.google + hardcoded fallbacks) ---
     for ip in 8.8.8.8 8.8.4.4; do
@@ -62,16 +68,30 @@ BUSYBOX=/var/local/tvtools/busybox
     ) &
 
     # --- OTA freeze re-apply (alvidaa ota off) ---
+    # The sidecar is sourced as root, same trust level as this file — but
+    # validate it anyway (ds41 condition 4): expected keys with host/IP-shaped
+    # values only. A corrupted state FAILS LOUD and leaves the TV UNFROZEN,
+    # never half-armed.
     STATE_SH=/var/local/alvidaa/ota_freeze.state.sh
     if [ -f "$STATE_SH" ]; then
-        . "$STATE_SH"
-        $IPTABLES -N ALVIDAA_OTA 2>/dev/null
-        for ip in $OTA_IPS; do
-            $IPTABLES -C ALVIDAA_OTA -d $ip -j REJECT 2>/dev/null || $IPTABLES -A ALVIDAA_OTA -d $ip -j REJECT
-        done
-        $IPTABLES -C OUTPUT -j ALVIDAA_OTA 2>/dev/null || $IPTABLES -I OUTPUT 1 -j ALVIDAA_OTA
-        for h in $OTA_HOSTS; do
-            $BUSYBOX grep -q "0.0.0.0 $h" /tmp/hosts 2>/dev/null || echo "0.0.0.0 $h" >> /tmp/hosts
-        done
+        if $BUSYBOX grep -qE "^OTA_HOSTS='[a-z0-9. -]+'$" "$STATE_SH" && $BUSYBOX grep -qE "^OTA_IPS='[0-9. ]+'$" "$STATE_SH"; then
+            . "$STATE_SH"
+            $IPTABLES -N ALVIDAA_OTA 2>/dev/null
+            for ip in $OTA_IPS; do
+                $IPTABLES -C ALVIDAA_OTA -d $ip -j REJECT 2>/dev/null || $IPTABLES -A ALVIDAA_OTA -d $ip -j REJECT
+            done
+            $IPTABLES -C OUTPUT -j ALVIDAA_OTA 2>/dev/null || $IPTABLES -I OUTPUT 1 -j ALVIDAA_OTA
+            for h in $OTA_HOSTS; do
+                $BUSYBOX grep -q "0.0.0.0 $h" /tmp/hosts 2>/dev/null || echo "0.0.0.0 $h" >> /tmp/hosts
+            done
+            echo "tvfw: OTA freeze re-applied (${OTA_IPS})"
+        else
+            echo "tvfw: OTA freeze state INVALID — failing loud, leaving TV UNFROZEN"
+            $IPTABLES -D OUTPUT -j ALVIDAA_OTA 2>/dev/null
+            $IPTABLES -F ALVIDAA_OTA 2>/dev/null
+            $IPTABLES -X ALVIDAA_OTA 2>/dev/null
+            $BUSYBOX grep -vE '^0\.0\.0\.0 (ota-tv\.vidaahub\.com|upgrade-cus\.prod-eu-c\.az\.vidaahub\.com)$' /tmp/hosts > /tmp/hosts.clean 2>/dev/null && mv /tmp/hosts.clean /tmp/hosts
+            rm -f "$STATE_SH" /var/local/alvidaa/ota_freeze.state
+        fi
     fi
 ) &

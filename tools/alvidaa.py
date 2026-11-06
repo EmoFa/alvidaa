@@ -253,6 +253,17 @@ def cmd_doctor(args):
 # pre-resolved IPs, no boot-DNS dependency). Standing policy (ENDPOINTS.md)
 # is ALLOW for ota-tv; the freeze is an explicit, tracked override.
 OTA_HOSTS = ["ota-tv.vidaahub.com", "upgrade-cus.prod-eu-c.az.vidaahub.com"]
+# Collateral candidates (ds41 condition 1, findings 09): prod-eu-c serves
+# file-ul/account uploads too, and CDN IPs rotate across the vidaahub set.
+# A per-IP freeze REJECT blocks EVERY host sharing that IP — enumerate the
+# plausible sharers, report the overlap at freeze time and in status.
+OTA_COLLATERAL = [
+    "file-ul.vidaahub.com", "evt-na.vidaahub.com", "ter-jrnl-na.vidaahub.com",
+    "exc-jrnl-na.vidaahub.com", "policy-jrnl-na.vidaahub.com",
+    "dvcstatus-dataretrv.vidaahub.com", "rsc-ads.vidaahub.com",
+    "recommend-ui.vidaahub.com", "home-ui.vidaahub.com", "img.vidaahub.com",
+    "msg.vidaahub.com",
+]
 OTA_CHAIN = "ALVIDAA_OTA"
 OTA_STATE = "/var/local/alvidaa/ota_freeze.state"
 OTA_STATE_SH = "/var/local/alvidaa/ota_freeze.state.sh"
@@ -302,17 +313,47 @@ def _ota_nc(target):
     return "OK" in out
 
 
-def _ota_state_files(state, ips):
+def _ota_state_files(state, ips, collateral):
     """Write the JSON state and the shell sidecar tvfw re-applies at boot."""
     import datetime
     now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     js = json.dumps({
         "frozen_at": now, "hosts": OTA_HOSTS, "ips": ips,
+        "collateral": collateral,
         "chain": OTA_CHAIN, "layers": ["iptables-chain", "hosts-pin"],
     })
     sh = ("OTA_HOSTS='%s'\nOTA_IPS='%s'\n" % (" ".join(OTA_HOSTS), " ".join(ips)))
     _tv_ota("echo '%s' > %s" % (js.replace("'", "'\\''"), OTA_STATE))
     _tv_ota("echo '%s' > %s" % (sh.replace("'", "'\\''"), OTA_STATE_SH))
+
+
+def _ota_collateral(ips):
+    """Return {ip: [other vidaahub hosts sharing that IP]} for the freeze set."""
+    if not ips:
+        return {}
+    shared = {}
+    for host in OTA_COLLATERAL:
+        for ip in _ota_resolve(host):
+            if ip in ips:
+                shared.setdefault(ip, []).append(host)
+    return shared
+
+
+def _ota_tvfw_applied():
+    """Deferral-window readout (ds41 condition 2) from tvfw's own marker."""
+    out = _tv_ota("cat /var/local/tvfw.applied_at_boot 2>/dev/null; echo /; "
+                  "cat /var/local/tvfw.applied 2>/dev/null")
+    parts = [p.strip() for p in out.split("/", 1) if p.strip()]
+    if len(parts) < 2 or not parts[0].replace(".", "").isdigit():
+        return None
+    import time as _t
+    applied_T = float(parts[0])
+    try:
+        boot_epoch = _t.time() - float(parts[1])
+        age = _t.time() - boot_epoch - applied_T
+        return "applied at T+%ds (%.0fs ago)" % (applied_T, max(0, age))
+    except ValueError:
+        return "applied at T+%ds" % applied_T
 
 
 def cmd_ota(args):
@@ -343,7 +384,16 @@ def cmd_ota(args):
         for h in OTA_HOSTS:
             _tv_ota("%s grep -q '^0\\.0\\.0\\.0 %s$' %s 2>/dev/null || echo '0.0.0.0 %s' >> %s"
                     % (BB, h, OTA_HOSTS_FILE, h, OTA_HOSTS_FILE))
-        _ota_state_files(None, ips)
+        # Collateral disclosure (ds41 condition 1): a per-IP REJECT blocks
+        # every vidaahub host sharing the frozen IPs — state it, never silent.
+        collateral = _ota_collateral(ips)
+        if collateral:
+            print("  collateral   : per-IP freeze also blocks (shared CDN IPs):")
+            for ip, hosts in sorted(collateral.items()):
+                print("    %-15s %s" % (ip, ", ".join(hosts)))
+        else:
+            print("  collateral   : no other vidaahub host shares the frozen IPs right now")
+        _ota_state_files(None, ips, collateral)
         print("verifying freeze (both layers must fail to connect)...")
         rules, jump = _ota_chain_state()
         pin = _ota_pin_present()
@@ -396,14 +446,24 @@ def cmd_ota(args):
         frozen_at = ""
         if state:
             frozen_at = _tv_ota("%s grep -o '\"frozen_at\": *\"[^\"]*\"' %s 2>/dev/null" % (BB, OTA_STATE)).strip()
+        applied = _ota_tvfw_applied()
         print("  state file     : %s %s" % ("present" if state else "absent", frozen_at))
         print("  kernel layer   : chain %d REJECT rules, jump %s" % (rules, "armed" if jump else "absent"))
         print("  resolver layer : %d pin line(s) | live resolve -> %s"
               % (pin, ", ".join(resolved) or "UNRESOLVED"))
         print("  live probe     : connect by IP %s | connect by name %s"
               % ("OPEN" if real_ok else "blocked", "OPEN" if name_ok else "blocked"))
+        print("  tvfw           : %s" % (applied or "not applied this boot (marker missing)"))
         print("  reboot survival: tvfw re-apply block %s | kill-switch %s"
               % ("present" if tvfw_block and int(tvfw_block or 0) > 0 else "MISSING", killswitch))
+        if state and resolved:
+            collateral = _ota_collateral(resolved)
+            if collateral:
+                print("  collateral     : freeze IPs also serve (shared CDN IPs):")
+                for ip, hosts in sorted(collateral.items()):
+                    print("    %-15s %s" % (ip, ", ".join(hosts)))
+            else:
+                print("  collateral     : no other vidaahub host shares the freeze IPs right now")
         if rules and jump and pin and not real_ok and not name_ok:
             verdict = "FROZEN (verified)"
         elif not rules and not jump and not pin and real_ok and name_ok:
@@ -420,6 +480,75 @@ def cmd_ota(args):
     return 2
 
 
+def _md5_tv(path):
+    out = tv("/var/local/tvtools/busybox md5sum '%s' 2>/dev/null | /var/local/tvtools/busybox cut -d' ' -f1" % path)
+    return out.strip()
+
+
+def cmd_push(args):
+    if len(args) < 2:
+        print("usage: alvidaa push <local-file> <tv-absolute-path>")
+        return 2
+    local, remote = args[0], args[1]
+    if not os.path.isfile(local):
+        print("no such file: %s" % local)
+        return 2
+    if not remote.startswith("/"):
+        print("remote path must be absolute (e.g. /var/local/alvidaa/…)")
+        return 2
+    import hashlib, io, tarfile, base64
+    lm = hashlib.md5(open(local, "rb").read()).hexdigest()
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as t:
+        t.add(local, arcname=os.path.basename(local))
+    # Stream the tar over SSH stdin — argv dies at ~10KB (dropbear command
+    # channel), the stdin pipe is the lane every deploy script in this repo
+    # already uses.
+    base = os.path.basename(local)
+    mv_cmd = "" if remote == "/tmp/" + base else "mv '/tmp/%s' '%s' && " % (base, remote)
+    out = subprocess.run(
+        [TV_WRAPPER,
+         "cat > /tmp/.alvidaa-push.tar && "
+         "/var/local/tvtools/busybox tar xf /tmp/.alvidaa-push.tar -C /tmp/ && "
+         "%srm -f /tmp/.alvidaa-push.tar && "
+         "/var/local/tvtools/busybox sync && echo INSTALL-OK" % mv_cmd],
+        input=buf.getvalue(), capture_output=True, timeout=90)
+    stdout = out.stdout.decode(errors="replace")
+    stderr = out.stderr.decode(errors="replace")
+    if "INSTALL-OK" not in stdout:
+        print("push failed: %s" % (stdout.strip()[:200] or stderr.strip()[:200] or "empty"))
+        return 1
+    rm = _md5_tv(remote)
+    ok = rm == lm
+    print("push %s -> %s:%s  md5 %s  %s" % (
+        local, TV, remote, lm[:12] + "…", "VERIFIED" if ok else "MISMATCH (local %s)" % lm[:12] + "…"))
+    return 0 if ok else 1
+
+
+def cmd_pull(args):
+    if len(args) < 2:
+        print("usage: alvidaa pull <tv-absolute-path> <local-file>")
+        return 2
+    remote, local = args[0], args[1]
+    if not remote.startswith("/"):
+        print("remote path must be absolute")
+        return 2
+    rm = _md5_tv(remote)
+    if not rm:
+        print("no such file on TV (or unreadable): %s" % remote)
+        return 2
+    out = tv("/var/local/tvtools/busybox base64 '%s'" % remote, timeout=60)
+    import base64, hashlib
+    data = base64.b64decode("".join(out.split()))
+    with open(local, "wb") as f:
+        f.write(data)
+    lm = hashlib.md5(data).hexdigest()
+    ok = lm == rm
+    print("pull %s:%s -> %s  md5 %s  %s" % (
+        TV, remote, local, rm[:12] + "…", "VERIFIED" if ok else "MISMATCH (local %s)" % lm[:12] + "…"))
+    return 0 if ok else 1
+
+
 COMMANDS = {
     "sys": cmd_sys,
     "logs": cmd_logs,
@@ -429,6 +558,8 @@ COMMANDS = {
     "apps": cmd_apps,
     "sources": cmd_sources,
     "ota": cmd_ota,
+    "push": cmd_push,
+    "pull": cmd_pull,
 }
 
 

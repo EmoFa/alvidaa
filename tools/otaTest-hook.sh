@@ -6,7 +6,9 @@
 # installer injects the install timestamp into the header line below.
 #
 # Changelog
-#   v13 (2026-11-05, ds41-acked design; NOT yet deployed to the TV):
+#   v13 (2026-11-05, ds41-acked design; deployed to the TV same day, md5
+#        35f3df188442e0610b3fe9a5e6b6cc7d, v12 preserved as otaTest.v12.bak):
+#        doctor confirms 'hook ok v13 watchdog:alive kill-switch:absent'.
 #     - Watchdog loop unbound: 40x30s (~20 min) -> immortal, so dropbear/
 #       telnetd/alvidaa-bridge keep getting resurrected for the life of the
 #       boot instead of only the first ~20 minutes.

@@ -6,7 +6,7 @@ reimplemented here); bridge work goes through http://<tv>:8770. Every
 health check degrades gracefully: a doctor that dies when the thing it
 checks is down is useless.
 
-Subcommands: sys, logs, net, doctor, open, apps, sources, ota
+Subcommands: sys, logs, net, doctor, open, apps, sources, ota, privacy
 Environment: TV_HOST overrides the default 192.168.0.11 (the TV is
 DHCP-shuffled — see server/tv).
 """
@@ -548,6 +548,284 @@ def cmd_pull(args):
     return 0 if ok else 1
 
 
+# ---------------------------------------------------------------- privacy
+# Kill-list / telemetry visibility (issue #15), READ-ONLY: nothing here
+# touches firewall state. The whole point of reporting the layers
+# separately is findings 09: one layer is not enough, and "0 rules" can
+# mean either "the resolver is doing the work" (correct) or "the apply
+# loop silently failed" (the 2026-11-05 boot bug) — a bare count cannot
+# tell them apart, so every layer reports WHICH case it is.
+#
+# Layers, per the kill-list design (firmware/tvfw + ENDPOINTS.md):
+#   resolver  — AdGuard NXDOMAIN-pins telemetry hosts (the durable kill;
+#               survives kernel flushes and CDN rotation)
+#   kernel    — tvfw Tier 0 (DoH) + Tier 1 (telemetry hosts) REJECTs in
+#               OUTPUT, re-applied at boot by the hook
+#   doh       — the Tier 0 bootstrap block specifically (dns.google),
+#               the most quotable number in the project
+#   wiretap   — LOG-target kernel capture (armed window only; the log
+#               file is historical evidence, NOT live data, once the
+#               LOG rules are gone)
+PRIVACY_TIER1 = [
+    "evt-na.vidaahub.com", "ter-jrnl-na.vidaahub.com",
+    "exc-jrnl-na.vidaahub.com", "policy-jrnl-na.vidaahub.com",
+    "dvcstatus-dataretrv.vidaahub.com", "file-ul.vidaahub.com",
+    "rsc-ads.vidaahub.com",
+]
+PRIVACY_DOH_IPS = {"8.8.8.8": "dns.google", "8.8.4.4": "dns.google"}
+# IP labels from the Oct 30 – Nov 2 wiretap window (findings 09); CDN
+# rotation means a historical IP can drift to a different host — labels
+# are attributed, never asserted.
+PRIVACY_IP_LABELS = {
+    "20.170.76.123": "ter-jrnl-na (journal collector, per findings 09)",
+    "20.52.196.175": "dvcstatus-dataretrv (per findings 09)",
+    "131.189.128.123": "file-ul/account (per findings 09)",
+    "131.189.69.51": "account, prod-eu-c (per findings 09)",
+}
+WIRETAP_LOG = "/var/local/wiretap.log"
+BB = "/var/local/tvtools/busybox"  # (same path as the ota section)
+
+
+def _ipt_rules(chain):
+    """Parsed `iptables -L <chain> -n -v -x`: [(pkts, bytes, target, proto, dest, extra)].
+    None = chain does not exist; [] = chain exists and is empty. Both states
+    matter (findings 09): an empty OUTPUT after a boot with an applied
+    marker is the silent-kill signature, not an OK state."""
+    out = tv("/usr/local/bin/iptables -L %s -n -v -x 2>&1" % chain)
+    if "No chain/target/match" in out or not out.strip():
+        return None
+    rules = []
+    for line in out.splitlines():
+        p = line.split()
+        if len(p) < 9 or not p[0].isdigit():
+            continue  # header/blank
+        rules.append((int(p[0]), int(p[1]), p[2], p[3], p[8], " ".join(p[9:])))
+    return rules
+
+
+_RESOLVE_CACHE = {}
+
+
+def _privacy_resolve(host):
+    """Resolver-layer probe as THE TV sees it: ('pinned'|'resolved'|'unresolved', ips).
+    busybox nslookup answers 0.0.0.0 / :: for AdGuard-blocked hosts
+    (findings 09) — that IS the blocking signal, never filtered away here."""
+    if host in _RESOLVE_CACHE:
+        return _RESOLVE_CACHE[host]
+    out = tv("%s nslookup %s 2>&1" % (BB, host))
+    ips = []
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("Address"):
+            ip = line.split(":", 1)[-1].strip()
+            # the 'Server: … :53' echo line also starts with Address — skip it
+            if ip and not ip.endswith(":53") and ip not in ("0.0.0.0", "::") and ":" not in ip:
+                ips.append(ip)
+            elif ip in ("0.0.0.0", "::"):
+                ips.append(ip)
+    real = [ip for ip in ips if ip not in ("0.0.0.0", "::")]
+    result = ("resolved", real) if real else (("pinned", ips) if ips else ("unresolved", []))
+    _RESOLVE_CACHE[host] = result
+    return result
+
+
+def _wiretap_summary():
+    """(armed, historical_counts) — armed = LOG rules live in the kernel AND
+    the dmesg ring actually carries wiretap lines; the log file alone proves
+    nothing (its mtime keeps moving while its content is stale)."""
+    log_rules = 0
+    for chain in ("OUTPUT", "INPUT", "FIREWALL_OUT_EULAON", "FIREWALL_OUT_EULAOFF"):
+        rules = _ipt_rules(chain)
+        if rules:
+            log_rules += sum(1 for r in rules if r[2] == "LOG")
+    ring = tv("%s dmesg 2>/dev/null | %s grep -c 'TVOUT\\|TVDNS'" % (BB, BB)).strip()
+    ring = int(ring) if ring.isdigit() else 0
+    lines = tv("%s grep -h -E 'TVOUT|TVDNS' %s 2>/dev/null" % (BB, WIRETAP_LOG), timeout=40)
+    hist = {}
+    srcs = set()
+    for line in lines.splitlines():
+        fields = dict(f.split("=", 1) for f in line.split() if "=" in f)
+        dst, dpt = fields.get("DST"), fields.get("DPT", "?")
+        src = fields.get("SRC")
+        if src:
+            srcs.add(src)
+        if dst:
+            hist.setdefault((dst, dpt), 0)
+            hist[(dst, dpt)] += 1
+    armed = log_rules > 0 and ring > 0
+    return armed, ring, hist, srcs, len(lines.splitlines())
+
+
+def _label(ip):
+    if ip in PRIVACY_DOH_IPS:
+        return PRIVACY_DOH_IPS[ip]
+    if ip in PRIVACY_IP_LABELS:
+        return PRIVACY_IP_LABELS[ip]
+    # reverse-map from the CURRENT resolver view of the Tier-1 hosts;
+    # CDN rotation makes this best-effort, so say so. The resolve cache
+    # keeps this at 7 lookups per run, not per IP.
+    for h in PRIVACY_TIER1:
+        state, ips = _privacy_resolve(h)
+        if state == "resolved" and ip in ips:
+            return "%s (current resolution; rotation may drift)" % h
+    return ""
+
+
+def _tvfw_marker():
+    out = tv("cat /var/local/tvfw.applied_at_boot 2>/dev/null; echo /; "
+             "cat /var/local/tvfw.applied 2>/dev/null; echo /; cat /proc/uptime")
+    parts = out.split("/")
+    if len(parts) < 3:
+        return "no marker — tvfw did not complete this boot"
+    at_boot = parts[0].strip().split()[0] if parts[0].strip() else ""
+    epoch = parts[1].strip().split()[0] if parts[1].strip() else ""
+    if not at_boot.isdigit():
+        return "no marker — tvfw did not complete this boot"
+    # The marker epoch is written with the TV clock, which starts in 2000
+    # before NTP — a 9xx-range epoch is 'clock not set', not 'ancient'.
+    note = ""
+    if not epoch:
+        note = " (epoch unreadable)"
+    else:
+        try:
+            if float(epoch) < 1_500_000_000:
+                note = " (marker clock unset — pre-NTP write)"
+        except ValueError:
+            note = " (epoch unreadable)"
+    return "tvfw applied at T+%ss this boot%s" % (at_boot, note)
+
+
+def cmd_privacy(args):
+    action = args[0] if args else "status"
+
+    # ---- shared collection (each piece degrades independently) ----
+    out_rules = _ipt_rules("OUTPUT")
+    resolver = {}
+    if action in ("status", "hits"):
+        for h in PRIVACY_TIER1:
+            resolver[h] = _privacy_resolve(h)
+    try:
+        armed, ring, hist, srcs, n_lines = _wiretap_summary()
+    except Exception:
+        armed, ring, hist, srcs, n_lines = False, 0, {}, set(), 0
+
+    if action == "status":
+        print("== layer 1: resolver (AdGuard @ the TV's DNS) ==")
+        pinned = sum(1 for s, _ in resolver.values() if s == "pinned")
+        live = [h for h, (s, _) in resolver.items() if s == "resolved"]
+        down = any(s == "unresolved" for s, _ in resolver.values()) and pinned == 0
+        for h, (s, ips) in resolver.items():
+            print("  %-38s %-11s %s" % (h, s, ", ".join(ips) if ips else ""))
+        if live:
+            print("  VERDICT: NOT blocking %s — resolver layer has a hole" % ", ".join(live))
+        elif pinned:
+            print("  VERDICT: blocking (resolver is doing the work — %d/%d hosts pinned)" % (pinned, len(resolver)))
+        elif down:
+            print("  VERDICT: no answer from the resolver — DNS path itself is down, NOT 'blocked'")
+        print("== layer 2: kernel REJECTs (tvfw, OUTPUT) ==")
+        print("  %s" % _tvfw_marker())
+        if out_rules is None:
+            print("  OUTPUT chain unreadable — iptables unavailable")
+        elif not out_rules:
+            print("  OUTPUT is EMPTY: no Tier-0 (DoH) and no Tier-1 (telemetry) rules.")
+            print("  This is the silent-kill state from findings 09 — the kernel")
+            print("  backstop is NOT working this boot; the resolver layer is")
+            print("  the only active block. Re-source /var/local/tvfw or reboot")
+            print("  and re-check (nothing here changes firewall state).")
+        else:
+            t0 = [r for r in out_rules if r[4] in PRIVACY_DOH_IPS]
+            t1 = [r for r in out_rules if r[2] == "REJECT" and r[4] not in PRIVACY_DOH_IPS]
+            logs = [r for r in out_rules if r[2] == "LOG"]
+            print("  Tier-0 DoH rules: %d | Tier-1 telemetry rules: %d | LOG (wiretap): %d"
+                  % (len(t0), len(t1), len(logs)))
+            print("  VERDICT: kernel backstop armed")
+        ota_rules = _ipt_rules("ALVIDAA_OTA")
+        print("== layer 3: DoH bootstrap block (Tier 0) ==")
+        if out_rules is None:
+            print("  UNAVAILABLE — OUTPUT chain unreadable")
+        elif not any(r[4] in PRIVACY_DOH_IPS for r in out_rules):
+            print("  dns.google REJECT rules: ABSENT — vidaahub DoH evasion is")
+            print("  unimpeded at the kernel; only the resolver layer answers.")
+        else:
+            for r in out_rules:
+                if r[4] in PRIVACY_DOH_IPS:
+                    print("  %-8s %-45s pkts %d" % (r[4], PRIVACY_DOH_IPS[r[4]], r[0]))
+        print("== layer 4: boot-time rejects / freeze ==")
+        ks = tv("[ -f /var/local/hook.off ] && echo present || echo absent").strip()
+        pins = tv("%s grep -c '^0\\.0\\.0\\.0 ' /tmp/hosts 2>/dev/null" % BB).strip()
+        print("  /tmp/hosts 0.0.0.0 pins: %s | ALVIDAA_OTA chain: %s | kill-switch: %s"
+              % (pins or "0", "%d rules" % len(ota_rules) if ota_rules else "absent", ks))
+        print("  (freeze detail: alvidaa ota status)")
+        print("== wiretap ==")
+        if armed:
+            print("  ARMED — kernel LOG rules live, dmesg ring carrying TVOUT/TVDNS (%d lines)" % ring)
+        else:
+            print("  NOT armed — no live LOG rules in the kernel (dmesg ring: %d wiretap lines)." % ring)
+            print("  wiretap.log is HISTORICAL evidence only (%d lines); do not quote it as current." % n_lines)
+        return 0
+
+    if action == "hits":
+        print("== kernel counters (since boot) ==")
+        if not out_rules:
+            print("  UNAVAILABLE — OUTPUT has no rules this boot (kernel layer not armed).")
+            print("  Zero here would be a lie of a different kind: nothing is being counted.")
+        else:
+            rows = [(r[0], r[4], r[5]) for r in out_rules if r[0] > 0 and r[2] == "REJECT"]
+            if not rows:
+                print("  REJECT rules present, all counters at 0 — nothing has hit the")
+                print("  kernel layer since boot (resolver layer may be absorbing it).")
+            for pkts, ip, extra in sorted(rows, reverse=True):
+                lbl = _label(ip)
+                print("  %-16s %7d pkts  %-12s %s" % (ip, pkts, extra[:12], lbl))
+        print("== wiretap log (historical armed windows — NOT since-boot) ==")
+        if not hist:
+            print("  no TVOUT/TVDNS lines readable" + ("" if armed else " (wiretap not armed)"))
+        else:
+            era = ", ".join(sorted(srcs)) or "?"
+            print("  %d lines from SRC %s — attribute to the armed window, not today" % (n_lines, era))
+            for (dst, dpt), n in sorted(hist.items(), key=lambda kv: -kv[1])[:15]:
+                lbl = _label(dst)
+                print("  %-16s %-4s %6d hits  %s" % (dst, dpt, n, lbl))
+            if len(hist) > 15:
+                print("  … %d more destinations" % (len(hist) - 15))
+        return 0
+
+    if action == "doh":
+        print("== DoH / hardcoded-resolver evasion (dns.google) ==")
+        doh_rules = [r for r in (out_rules or []) if r[4] in PRIVACY_DOH_IPS and r[2] == "REJECT"]
+        if doh_rules:
+            total = sum(r[0] for r in doh_rules)
+            print("  kernel, since boot : %d attempts REJECTed (Tier-0 rules armed)" % total)
+            for r in doh_rules:
+                print("    %-8s pkts %d (%s)" % (r[4], r[0], PRIVACY_DOH_IPS[r[4]]))
+        else:
+            print("  kernel, since boot : UNAVAILABLE — Tier-0 rules not in OUTPUT this boot.")
+            print("  The evasion is NOT being counted (and not blocked) at the kernel;")
+            print("  only the resolver layer stands. This is not zero attempts — it is")
+            print("  no counter. Re-arm tvfw before the next measurement window.")
+        if n_lines:
+            # Two transports carry the same evasion (findings 09 recorded the
+            # :53 count as 'DoH bootstrap'): :443 dns-query (DoH proper) and
+            # :53 plain DNS aimed straight at Google, bypassing the LAN resolver.
+            doh443 = sum(n for (dst, dpt), n in hist.items()
+                         if dst in PRIVACY_DOH_IPS and dpt == "443")
+            doh53 = sum(n for (dst, dpt), n in hist.items()
+                        if dst in PRIVACY_DOH_IPS and dpt == "53")
+            print("  wiretap, historical: %d to tcp/udp :443 (DoH proper), %d to :53 (hardcoded"
+                  % (doh443, doh53))
+            print("                       plain resolver) — armed-window log, %d lines, era %s"
+                  % (n_lines, ", ".join(sorted(srcs)) or "?"))
+            print("                       (Tier-0 blocks :443 only — :53 to the hardcoded")
+            print("                        resolver is a separate leak if it recurs)")
+        state, ips = _privacy_resolve("ter-jrnl-na.vidaahub.com")
+        print("  resolver now       : ter-jrnl-na -> %s (%s)"
+              % (", ".join(ips) or "no answer", state))
+        return 0
+
+    print("usage: alvidaa privacy status|hits|doh")
+    return 2
+
+
 COMMANDS = {
     "sys": cmd_sys,
     "logs": cmd_logs,
@@ -557,6 +835,7 @@ COMMANDS = {
     "apps": cmd_apps,
     "sources": cmd_sources,
     "ota": cmd_ota,
+    "privacy": cmd_privacy,
     "push": cmd_push,
     "pull": cmd_pull,
 }

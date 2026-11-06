@@ -107,20 +107,34 @@ Per [AGENTS.md](../../../../AGENTS.md):
 
 ## Next up
 
-In order, per the AGENTS.md onboarding ladder:
+In order, per the AGENTS.md onboarding ladder. Two helpers landed on the
+same branch to make step 1 one command each:
 
-1. **Capture the SSDP descriptor.** `curl http://<tv-ip>:49152/description.xml`
-   (port may vary; discover via SSDP M-SEARCH or UPnP tools). Record the
-   `transport_protocol=` field into this guide + `inventory.json`.
-2. **Launcher lane.** `server/pair.py <tv-ip>`; confirm 4-digit PIN; verify
-   actions (`state`, `sourcelist`, `applist`, `launchapp`) respond. If the
-   `standard` credential profile fails CONNACK, walk the cascade like the
-   65U7H work.
-3. **Bridge recon.** Load `launcher/recon.html` via `/api/open?url=…`;
-   capture Phoenix endpoint inventory (`9009`/`9888`) and the `fetcher`
-   permission block — a non-empty block here stops the chain cold and needs
-   its own writeup.
-4. **Only then, root lane.** Apply the 100U7Q `postinst` path verbatim.
+1. **Capture the SSDP descriptor.** Pi-side:
+   `tools/ssdp-descriptor.sh` (auto-discover) or
+   `tools/ssdp-descriptor.sh <tv-ip>` (direct). Read-only — UDP M-SEARCH
+   + HTTP GET. Record `transport_protocol=`, `UDN`, `modelName` into the
+   inventory row and [`findings/01-ssdp.md`](findings/). Expect
+   `transport_protocol ≥ 3290` on this U09.60 build (3290+ selects the
+   2024 app-style pairing path in `pair.py`).
+2. **Load the full fingerprint page on the TV.** From the TV browser app,
+   open `http://<pi>:8770/fingerprint-full.html` (also reachable via
+   `/api/open?url=…` once the server is up). Read-only — every probe is
+   a passive connection test: sweeps every `Hisense_*` and `WebSDK_*`
+   function on `window`, dumps `navigator`/`screen`/`location`, and
+   checks `http://localhost:9009/` + `wss://localhost:9888` *without*
+   sending any fetcher command. Screenshot the JSON and the page
+   auto-POSTs to `/api/recon` if the server is running.
+3. **Launcher lane.** `server/pair.py <tv-ip>` (set `HISENSE_HOST` or
+   pass the IP); confirm the 4-digit PIN; verify actions (`state`,
+   `sourcelist`, `applist`, `launchapp`) respond. If the `standard`
+   credential profile fails CONNACK, walk the cascade like the 65U7H
+   work. Country code from step 2 decides which profile to try first.
+4. **Bridge recon with writes.** Only after steps 1–3 are green: load
+   `launcher/recon.html` via `/api/open?url=…` to probe the writable
+   paths and the `fetcher` permission block actively. A non-empty block
+   on this UK build stops the chain cold and needs its own writeup.
+5. **Only then, root lane.** Apply the 100U7Q `postinst` path verbatim.
    Expected endpoint: key-only Dropbear on `0.0.0.0:8008`, no automatic
    boot persistence. Consider the 75UR9S `re_sshd`-via-serviceList
    boot-persistence adapter later; its payload is in-tree at

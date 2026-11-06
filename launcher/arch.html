@@ -1,0 +1,41 @@
+<!doctype html>
+<!-- opkg arch discovery: status head + conf candidates. Paced reads. -->
+<html><head><meta charset="utf-8"><title>arch</title></head>
+<body><pre id="out">reading…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), files: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path, cap) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, cap || 5000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var T = [
+    ["status_head", "../APPS/pkgs/opkgmeta/status", 6000],
+    ["usr_local_etc_opkg_conf", "../usr/local/etc/opkg.conf", 2000],
+    ["usr_local_etc_opkg_arch", "../usr/local/etc/opkg/arch.conf", 2000],
+    ["opkgmeta_opkg_conf", "../APPS/pkgs/opkgmeta/opkg.conf", 2000]
+  ];
+  var i = 0;
+  function next() {
+    if (i >= T.length) { try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {} save("arch-end"); return; }
+    report.files[T[i][0]] = { path: T[i][1], r: raw(T[i][1], T[i][2]) };
+    save("arch-" + i);
+    i++;
+    setTimeout(next, 3000);
+  }
+  next();
+})();
+</script></body></html>

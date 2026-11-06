@@ -1,11 +1,5 @@
 {
-  "only": [
-    "Spotify : Music & Podcasts",
-    "YouTube",
-    "TV Channels\u25b6",
-    "TV Browser",
-    "Recon"
-  ],
+  "only": [],
   "hidden": [],
   "rename": {
     "tv channels\u25b6": "Live TV",

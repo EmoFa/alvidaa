@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Identity cross-check: sticker says 55A7KAU…, bridge said 55U66GAVT.
+     Pull every identifier the bridge exposes and POST to /api/recon. Read-only. -->
+<html><head><meta charset="utf-8"><title>identity</title></head>
+<body><pre id="out">querying…</pre><script>
+(function () {
+  "use strict";
+  var rep = { started: new Date().toISOString(), ua: navigator.userAgent, id: {} };
+  function save() {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify(rep));
+    } catch (e) {}
+  }
+  ["Hisense_GetModelName", "Hisense_GetSerialType", "Hisense_GetDeviceCode",
+   "Hisense_GetFeatureCode", "Hisense_GetCapabilityCode", "Hisense_GetUuid",
+   "Hisense_GetDeviceID", "Hisense_GetBrand", "Hisense_GetRegion",
+   "Hisense_GetCountryCode", "Hisense_GetOSVersion", "Hisense_GetFirmWareVersion",
+   "Hisense_GetChipSetName", "Hisense_GetPanelResolution", "Hisense_GetMenuScheme",
+   "Hisense_GetDeviceInfo", "Hisense_GetNetworkInfo", "Hisense_GetApiVersion"
+  ].forEach(function (n) {
+    try {
+      var f = window[n];
+      if (typeof f !== "function") { rep.id[n] = "(absent)"; return; }
+      var r = f();
+      if (r != null && typeof r === "object") r = JSON.stringify(r);
+      rep.id[n] = (r == null) ? "(no return)" : String(r).slice(0, 900);
+    } catch (e) { rep.id[n] = "ERR " + e; }
+  });
+  out.textContent = JSON.stringify(rep, null, 1);
+  save(); setTimeout(save, 1200); setTimeout(save, 3000);
+})();
+</script></body></html>

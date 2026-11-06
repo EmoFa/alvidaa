@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- live-start re_sshd via the FaaS service-start channel, then read the marker. -->
+<html><head><meta charset="utf-8"><title>svcstart</title></head>
+<body><pre id="o">…</pre><script>
+(function () {
+  "use strict";
+  var O = document.getElementById('o');
+  function post(t) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: "svcstart", at: new Date().toISOString(), report: { log: t } }));
+    } catch (e) {}
+  }
+  function raw(path) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 3000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  setTimeout(function () {
+    var out = [];
+    try {
+      var ws = new WebSocket("wss://localhost:9888");
+      ws.onopen = function () {
+        ws.send(JSON.stringify({ path: "phoenix://service/basic/re_sshd", method: "start",
+                                 parameters: {}, session: 911, timeout: 10 }));
+        setTimeout(function () { try { ws.close(); } catch (e) {} }, 1500);
+      };
+      ws.onerror = function () { out.push("ws error"); };
+      out.push("start sent");
+    } catch (e) { out.push("EXC " + e); }
+    setTimeout(function () {
+      out.push("marker: " + JSON.stringify(raw("../APPS/.re_sshd/boot_marker.txt")));
+      out.push("tmplog: " + JSON.stringify(raw("../tmp/re_sshd_boot.log")));
+      post(out.join("\n"));
+      O.textContent = out.join("\n");
+    }, 4000);
+  }, 1500);
+})();
+</script></body></html>

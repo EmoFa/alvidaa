@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Fingerprint page: calls Hisense_GetFirmWareVersion() / Hisense_GetChipSetName()
+     per AGENTS.md onboarding, plus a Hisense_* bridge-function sweep as fallback.
+     POSTs results to /api/recon. Read-only, no writes. -->
+<html><head><meta charset="utf-8"><title>fingerprint</title></head>
+<body><pre id="out">fingerprinting…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var rep = { started: new Date().toISOString(), ua: navigator.userAgent, bridge: {} };
+  function save() {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify(rep));
+    } catch (e) {}
+  }
+  function call(name) {
+    try {
+      var f = window[name];
+      if (typeof f !== "function") { rep.bridge[name] = "(absent)"; return; }
+      var r = f();
+      rep.bridge[name] = (r === undefined || r === null) ? "(no return)" : String(r).slice(0, 300);
+    } catch (e) { rep.bridge[name] = "ERR " + e; }
+  }
+  ["Hisense_GetFirmWareVersion", "Hisense_GetChipSetName",
+   "Hisense_GetTVType", "Hisense_GetModelName", "Hisense_GetFirmWare",
+   "Hisense_GetSN", "Hisense_GetDeviceID"].forEach(function (n) { call(n); });
+  // sweep: every Hisense_* function name exposed to the page
+  try {
+    rep.hisense_fns = Object.keys(window).filter(function (k) {
+      return k.indexOf("Hisense_") === 0 && typeof window[k] === "function";
+    });
+  } catch (e) { rep.hisense_fns = "ERR " + e; }
+  out.textContent = JSON.stringify(rep, null, 1);
+  save(); setTimeout(save, 1500); setTimeout(save, 4000);
+})();
+</script></body></html>

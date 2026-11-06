@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- find ipk_install.sh (the daemon's install wrapper) + opkg stderr log.
+     Paced reads. -->
+<html><head><meta charset="utf-8"><title>ipksh</title></head>
+<body><pre id="out">reading…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), files: {} };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  function raw(path, cap) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, cap || 8000) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  var T = [
+    ["scripts_ipk_install", "../usr/local/scripts/ipk_install.sh"],
+    ["bin_ipk_install", "../usr/local/bin/ipk_install.sh"],
+    ["opt_ipk_install", "../opt/ipk_install.sh"],
+    ["var_log_messages", "../var/log/messages", 4000]
+  ];
+  var i = 0;
+  function next() {
+    if (i >= T.length) { try { out.textContent = JSON.stringify(report, null, 1); } catch (e) {} save("ipksh-end"); return; }
+    report.files[T[i][0]] = { path: T[i][1], r: raw(T[i][1], T[i][2]) };
+    save("ipksh-" + i);
+    i++;
+    setTimeout(next, 3000);
+  }
+  next();
+})();
+</script></body></html>

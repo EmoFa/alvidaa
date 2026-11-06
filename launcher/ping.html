@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- minimal bridge liveness probe: ONE known-good read, nothing else. -->
+<html><head><meta charset="utf-8"><title>ping</title></head>
+<body><pre id="out">ping…</pre><script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var report = { started: new Date().toISOString(), ping: null, ua: navigator.userAgent };
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) {}
+  }
+  setTimeout(function () {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      report.ping = { ret: r.ret, len: String(msg == null ? "" : msg).length };
+      out.textContent = "ping: ret=" + r.ret;
+    } catch (e) {
+      report.ping = { exception: String(e) };
+      out.textContent = "ping EXC: " + e;
+    }
+    save("ping"); setTimeout(function () { save("ping-end"); }, 1200);
+  }, 2500);
+})();
+</script></body></html>

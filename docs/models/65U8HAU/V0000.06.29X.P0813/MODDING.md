@@ -168,3 +168,18 @@ The TV transitions to:
 ### Input Sources (`sourcelist`)
 
 `sourcelist` returns 7 entries (`TV`, `284` / `VIDAA tv`, `HDMI1`–`HDMI4`, `AVS`), preserving user-configured input labels in `displayname` (e.g., `NS`, `XBox`, `PS5`, `CrCast`) and string `"0"`/`"1"` flags in both `is_signal` and `has_signal`.
+
+---
+
+### 4. LAN TCP Port Filter & DevTools Surface
+
+A read-only TCP `connect_ex` probe (`timeout=1.5s`) against the TV's LAN IP distinguishes between ports dropped by the TV's packet filter (`errno=11` / timeout) and ports allowed through the filter with no active listener (`errno=111` / `ECONNREFUSED`):
+
+| TCP Port | Purpose | Observed Result | Meaning |
+| --- | --- | --- | --- |
+| `36669` | RemoteNow MQTT over TLS | **`OPEN` (`rc=0`)** | Active MQTT broker |
+| `18400` | UPnP / DLNA `MediaRenderer` HTTP | **`OPEN` (`rc=0`)** | Active SSDP descriptor server |
+| `9226` | Browser DevTools target port (`setDebugPort`) | **`closed (errno=111, ECONNREFUSED)`** | **Allowed through packet filter** (immediate TCP `RST`), no listener bound by default |
+| `9222`–`9224` | Legacy / UI DevTools ports | `closed (errno=11, timeout)` | Dropped by TV packet filter |
+| `2222`, `2323`, `8008` | Custom SSH / telnet ports | `closed (errno=11, timeout)` | Dropped by TV packet filter |
+

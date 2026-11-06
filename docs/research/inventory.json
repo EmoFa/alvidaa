@@ -290,13 +290,13 @@
       "capabilities": {
         "pairing": "working",
         "launcher": "working (web UI + WS live; WebSDK_createFileRequest bridge entry point added)",
-        "file_bridge_traversal": "untested",
-        "file_bridge_write": "untested",
-        "identity_gate": "untested",
-        "euladpp_untar": "untested",
-        "devtools_forge": "untested",
-        "root": "untested",
-        "notes": "Model guide: docs/models/65U8HAU/V0000.06.29X.P0813/. SSDP transport_protocol=3160, region=0; in-browser Hisense_Get* reports MTK9900, U06.29, board 65E83GAVT, region EM_C / AUS. Unformatted 12-hex-char macWifi is rejected with rc=133; uppercase colon-separated TV_MAC with the 'standard' profile connects (rc=0) using the 2024 VidaaAppAndroidV01 cert (res/El.p12). PIN dialog closes after ~30 s; reconnecting with password=accesstoken enables full MQTT actions (state, 7-item sourcelist, 45-item applist, and launchapp for appId 16 'TV Browser'). Browser exposes WebSDK_createFileRequest / WebSDK_createLibRequest / WebSDK_hiSecurity / opera_omi + 66 Hisense_Get* functions (HiUtils_createRequest and Hisense_installApp absent)."
+        "file_bridge_traversal": "gated from LAN IP (/file/fileRead returns empty body without vidaahub.com Origin)",
+        "file_bridge_write": "gated (empty response from non-vidaahub.com Origin; 4 mode bases 0..3)",
+        "identity_gate": "working on /file/* (vidaahub.com Origin check; /tvapi/* ungated, deviceCode unmasked)",
+        "euladpp_untar": "untested (/file/fileRead gated from LAN IP)",
+        "devtools_forge": "inputs verified (/tvapi/deviceCode unmasked, WebSDK_hiSecurity present, TCP 9226 unfiltered ECONNREFUSED; forge untested)",
+        "root": "untested (launcher lane; TCP 2222/2323/8008 closed)",
+        "notes": "Model guide: docs/models/65U8HAU/V0000.06.29X.P0813/. SSDP transport_protocol=3160, region=0; in-browser Hisense_Get* reports MTK9900, U06.29, board 65E83GAVT, region EM_C / AUS. Unformatted 12-hex-char macWifi is rejected with rc=133; uppercase colon-separated TV_MAC with the 'standard' profile connects (rc=0) using the 2024 VidaaAppAndroidV01 cert (res/El.p12). PIN dialog closes after ~30 s; reconnecting with password=accesstoken enables full MQTT actions (state, 7-item sourcelist, 45-item applist, and launchapp for appId 16 'TV Browser'). Browser exposes WebSDK_createFileRequest / WebSDK_createLibRequest / WebSDK_hiSecurity / opera_omi + 66 Hisense_Get* functions (HiUtils_createRequest and Hisense_installApp absent). localhost:9009 C++ UI service enforces a vidaahub.com Origin check on /file/* (4 mode bases 0..3) while leaving /tvapi/initialData and /tvapi/deviceCode ungated; LAN TCP 9226 is unfiltered (ECONNREFUSED) while 9222-9224 are firewall-dropped."
       }
     }
   ]

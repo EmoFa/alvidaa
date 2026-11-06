@@ -23,3 +23,6 @@ tools/u7q/bin/
 tools/u7q/web/pub/
 tools/u7q/web/captures/
 tools/u7q/web/server.log
+
+# tools/audio build output (probe binary + pulled libasound)
+tools/audio/dist/

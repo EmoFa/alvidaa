@@ -132,17 +132,16 @@
       }
     },
     {
-      "id": "V0000.06.29X.P0813",
-      "model": "65U8HAU (65E83GAVT, serial type 65U8H / intl 65U8HQ) / 65U7H",
-      "region": "AU (EM_C / AUS, SSDP region 0) / India",
+      "id": "V0000.06.29X.P0813 (AU)",
+      "model": "65U8HAU (65E83GAVT, serial type 65U8H / intl 65U8HQ)",
+      "region": "AU (EM_C / AUS, SSDP region 0)",
       "soc": "MTK9900 (aarch64)",
       "vidaa_os": "U06.29",
       "transport_protocol": "3160",
       "browser": "Chrome 88.0.4324.182 (Linux aarch64, Odin)",
       "build_date": "?",
       "tested_by": [
-        "gh:MewX",
-        "reddit:pavanjadhaw"
+        "gh:MewX"
       ],
       "capabilities": {
         "pairing": "working",
@@ -153,7 +152,31 @@
         "euladpp_untar": "gated (/file/fileRead of ../APPS/euladpp/* returns empty body from LAN HTTP origin)",
         "devtools_forge": "gated (/tvapi/deviceCode unmasked & TCP 9226 unfiltered ECONNREFUSED, but /hiSecurity/* returns empty body from LAN HTTP origin)",
         "root": "blocked-at-origin-gate (/file/* and /hiSecurity/* return empty body from LAN HTTP origins; TCP 2222/2323/8008 closed)",
-        "notes": "Model guide: docs/models/65U8HAU/V0000.06.29X.P0813/. Verified on 65U8HAU (AU / EM_C, SSDP transport_protocol=3160, region=0; Hisense_Get* reports MTK9900, U06.29, board 65E83GAVT, serial type 65U8H): unformatted 12-hex-char macWifi is rejected with rc=133; uppercase colon-separated TV_MAC with the 'standard' profile connects (rc=0) using the 2024 VidaaAppAndroidV01 cert (res/El.p12). PIN dialog closes after ~30 s; reconnecting with password=accesstoken enables full MQTT actions (state, 7-item sourcelist, 45-item applist, launchapp for appId 16 'TV Browser', and server-side custom launcher registration + Home-watcher bounce). Browser exposes WebSDK_createFileRequest / WebSDK_createLibRequest / WebSDK_hiSecurity / opera_omi + 66 Hisense_Get* functions (HiUtils_createRequest and Hisense_installApp absent). localhost:9009 C++ UI service enforces an origin gate on both /file/* (4 mode bases 0..3; ../etc/shells, ../proc/version, and ../APPS/euladpp/* return empty body) and /hiSecurity/* (getDebugPort returns empty body) while leaving /tvapi/initialData and /tvapi/deviceCode ungated; LAN TCP 9226 is unfiltered (ECONNREFUSED) while 9222-9224 are firewall-dropped. Earlier community report on 65U7H (India, attributed to pavanjadhaw, public source pending) reported pairing with silent actions and unconfirmed traversal/root."
+        "notes": "Model guide: docs/models/65U8HAU/V0000.06.29X.P0813/. Verified on 65U8HAU (AU / EM_C, transport_protocol=3160, region=0; Hisense_Get* reports MTK9900, U06.29, board 65E83GAVT, serial type 65U8H). Unformatted 12-hex macWifi is rejected with rc=133; uppercase colon-separated TV_MAC with the 'standard' profile connects (rc=0) using the 2024 VidaaAppAndroidV01 cert (res/El.p12). PIN dialog closes after ~30 s; reconnecting with password=accesstoken enables full MQTT actions (state, 7-item sourcelist, 45-item applist, launchapp for appId 16 'TV Browser', server-side custom launcher registration + Home-watcher bounce). Browser exposes WebSDK_createFileRequest / WebSDK_createLibRequest / WebSDK_hiSecurity / opera_omi + 66 Hisense_Get* (HiUtils_createRequest and Hisense_installApp absent). localhost:9009 C++ UI service enforces an origin gate on /file/* (4 mode bases 0..3) and /hiSecurity/* while leaving /tvapi/initialData and /tvapi/deviceCode ungated; LAN 9226 unfiltered (ECONNREFUSED) while 9222-9224 are firewall-dropped. Root blocked at that origin gate."
+      }
+    },
+    {
+      "id": "V0000.06.29X.P0813 (IN)",
+      "model": "65U7H (board 65A65GAVT)",
+      "region": "India (EM_C, countryID IND)",
+      "soc": "MTK9900 (aarch64)",
+      "vidaa_os": "U06.29",
+      "transport_protocol": "3160",
+      "browser": "Chrome 88.0.4324.182 (Linux aarch64, Odin)",
+      "build_date": "?",
+      "tested_by": [
+        "reddit:pavanjadhaw"
+      ],
+      "capabilities": {
+        "pairing": "partial (tokens issued; ui_service actions stay silent)",
+        "launcher": "untested",
+        "file_bridge_traversal": "working (WebSDK file bridge, ../ traversal, origin-gated to vidaahub.com)",
+        "file_bridge_write": "working (same WebSDK route)",
+        "identity_gate": "untested",
+        "euladpp_untar": "untested",
+        "devtools_forge": "untested",
+        "root": "not achieved (no exec door found; WIP)",
+        "notes": "Model guide: docs/models/65U7H/V0000.06.29X.P0813/. Started on V0000.06.21U.N1023, upgraded to V0000.06.29X.P0813 mid-research. Different bridge surface from the U9 generation: no HiUtils_createRequest, instead WebSDK_createFileRequest -> POST localhost:9009/file/<api>, origin-gated to vidaahub.com (works over plain HTTP too). Mode bases 0=/tmp, 2=channelA, 6=/APPS, 7=/OAD. The file service is fragile: reading binaries NUL-truncates, and POSTs to /hiSecurity/* kill the handler with nothing supervising it back. rc.local ships the /var/local/otaTest.sh call commented out. The U9 hiutils API table is absent on this build. Contributed by pavanjadhaw; see issue #2 for the running dialogue."
       }
     },
     {

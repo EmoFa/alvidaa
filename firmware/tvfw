@@ -50,13 +50,16 @@ BUSYBOX=/var/local/tvtools/busybox
     done
 
     # --- Tier 1: telemetry + ads (backgrounded retry: CDN rotation means
-    #     AdGuard is the durable kill; this is the in-kernel backstop) ---
+    #     AdGuard is the durable kill; this is the in-kernel backstop).
+    #     busybox nslookup answers 0.0.0.0 for resolver-blocked hosts
+    #     (NXDOMAIN pin) — filter that out or the backstop grows a bogus
+    #     -d 0.0.0.0 rule; a blocked host has no real IP to block. ---
     (
         n=0
         while [ $n -lt 60 ]; do
             ok=1
             for host in evt-na.vidaahub.com ter-jrnl-na.vidaahub.com exc-jrnl-na.vidaahub.com policy-jrnl-na.vidaahub.com dvcstatus-dataretrv.vidaahub.com file-ul.vidaahub.com rsc-ads.vidaahub.com; do
-                ips=$($BUSYBOX nslookup $host 2>/dev/null | awk '/^Address/{print $2}' | $BUSYBOX grep -v ':')
+                ips=$($BUSYBOX nslookup $host 2>/dev/null | awk '/^Address/{print $2}' | $BUSYBOX grep -v ':' | $BUSYBOX grep -v '^0\.0\.0\.0$')
                 [ -z "$ips" ] && ok=0
                 for ip in $ips; do
                     $IPTABLES -C OUTPUT -d $ip -j REJECT 2>/dev/null || $IPTABLES -I OUTPUT 1 -d $ip -j REJECT

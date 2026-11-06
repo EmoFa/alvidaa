@@ -206,7 +206,7 @@
     {
       "id": "V0000.09.60W.Q0624",
       "model": "75UR9S",
-      "region": "US",
+      "region": "EU (Czech Republic)",
       "soc": "MT9655 (32-bit ARM userland)",
       "vidaa_os": "U09.0",
       "transport_protocol": "untested",
@@ -223,8 +223,8 @@
         "identity_gate": "untested",
         "euladpp_untar": "untested",
         "devtools_forge": "untested",
-        "root": "achieved (root + key-only SSH on 8008 verified 2026-11-04; manual re-trigger after reboot)",
-        "notes": "Model guide: docs/models/75UR9S/V0000.09.60W.Q0624/. 100U7Q chain on the 09.60W build: FaaS fetch function lives in the BASIC package (tv.vidaa.jsservice.basic/CHA/functions/fetch/), route /function/basic/fetch/sw2; original postinst had a latent mkdir-after-redirect bug; -s flag invalid in no-password-auth builds; no iptables on this firmware."
+        "root": "achieved (root + key-only SSH on 8008 verified 2026-11-04; boot persistence verified 2026-11-06 — re_sshd serviceList autostart re-arms dropbear at every cold boot)",
+        "notes": "Model guide: docs/models/75UR9S/V0000.09.60W.Q0624/. 100U7Q chain on the 09.60W build: FaaS fetch function lives in the BASIC package (tv.vidaa.jsservice.basic/CHA/functions/fetch/), route /function/basic/fetch/sw2; original postinst had a latent mkdir-after-redirect bug; -s flag invalid in no-password-auth builds; no iptables on this firmware. Boot persistence via the re_sshd JS service (serviceList.json, autoStart) triggering the superwatch socket; all persistent filesystems are mounted nosuid, so SUID is impossible on this build."
       }
     },
     {

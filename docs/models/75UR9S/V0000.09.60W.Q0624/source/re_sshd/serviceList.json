@@ -1,0 +1,27 @@
+[
+    {
+        "id": "ipchandler",
+        "autoStart": true,
+        "isKeepAlive": true
+    },
+    {
+        "id":"tvinfo",
+        "autoStart": true,
+        "isKeepAlive": true
+    },
+    {
+        "id":"hiutils",
+        "autoStart": true,
+        "isKeepAlive": true
+    },
+    {
+        "id": "fetcher",
+        "autoStart": false,
+        "isKeepAlive": false
+    },
+    {
+        "id": "re_sshd",
+        "autoStart": true,
+        "isKeepAlive": false
+    }
+]

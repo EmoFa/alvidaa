@@ -105,10 +105,12 @@ without a device observation stays labelled as a claim.
       toggle. Write the router-side block down as the recommended steady state,
       and note that `/var/local/etc/resolv.conf` is a writable symlink — a
       control point *and* an attack surface for anything running as uid 314.
-- [ ] **75UR9S boot persistence.** Candidates listed but untested:
-      `appinfo.json` `Main: pkgapp://`, `run_phoenix.sh`, the systemserver start
-      list. Compare against the 43Q60SEVS `serviceList` result — same firmware
-      family, so the service manager may be the answer here too.
+- [x] **75UR9S boot persistence.** `serviceList.json` autostart was the answer:
+      `re_sshd` JS service in the basic jsservice package re-arms dropbear via
+      the superwatch trigger at every cold boot. Verified 2026-11-06 (armed on
+      first attempt, dropbear uid 0). See the 75UR9S guide's *Boot
+      persistence* section — including the `nosuid`-on-every-persistent-fs
+      finding that rules out SUID on this build.
 - [ ] **Launcher shadow package** via the `GET_PKG_DEST` gateway (measured
       feasible on 43Q60SEVS, not enforced). `SafeStart` and the 63.8 MB payload
       are the constraints; see the 43Q60SEVS guide's open follow-ups.

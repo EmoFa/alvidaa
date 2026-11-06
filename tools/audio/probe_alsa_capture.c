@@ -43,6 +43,8 @@ extern int snd_pcm_set_params(snd_pcm_t *pcm, int format, int access,
                               unsigned int channels, unsigned int rate,
                               int soft_resample, unsigned int latency);
 extern long snd_pcm_readi(snd_pcm_t *pcm, void *buf, unsigned long size);
+extern int snd_pcm_start(snd_pcm_t *pcm);
+extern int snd_pcm_recover(snd_pcm_t *pcm, int err, int silent);
 extern int snd_pcm_close(snd_pcm_t *pcm);
 extern const char *snd_strerror(int errnum);
 
@@ -73,6 +75,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* Some drivers need the capture stream started explicitly; readi()
+       starts it implicitly on most, but this one returned EIO without it. */
+    rc = snd_pcm_start(pcm);
+    if (rc < 0) {
+        fprintf(stderr, "start: %s (continuing, readi may start it)\n",
+                snd_strerror(rc));
+    }
+
     FILE *f = fopen(out, "wb");
     if (!f) {
         perror("fopen");
@@ -90,8 +100,13 @@ int main(int argc, char **argv) {
     while (got < total_frames) {
         long n = snd_pcm_readi(pcm, buf, FRAMES);
         if (n < 0) {
-            fprintf(stderr, "readi: %s\n", snd_strerror((int)n));
-            break;
+            /* EIO/EPIPE on capture usually means the stream needs
+               re-preparing rather than that the device is dead. */
+            rc = snd_pcm_recover(pcm, (int)n, 1);
+            fprintf(stderr, "readi: %s (recover rc=%d)\n",
+                    snd_strerror((int)n), rc);
+            if (rc < 0) break;
+            continue;
         }
         fwrite(buf, sizeof(int16_t), (size_t)n * CHANNELS, f);
         for (long i = 0; i < n * CHANNELS; i++) {

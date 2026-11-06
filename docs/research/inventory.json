@@ -277,7 +277,7 @@
     },
     {
       "id": "V0000.06.29X.P0813 (65U8HAU)",
-      "model": "65U8HAU (65E83GAVT)",
+      "model": "65U8HAU (65E83GAVT, serial type 65U8H / intl 65U8HQ)",
       "region": "AU (EM_C / AUS, SSDP region 0)",
       "soc": "MTK9900 (aarch64)",
       "vidaa_os": "U06.29",

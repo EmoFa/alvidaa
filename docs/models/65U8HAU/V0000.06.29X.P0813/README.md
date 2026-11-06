@@ -1,6 +1,6 @@
 # 65U8HAU — V0000.06.29X.P0813 (extension X.P0813)
 
-- **Model:** `65U8HAU` (Australian U8H series; internal board/model `65E83GAVT` via `Hisense_GetModelName()`)
+- **Model:** `65U8HAU` (Australian U8H Mini-LED series; `Hisense_GetSerialType()` = `65U8H`, internal board `Hisense_GetModelName()` = `65E83GAVT`; international VIDAA U6 siblings on the same MTK9900 platform are sold as `65U8HQ` in EU/UK and `65U8H` in MEA/ZA/APAC, whereas the North American `65U8H` ships with Google TV rather than VIDAA)
 - **Firmware:** `V0000.06.29X.P0813` (extension `X.P0813` via `Hisense_GetFirmWareVersion()`)
 - **SoC:** `MTK9900` (MediaTek MT9900, 64-bit ARM `aarch64` via `Hisense_GetChipSetName()` and UA)
 - **Region:** `AU` (`Hisense_GetRegion()` = `EM_C`, `Hisense_GetCountryCode()` = `AUS`, SSDP `region=0`)

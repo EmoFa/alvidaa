@@ -349,9 +349,8 @@ def _ota_tvfw_applied():
     import time as _t
     applied_T = float(parts[0])
     try:
-        boot_epoch = _t.time() - float(parts[1])
-        age = _t.time() - boot_epoch - applied_T
-        return "applied at T+%ds (%.0fs ago)" % (applied_T, max(0, age))
+        age = max(0, _t.time() - float(parts[1]))  # marker is an epoch
+        return "applied at T+%ds (%.0fs ago)" % (applied_T, age)
     except ValueError:
         return "applied at T+%ds" % applied_T
 

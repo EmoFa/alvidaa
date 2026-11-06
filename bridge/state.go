@@ -423,19 +423,34 @@ func (b *Bridge) maybeBounceHome() {
 func (b *Bridge) launchHome(name string) map[string]any {
 	apps := b.appsList()
 	var app map[string]any
-	// The bridge serves the launcher itself: prefer the loopback URL so a
-	// stale external-server entry carrying the same port can never win.
+	// The launcher's own app entry wins by IDENTITY, not by URL. URL matching
+	// alone is not enough: any other app repointed at the bridge port (a
+	// diagnostics page, a second tile) would otherwise be launched instead.
+	// That is exactly what happened when the Recon tile was repointed to
+	// loopback — the watcher started bouncing to Recon.
+	//
+	// Among duplicate vidaa-home entries, the loopback one still wins, so a
+	// stale entry pointing at a retired external server cannot take over.
+	var home, homeLoop map[string]any
 	for _, a := range apps {
-		u, _ := a["url"].(string)
-		if strings.Contains(u, fmt.Sprintf("127.0.0.1:%d/", b.port)) {
-			app = a
-			break
+		if a["appId"] != "vidaa-home" {
+			continue
 		}
+		if u, _ := a["url"].(string); strings.Contains(u, fmt.Sprintf("127.0.0.1:%d/", b.port)) && homeLoop == nil {
+			homeLoop = a
+		}
+		if home == nil {
+			home = a
+		}
+	}
+	app = homeLoop
+	if app == nil {
+		app = home
 	}
 	if app == nil {
 		for _, a := range apps {
 			u, _ := a["url"].(string)
-			if strings.Contains(u, fmt.Sprintf(":%d/", b.port)) {
+			if strings.Contains(u, fmt.Sprintf("127.0.0.1:%d/", b.port)) {
 				app = a
 				break
 			}
@@ -443,7 +458,8 @@ func (b *Bridge) launchHome(name string) map[string]any {
 	}
 	if app == nil {
 		for _, a := range apps {
-			if a["appId"] == "vidaa-home" {
+			u, _ := a["url"].(string)
+			if strings.Contains(u, fmt.Sprintf(":%d/", b.port)) {
 				app = a
 				break
 			}

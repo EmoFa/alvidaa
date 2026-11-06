@@ -1,11 +1,13 @@
 # 75U8QTUK (UK) — V0000.09.60I.Q0813 — VIDAA U9 on MTK9655
 
-**Status (2026-11-06, updated after findings/09): ROOT ARMED, RE-ARM TESTED,
+**Status (2026-11-06, updated after findings/10): ROOT ARMED, RE-ARM TESTED,
 NATIVE HOME INSTALLED AND OWNER-VERIFIED.** The alvidaa DOM launcher now
 replaces the stock Home via a component-only swap in the writable
 operation-ui module; apps, inputs, TV Settings and app launch were all
-confirmed on screen. Rollback is one command
-([findings/09](findings/09-native-home.md)).
+confirmed on screen. The current bundle (v2) also merges apps and inputs into
+one list and adds a CSS-gradient wallpaper picker in Preferences
+([findings/10](findings/10-native-home-customization.md)). Rollback is one
+command ([findings/09](findings/09-native-home.md)).
 A real reboot confirmed there is **no automatic autostart**; the documented
 `83` + `82` sequence restored uid-0 SSH afterwards with no re-download
 ([findings/08](findings/08-reboot-rearm.md)). Initial arm: fingerprint

@@ -1,5 +1,11 @@
 # Native Home replacement installed (operationui Launcher component)
 
+> **Current state:** the installed bundle is now v2 — merged apps/inputs and
+> CSS wallpapers — see [findings/10](10-native-home-customization.md). This
+> file is the canonical record of the first install, the preflight, the SDK
+> contracts, the restart mechanics and the rollback path; its hashes describe
+> the v1 candidate that findings/10 superseded.
+
 **2026-11-06, owner-authorized, LAN-local.** The alvidaa "Free My TV" DOM
 launcher now replaces the stock Home on the 75U8QTUK. This is a component
 swap inside the writable operation-ui module, not a SystemUI/root-page

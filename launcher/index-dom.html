@@ -53,18 +53,45 @@
 var S = { apps: null, sources: null, state: null, online: false, hello: false,
           row: 0, col: 0, busy: false, toast: "", toastUntil: 0, installed: null };
 
-var BRIDGE = { hiutils: false, legacy: false, checked: false };
+var BRIDGE = { hiutils: false, websdk: false, legacy: false, checked: false };
 function detectBridge() {
   if (BRIDGE.checked) return BRIDGE;
   BRIDGE.checked = true;
   try { BRIDGE.hiutils = typeof HiUtils_createRequest !== "undefined"; } catch (e) {}
+  try { BRIDGE.websdk = typeof WebSDK_createFileRequest !== "undefined"; } catch (e) {}
   try { BRIDGE.legacy = typeof Hisense_installApp !== "undefined"; } catch (e) {}
   return BRIDGE;
+}
+function fileBridgeCall(action, params) {
+  if (typeof HiUtils_createRequest === "function") return HiUtils_createRequest(action, params);
+  if (typeof WebSDK_createFileRequest === "function") {
+    if ((location.hostname || "").indexOf("vidaahub.com") === -1) {
+      return { ret: false, msg: "U6 /file/* requires a vidaahub.com origin" };
+    }
+    var p = {};
+    if (params && typeof params === "object") {
+      for (var k in params) {
+        if (Object.prototype.hasOwnProperty.call(params, k)) p[k] = params[k];
+      }
+      if (typeof p.mode === "number" && p.mode > 3) p.mode = 3;
+    }
+    var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
+    if (raw && typeof raw === "object") return raw;
+    if (typeof raw === "string" && raw.length > 0 && raw !== "null" && raw !== "false") {
+      try {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && "ret" in parsed) return parsed;
+      } catch (e) {}
+      return { ret: true, msg: raw };
+    }
+    return { ret: false, msg: raw === "" ? "empty response from WebSDK_createFileRequest" : String(raw) };
+  }
+  return { ret: false, msg: "no file bridge" };
 }
 function installVisible() {
   if (S.installed === true && !/[?&]setup/.test(location.search)) return false;
   var b = detectBridge();
-  return (b.hiutils || b.legacy) && !S.installedNow;
+  return (b.hiutils || b.websdk || b.legacy) && !S.installedNow;
 }
 
 // ---------------------------------------------------------------- websocket
@@ -225,6 +252,7 @@ document.addEventListener("keydown", function (e) {
   else if (e.key === "ArrowUp") { if (S.row > 0) S.row--; }
   else if (e.key === "ArrowDown") { if (S.row < rows - 1) S.row++; }
   else if (e.key === "Enter") { activate(S.row, S.col); e.preventDefault(); return; }
+  else return;
   clampFocus(); updateScroll(); renderRows(); e.preventDefault();
 });
 document.addEventListener("click", function (e) {
@@ -242,10 +270,10 @@ var APP_URL = location.href.split("?")[0].split("#")[0];
 function installAsApp() {
   var b = detectBridge();
   var icon = APP_URL + "icon.png";
-  if (b.hiutils) {
+  if (b.hiutils || b.websdk) {
     try {
-      var cur = HiUtils_createRequest("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
-      var list = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
+      var cur = fileBridgeCall("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
+      var list = (cur && cur.ret) ? JSON.parse(cur.msg) : { AppInfo: [] };
       if (!list.AppInfo) list.AppInfo = [];
       var kept = [];
       for (var k = 0; k < list.AppInfo.length; k++) {
@@ -262,10 +290,10 @@ function installAsApp() {
         Type: "Browser", InstallTime: new Date().toISOString().split("T")[0],
         RunTimes: 0, StoreType: "custom", PreInstall: false
       });
-      var res = HiUtils_createRequest("fileWrite", {
+      var res = fileBridgeCall("fileWrite", {
         path: "websdk/Appinfo.json", mode: 6, writedata: JSON.stringify(list)
       });
-      toast(res.ret ? "installed! restart the TV" : "install failed: " + (res.msg || "?"));
+      toast((res && res.ret) ? "installed! restart the TV" : "install failed: " + ((res && res.msg) || "?"));
     } catch (e) { toast("install error: " + e); }
   } else if (b.legacy) {
     try {

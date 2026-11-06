@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import queue
+import select
 import ssl
 import sys
 import time
@@ -39,10 +40,22 @@ STANDARD_SALT = "h*i&s%e!r^v0i1c9"
 XOR_MASK = 6239759785777146216
 TV_MAC = os.environ.get("TV_MAC", "")  # TV WiFi MAC — from its SSDP descriptor (see docs/models/50A51HUV/09.01O.P0813/findings/01-mqtt-bridge.md)
 
-def creds(profile):
+
+def format_colon_mac(mac):
+    """Convert a 12-hex-char SSDP MAC (e.g. 'e85177e4d412') to 'E8:51:77:E4:D4:12'."""
+    clean = mac.replace(":", "").replace("-", "").strip().upper()
+    if len(clean) == 12 and all(c in "0123456789ABCDEF" for c in clean):
+        return ":".join(clean[i:i + 2] for i in range(0, 12, 2))
+    return mac
+
+
+def creds(profile, mac=None):
+    mac = TV_MAC if mac is None else mac
+    if ":" in mac:
+        mac = mac.upper()
     ts = int(time.time())
-    digest = hashlib.md5(f"{CLIENT_ID_PATTERN}${TV_MAC}".encode()).hexdigest().upper()
-    client_id = f"{TV_MAC}$his${digest[:6]}_vidaacommon_001"
+    digest = hashlib.md5(f"{CLIENT_ID_PATTERN}${mac}".encode()).hexdigest().upper()
+    client_id = f"{mac}$his${digest[:6]}_vidaacommon_001"
     if profile == "legacy":
         return client_id, "hisenseservice", "multimqttservice"
     if profile == "modern":
@@ -65,10 +78,11 @@ def cert_paths():
 PROFILES = ["modern", "middle", "standard", "legacy"]
 
 class Pairer:
-    def __init__(self, profile, host=None):
+    def __init__(self, profile, host=None, mac=None):
         self.profile = profile
         self.host = host or HOST
-        self.client_id, self.username, self.password = creds(profile)
+        self.mac = TV_MAC if mac is None else mac
+        self.client_id, self.username, self.password = creds(profile, mac=self.mac)
         self.rc = None
         self.pushes = queue.Queue()
         cert, key = cert_paths()
@@ -146,13 +160,28 @@ def pair(host=None, pin_arg=None):
 
     print(f"TV: {host}, cert: {'vidaa (2024)' if 'vidaa_cert' in str(cert_paths()) else 'RemoteNOW (2018)'}")
     tokens = None
+    active_mac = TV_MAC
     for profile in PROFILES:
-        p = Pairer(profile, host=host)
-        print(f"[{profile}] connecting as {p.username} ...", flush=True)
+        p = Pairer(profile, host=host, mac=active_mac)
+        print(f"[{profile}] connecting as {p.username} (client_id={p.client_id}) ...", flush=True)
         if not p.connect():
-            print(f"[{profile}] rejected (rc={p.rc}) — TV shows the 'outdated app' popup; next profile")
-            p.stop()
-            continue
+            # U6 / transport_protocol=3160 (e.g. 65U8HAU V0000.06.29X.P0813) rejects
+            # unformatted 12-hex-char SSDP MACs with rc=133 (Client Identifier not valid)
+            # and requires uppercase colon-separated XX:XX:XX:XX:XX:XX.
+            colon_mac = format_colon_mac(active_mac)
+            if p.rc == 133 and colon_mac != active_mac:
+                p.stop()
+                active_mac = colon_mac
+                print(f"[{profile}] rc=133 (Client Identifier not valid) — retrying with colon-formatted TV_MAC={active_mac}", flush=True)
+                p = Pairer(profile, host=host, mac=active_mac)
+                if not p.connect():
+                    print(f"[{profile}] rejected (rc={p.rc}); next profile", flush=True)
+                    p.stop()
+                    continue
+            else:
+                print(f"[{profile}] rejected (rc={p.rc}) — TV shows the 'outdated app' popup; next profile")
+                p.stop()
+                continue
         print(f"[{profile}] MQTT session established", flush=True)
         p.subscribe_pairing_topics()
         time.sleep(0.5)
@@ -161,19 +190,29 @@ def pair(host=None, pin_arg=None):
                     '{"app_version":2,"connect_result":0,"device_type":"Mobile App"}')
         dialog = wait_for_any(p.pushes, ("authentication", "authenticationcode"), 6)
         print(f"[{profile}] PIN dialog push: {dialog}", flush=True)
-        print(f"\n>>> LOOK AT THE TV — enter the 4-digit code shown there <<<", flush=True)
+        print(f"\n>>> LOOK AT THE TV — enter the 4-digit code shown there (stdin or {os.path.join(KEYS, '.pin')}) <<<", flush=True)
         pin = pin_arg
         pin_file = os.path.join(KEYS, ".pin")
         deadline = time.time() + 240
-        last_trigger = 0.0
         while not (pin and len(pin) == 4 and pin.isdigit()):
             # surface whatever the TV pushes while we wait (no re-trigger: it rotates the PIN)
             try:
-                topic, payload = p.pushes.get(timeout=0.5)
+                topic, payload = p.pushes.get(timeout=0.3)
                 print(f"  push {topic}: {str(payload)[:140]}", flush=True)
+                if topic == "authenticationcodeclose":
+                    print("TV closed the PIN dialog (~30s window expired); rerun and submit within 30s")
+                    p.stop()
+                    sys.exit(2)
                 continue  # pushes during wait are informational; keep looping for pin
             except queue.Empty:
                 pass
+            if sys.stdin and sys.stdin.isatty():
+                r, _, _ = select.select([sys.stdin], [], [], 0.1)
+                if r:
+                    line = sys.stdin.readline().strip()
+                    if len(line) == 4 and line.isdigit():
+                        pin = line
+                        break
             try:
                 pin = open(pin_file).read().strip()
             except OSError:
@@ -182,7 +221,7 @@ def pair(host=None, pin_arg=None):
                 os.remove(pin_file)
                 break
             if time.time() > deadline:
-                print("timed out waiting for PIN file; rerun")
+                print("timed out waiting for PIN; rerun")
                 p.stop()
                 sys.exit(2)
         if not (pin and len(pin) == 4 and pin.isdigit()):
@@ -207,6 +246,9 @@ def pair(host=None, pin_arg=None):
             sys.exit(3)
         print(f"[{profile}] PIN accepted — requesting tokens")
         p.c.publish(f"/remoteapp/tv/platform_service/{p.client_id}/data/gettoken", '{"refreshtoken": ""}')
+        # NOTE: only publish authenticationcodeclose AFTER result == 1; sending it
+        # on an unverified PIN popup on V0000.06.29X.P0813 hides the dialog without
+        # releasing hisenseUI's modal input grab.
         p.c.publish(f"/remoteapp/tv/ui_service/{p.client_id}/actions/authenticationcodeclose")
         tok = wait_for(p.pushes, "tokenissuance", 15) or wait_for(p.pushes, "gettoken", 5)
         p.stop()

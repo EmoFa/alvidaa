@@ -79,12 +79,27 @@
 
   function hiCall(action, params) {
     try {
-      if (typeof HiUtils_createRequest !== "function") return { error: "no bridge" };
-      var r = HiUtils_createRequest(action, params);
-      if (r && typeof r === "object") {
-        return { ret: r.ret, msg: normMsg(r.msg) };
+      if (typeof HiUtils_createRequest === "function") {
+        var r = HiUtils_createRequest(action, params);
+        if (r && typeof r === "object") return { ret: r.ret, msg: normMsg(r.msg) };
+        return { value: trunc(r, 2000) };
       }
-      return { value: trunc(r, 2000) };
+      if (typeof WebSDK_createFileRequest === "function") {
+        if ((location.hostname || "").indexOf("vidaahub.com") === -1) {
+          return { ret: false, msg: "U6 /file/* requires a vidaahub.com origin" };
+        }
+        var p = {};
+        if (params && typeof params === "object") {
+          for (var k in params) {
+            if (Object.prototype.hasOwnProperty.call(params, k)) p[k] = params[k];
+          }
+          if (typeof p.mode === "number" && p.mode > 3) p.mode = 3;
+        }
+        var raw = WebSDK_createFileRequest(action, JSON.stringify(p));
+        if (raw && typeof raw === "object") return { ret: raw.ret, msg: normMsg(raw.msg) };
+        return { value: trunc(raw, 2000) };
+      }
+      return { error: "no bridge" };
     } catch (e) {
       return { exception: String(e) };
     }

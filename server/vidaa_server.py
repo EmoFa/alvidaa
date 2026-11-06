@@ -477,9 +477,9 @@ class TVBridge:
                              if sc.get("name") and sc.get("url")]}
         try:
             apps_raw = self.apps_list()
-            out["installed"] = any(a.get("appId") == "vidaa-home" for a in apps_raw)
+            out["installed"] = any(a.get("appId") == "vidaa-home" for a in apps_raw) or bool(cfg.get("installed", False))
         except Exception as e:
-            out["installed"], out["apps"], out["apps_error"] = False, None, str(e)
+            out["installed"], out["apps"], out["apps_error"] = bool(cfg.get("installed", False)), None, str(e)
         try:
             out["apps"] = self.visible_apps()
         except Exception as e:
@@ -489,6 +489,19 @@ class TVBridge:
         except Exception as e:
             out["sources"], out["sources_error"] = None, str(e)
         return out
+
+    def register_launcher(self, url=""):
+        cfg = load_config()
+        cfg["installed"] = True
+        if url:
+            cfg["launcherUrl"] = url
+        try:
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(cfg, f, indent=2)
+                f.write("\n")
+        except OSError as e:
+            return {"t": "installed", "ok": False, "error": str(e)}
+        return {"t": "installed", "ok": True, "url": url}
 
     def _maybe_bounce_home(self):
         cfg = load_config()
@@ -511,6 +524,17 @@ class TVBridge:
         if app is None:
             app = next((a for a in apps if a.get("name", "").lower() == name.lower()), None)
         if app is None:
+            cfg = load_config()
+            lurl = cfg.get("launcherUrl")
+            if lurl:
+                self.call("ui_service", "launchapp",
+                          {"appId": "vidaa-home", "name": "Home",
+                           "url": lurl, "urlType": "1", "storeType": "custom"})
+                return {"ok": True, "launched": "Home (custom)", "url": lurl}
+            tvb = next((a for a in apps if a.get("name", "").lower() == "tv browser"), None)
+            if tvb is not None:
+                self.call("ui_service", "launchapp", {k: tvb[k] for k in ("appId", "name", "url", "urlType", "storeType") if k in tvb})
+                return {"ok": True, "launched": tvb.get("name"), "url": tvb.get("url")}
             return {"ok": False, "error": "launcher app not found in applist"}
         self.call("ui_service", "launchapp", {k: app[k] for k in ("appId", "name", "url", "urlType", "storeType") if k in app})
         return {"ok": True, "launched": app.get("name"), "url": app.get("url")}
@@ -525,7 +549,7 @@ class TVBridge:
             try:
                 cfg = load_config()
                 w = cfg.get("watcher", {})
-                if self.connected.is_set():
+                if w.get("enabled", True) and self.connected.is_set():
                     # poll gettvstate as fallback; _on_message handles instant bounce on reply/push
                     self.call("ui_service", "gettvstate")
                     self._maybe_bounce_home()
@@ -686,6 +710,8 @@ class Handler(SimpleHTTPRequestHandler):
                     ws.send_text(json.dumps(self.bridge.launch(m.get("name", ""))))
                 elif m.get("t") == "source":
                     ws.send_text(json.dumps(self.bridge.source(m.get("id", ""))))
+                elif m.get("t") == "install":
+                    ws.send_text(json.dumps(self.bridge.register_launcher(m.get("url", ""))))
             try:
                 self.bridge.listeners.remove(push)
             except ValueError:
@@ -729,6 +755,17 @@ class Handler(SimpleHTTPRequestHandler):
             except (OSError, ValueError):
                 return self._json({"ok": False,
                                    "error": "no recon report yet — open /recon.html on the TV"})
+        if u.path == "/api/reload":
+            self.bridge._emit({"t": "reload"})
+            return self._json({"ok": True, "reloading": True})
+        if u.path == "/api/browser":
+            res = self.bridge.launch("TV Browser")
+            if not res.get("ok"):
+                self.bridge.call("ui_service", "launchapp",
+                                 {"appId": "16", "name": "TV Browser",
+                                  "url": "url16", "storeType": 100})
+                res = {"ok": True, "launched": "TV Browser"}
+            return self._json(res)
         if u.path == "/api/open":
             url = q.get("url", "")
             if not url.startswith("http"):

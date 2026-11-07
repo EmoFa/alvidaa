@@ -850,6 +850,21 @@ function draw() {
 
   // [next r2] row geometry: the dock lives at the bottom edge of view 1,
   // apps + install live one view down (stage y + PAN_VIEW).
+  // [r4] Big label above the dock: what the focused tile actually is.
+  // The reference shows the machine name in large type, so the dock reads as
+  // "PlayStation / Mac / Fire TV" rather than "HDMI1 / HDMI2 / HDMI3".
+  if (S.row === 0) {
+    var focusItem = items(0)[S.col];
+    if (focusItem) {
+      ctx.font = "700 42px -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = focusItem.signal ? "#f8fafc" : "#64748b";
+      ctx.fillText(focusItem.label, left(), 372);
+      ctx.font = "500 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = focusItem.signal ? "#34d399" : "#475569";
+      ctx.fillText(focusItem.signal ? "connected" : "no signal", left() + 2, 396);
+    }
+  }
+
   drawRow(0, 424, "INPUTS & SOURCES");
   drawRow(1, 636, "APPS");
 

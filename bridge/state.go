@@ -381,6 +381,7 @@ func (b *Bridge) snapshot() map[string]any {
 		// must not offer INSTALL AS APP.
 		"installed": true,
 		"shortcuts": validShortcuts(cfg.Shortcuts),
+		"favorites": cfg.Favorites,
 	}
 	apps := b.visibleApps()
 	out["apps"] = apps

@@ -13,6 +13,9 @@ type Config struct {
 	Rename     map[string]string `json:"rename"`
 	Inputs     map[string]Input  `json:"inputs"`
 	Only       []string          `json:"only"`
+	// Favorites are app names kept on the launcher's main view. Everything
+	// else stays behind the Apps tile. Names match the TV's applist.
+	Favorites  []string          `json:"favorites"`
 	Shortcuts  []Shortcut        `json:"shortcuts"`
 	AutoSwitch bool              `json:"autoSwitch"`
 	Watcher    Watcher           `json:"watcher"`

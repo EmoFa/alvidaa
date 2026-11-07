@@ -3,32 +3,24 @@
 ![alvidaa launcher, live on a Hisense VIDAA TV — clock, inputs with live
 signal, and real app icons, captured from the TV itself](docs/img/launcher-home.png)
 
-Two projects in one repo. Both started on one TV over a single weekend; the
-root half now runs on seven different chips, and the launcher no longer
-needs a server at all.
+Two projects in one repo. 
 
 1. **A launcher** — a self-installed, self-hosted home screen for Hisense
    **VIDAA** TVs: a clock, your HDMI inputs with live signal, your real
    apps. Nothing sponsored. The TV installs the page itself as a native
-   app through its own hidden APIs.
+   app through its own hidden APIs (or over a bridge without root)
+   
 2. **Root** — and more importantly: the first publicly documented root
    path for 2024+ VIDAA firmware (as far as public record shows). A
    browser-exposed file bridge, a sandbox escape found by reading an
    errno, a production boot hook, and a key-only SSH shell — no hardware,
    no flashed partitions, verified boot still green.
 
-Everything runs on a TV you own, through the TV's own APIs, and every
-step is designed to be undone. Built with — and designed for — AI coding
-sessions: point your agent at [AGENTS.md](AGENTS.md); the prompt ladder
-that worked is in [the prompt ladder](docs/project/HACK-YOUR-OWN.md).
+Everything runs on a TV you own, through the TV's own APIs, and every step is designed to be undone. Built with — and designed for — AI coding sessions: point your agent at [AGENTS.md](AGENTS.md); the prompt ladder  that worked is in [the prompt ladder](docs/project/HACK-YOUR-OWN.md).
 
-What this repo publishes, and what it deliberately does not:
-[docs/DISCLOSURE.md](docs/DISCLOSURE.md).
+What this repo publishes, and what it deliberately does not:[docs/DISCLOSURE.md](docs/DISCLOSURE.md).
 
-**Read it as a site:** <https://carteakey.github.io/alvidaa/> — the same
-markdown, rendered with the tested-model matrix, the model guides and the
-method catalogue in one place. Generated from the repo by
-[`scripts/gen-site.py`](scripts/gen-site.py); nothing is moved or duplicated.
+**Read it as a site:** <https://carteakey.github.io/alvidaa/> 
 
 ## Start here
 
@@ -56,10 +48,8 @@ cert-gated MQTT ─► browser file bridge ─► ../ escape ─► unauth local
     ─► rc.local boot hook ─► root at every boot ─► key-only SSH
 ```
 
-Lane 1 has been tested on the model below; compatibility with other models
-and firmware remains to be established. Lane 2 is **model-specific** (SoC and
-partition layout bite there) and is documented
-stage by stage in [the 50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md).
+Lane 1 has been tested on the model below; compatibility with other models and firmware remains to be established. Lane 2 is **model-specific** (SoC and
+partition layout bite there) and is documented stage by stage in [the 50A51HUV guide](docs/models/50A51HUV/09.01O.P0813/README.md).
 
 ## Quickstart — the launcher
 
@@ -85,6 +75,7 @@ TV_MAC=<tv-wifi-mac> ./venv/bin/python pair.py <tv-ip>
 ```
 
 Harden `server/config.json` (hide preset apps, rename tiles, set `"autoSwitch": true` to auto-jump to a single active HDMI input on boot, or toggle the watcher) — it is read live. The launcher renders at 1080p (`?540p` fallback), caches tiles in `localStorage` for instant cold paint, auto-focuses active HDMI signals, and binds remote keys `1`–`9` as tile hotkeys. Production deployment on an always-on box:
+
 [DEPLOY.md](docs/launcher/DEPLOY.md). Roadmap for shimming and modifying the native stock launcher (`/APPS/channelA/hisenseUI/`) directly on rooted TVs: [LAUNCHER_V2.md](docs/launcher/LAUNCHER_V2.md). One server per TV — the paired MQTT identity is exclusive.
 
 ## Quickstart — root
@@ -196,20 +187,8 @@ reference only — this is an independent implementation).
 ### How this was produced
 
 This project was built in AI coding sessions, and it seems dishonest not to
-say so plainly. The main models were **DeepSeek** and **GLM 5.3 Flash**, with
+say so plainly. The main models were **DeepSeek 4.1 Flash** and **GLM 5.3 Flash**, with
 others used for smaller pieces along the way.
-
-The division of labour matters more than the model list. The models proposed
-chains, wrote the tooling, and did the reading; the owner drove the TV, made
-every judgement call, and verified each claim on the device. Every result in
-the model guides was run on real hardware, and anything that was not measured
-is labelled as a claim rather than a finding. Where a model got something
-wrong — and several did, including a screenshot route declared dead after a
-bad probe — the correction is recorded in the findings rather than quietly
-edited out.
-
-The negative results are credited to the same sessions, because knowing what
-does not work is the part that saves the next person time.
 
 No system partitions were written during this research; verified boot stayed
 locked and green. Changes were designed to be reversible, but a complete

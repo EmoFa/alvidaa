@@ -145,6 +145,15 @@ renders fine there.
    timestamps across three "new" builds). Every script deploy needs
    `rm -rf /var/local/hisenseUI/cobalt_home/*` **plus a reboot** — this is
    why `tools/deploy-overlay.sh` clears the cache in the same batch.
+4. **Relaunch is deduped by URL path, not query** (2026-11-07, bridge-lane
+   staging reviews): `/api/open` (`ui_service launchapp`) on an already-
+   running page URL does not restart the instance when only the query string
+   differs — the old instance keeps running with its OLD query params, so
+   review pins (`?col=N`, `?pan=1`) silently don't apply on the second open.
+   A re-push with changed content busts it (mtime recompile), and so does
+   any change to the URL path; the reliable review habit is a throwaway
+   param (`&v=N`) per open. Observed twice: query change alone left the
+   prior state on screen while the clock kept ticking (live instance).
 
 **Diagnostic techniques that worked here** (for the next hunt):
 

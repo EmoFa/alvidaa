@@ -120,4 +120,4 @@ function main(){
   }finally{release();}
 }
 if(require.main===module){try{main();}catch(error){console.error(error.stack);process.exit(1);}}
-module.exports={retire,restore,validatePatch,archive,postinst,PACKAGE,RUNTIMES};
+module.exports={retire,restore,validatePatch,archive,controlFiles,postinst,PACKAGE,RUNTIMES};

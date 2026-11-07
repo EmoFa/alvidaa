@@ -1,29 +1,50 @@
-# Free My TV attribution
+# Free My TV attribution and pinned web source
 
 Upstream: https://github.com/felipericardo/tv-launcher
 
 Revision: `f2d984c51edca1544e39f2d44cdf86b75b0b6703`.
 
-License: MIT, reproduced in [LICENSE](LICENSE) and embedded in the generated TV
-bundle. Copyright (c) 2026 Free My TV contributors.
+Main license: MIT, reproduced in [LICENSE](LICENSE). Copyright 2026 Free My TV
+contributors. The generated private TV bundle also includes this notice.
 
-`../../free-my-tv-native.js` adapts `web/home.css` and the web frontend's
-**offline/no-picks** design: For You header, navigation, large clock/date,
-rounded glass shelf, brand-colour app tiles, light/dark appearance, all-apps
-and input views, shelf customization and local preferences. Coordinates,
-colours and typography derive from the upstream 1920×1080 design.
+## Faithful web-port source
 
-This is a Cobalt/Vue renderer port, not the unmodified webOS/Tizen page:
+[`upstream/`](upstream/) contains the actual public web package and an
+[integrity manifest](upstream/MANIFEST.json), not a recreation of its layout.
+It includes the original HTML/CSS/JS, generated language catalogues, symbols,
+icons and variable Inter font. Its generic configuration contains **no API key**.
 
-- Native SDK data/actions replace `web/tv.js`.
-- Vue render functions and scoped inline styles replace browser DOM setup.
-- No canvas logo processing, blurred-photo backgrounds, CSS masks or SVG.
-- Local vendor icons are used when available, with text/brand-colour fallbacks.
-- No upstream fonts, symbols, screenshots, Android assets or binaries shipped.
-- `web/data.js` and Internet recommendations/weather/market feeds are omitted.
-- Vendor Settings, remote handlers, screensaver/service infrastructure and
-  kids/game pages remain vendor-owned, not rewritten as web substitutes.
+Additional asset licenses:
 
-Vendor code is combined locally from a pinned **private original backup** by
-`build-native.cjs`. It is not distributed in this repository. The generated
-bundle stays under gitignored firmware storage (or `/tmp` for tests).
+- [Inter — SIL Open Font License](upstream/fonts/OFL.txt).
+- [Material Symbols — Apache License](upstream/symbols/LICENSE-material-symbols.txt).
+
+Reproduce/verify it using the pinned Git objects of an upstream clone:
+
+```sh
+python tools/launcher-host/vendor-free-my-tv.py /path/to/upstream-clone --check
+```
+
+For an initial import, omit `--check`; the tool refuses to overwrite an existing
+snapshot. It archives the pinned commit into a temporary directory, so private
+configuration, untracked files and working-tree modifications are not imported.
+Keep this reference unmodified; native compatibility changes belong in the
+adapter/build layer and must be tested against it.
+
+This pinned source now drives the reversible on-TV web-port trial. **Complete
+visual/behavioral and physical acceptance is still pending.** See
+[the parity plan](../../../../docs/launcher/FREE-MY-TV-WEB-PARITY.md).
+
+## Installed first adaptation (historical scope)
+
+`../../free-my-tv-native.js` implements a simplified offline/no-picks adaptation:
+clock, shelf, app/input views, local preferences and stock TV Settings. It did
+not ship the upstream fonts, symbols, full presentation or live-data features.
+It is **not a one-for-one port**. Its tests establish that subset and deployment
+safety, not visual or functional parity with the upstream web interface.
+
+Vendor firmware code is combined locally from a pinned **private original
+backup** by `build-native.cjs`. It is not distributed in this repository.
+Generated firmware-containing bundles stay under gitignored firmware storage
+(or `/tmp` for tests). API credentials stay in private `server/keys/` storage,
+never in this public reference or browser-facing responses.

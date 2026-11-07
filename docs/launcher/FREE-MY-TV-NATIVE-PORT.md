@@ -1,5 +1,11 @@
 # Free My TV → native VIDAA Home plan
 
+> This page records the **first, simplified offline adaptation**, not verified
+> one-for-one upstream parity. The actual pinned web interface now runs in a
+> reversible on-TV trial. Follow the [web parity status and acceptance gates](FREE-MY-TV-WEB-PARITY.md)
+> and [private release guide](../../tools/launcher-host/NATIVE-WEB-RELEASE.md)
+> for that subsequent work. The first adaptation remains a recovery target.
+
 ## Goal and constraints
 
 Port the MIT **web frontend** of [Free My TV](https://github.com/felipericardo/tv-launcher)
@@ -124,9 +130,9 @@ failures and limitations in model findings as they occur. Update recovery docs
 and PR24 only with measured claims; do not include vendor bundles, keys,
 private platform context or unrelated working-tree changes.
 
-## Implemented outcome
+## Historical outcome: first offline adaptation
 
-The port is installed. `native-platform.js` uses the direct SDK for data,
+The first adaptation was installed. `native-platform.js` uses the direct SDK for data,
 readiness events, Settings, input switching and APC app launch. APC re-resolves
 metadata and retains vendor parental/EULA checks, never forwarding bypass flags.
 

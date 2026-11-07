@@ -26,7 +26,19 @@ def members(data):
     return result
 
 
-def patch(data):
+def retire_servers(content):
+    start = b'echo "--- step: launcher host ---"'
+    end = b'echo "--- step: phone home ---"'
+    if content.count(start) != 1 or content.count(end) != 1:
+        raise ValueError("Unknown bootstrap revision; refusing to guess")
+    a, b = content.index(start), content.index(end)
+    block = content[a:b]
+    if b <= a or b"/var/local/alvidaa/alvidaa-bridge" not in block or b"/APPS/launcher/server.js" not in block:
+        raise ValueError("Both expected launcher paths must be in the removable block")
+    return content[:a] + b'echo "--- native Home: no extra launcher server ---"\n  ' + content[b:]
+
+
+def patch(data, transform=retire_servers):
     entries = members(data)
     if [name for name, _, _ in entries].count("control.tar.gz") != 1:
         raise ValueError("Expected exactly one control archive")
@@ -42,15 +54,7 @@ def patch(data):
                         if info.name.lstrip("./") == "postinst":
                             if patched or content is None:
                                 raise ValueError("Unexpected postinst entry")
-                            start = b'echo "--- step: launcher host ---"'
-                            end = b'echo "--- step: phone home ---"'
-                            if content.count(start) != 1 or content.count(end) != 1:
-                                raise ValueError("Unknown bootstrap revision; refusing to guess")
-                            a, b = content.index(start), content.index(end)
-                            block = content[a:b]
-                            if b <= a or b"/var/local/alvidaa/alvidaa-bridge" not in block or b"/APPS/launcher/server.js" not in block:
-                                raise ValueError("Both expected launcher paths must be in the removable block")
-                            content = content[:a] + b'echo "--- native Home: no extra launcher server ---"\n  ' + content[b:]
+                            content = transform(content)
                             subprocess.run(["sh", "-n"], input=content, check=True, capture_output=True)
                             info.size = len(content)
                             patched = True

@@ -1,4 +1,4 @@
-# alvidaa
+# alvidaa 👋
 
 ![alvidaa launcher, live on a Hisense VIDAA TV — clock, inputs with live
 signal, and real app icons, captured from the TV itself](docs/img/launcher-home.png)

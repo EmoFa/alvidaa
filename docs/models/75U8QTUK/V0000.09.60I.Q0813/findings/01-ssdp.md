@@ -10,7 +10,7 @@ Direct-IP mode found no descriptor on any of the common VIDAA UPnP ports
 (49152–49154, 8080, 1400, 2869):
 
 ```
-$ tools/ssdp-descriptor.sh 10.0.0.173
+$ tools/ssdp-descriptor.sh <tv-ip>
 None of 49152/49153/49154/8080/1400/2869 answered.
 ```
 
@@ -20,11 +20,11 @@ non-standard port:
 ```
 $ tools/ssdp-descriptor.sh
 Responders:
-  10.0.0.1      http://10.0.0.1:2189/rootDesc.xml      (FreeBSD/MiniUPnPd router — not the TV)
-  10.0.0.173    http://10.0.0.173:3366/dd.xml
+  10.0.0.1      http://<gateway>:2189/rootDesc.xml      (FreeBSD/MiniUPnPd router — not the TV)
+  <tv-ip>      http://<tv-ip>:3366/dd.xml
 ```
 
-## TV descriptor — `http://10.0.0.173:3366/dd.xml` (417 bytes)
+## TV descriptor — `http://<tv-ip>:3366/dd.xml` (417 bytes)
 
 ```
 friendlyName:  TV
@@ -55,7 +55,7 @@ transport_protocol: (not present)
   advertised by the TV itself. Expected for a VIDAA set in default LAN
   posture; the control surface is the RemoteNow MQTT endpoint on
   `36669/tcp` (see findings/00), not UPnP.
-- The second responder (`10.0.0.1:2189`, "FreeBSD router", MiniUPnPd
+- The second responder (the gateway, `:2189`, "FreeBSD router", MiniUPnPd
   2.3.9) is the owner's own gateway, not the TV. Its identifying fields
   are deliberately omitted here.
 

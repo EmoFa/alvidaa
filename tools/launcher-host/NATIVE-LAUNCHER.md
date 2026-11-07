@@ -42,7 +42,7 @@ the recorded engine PID belongs to the last controller restart, not necessarily
 the current boot. Actual stock restore and native reapplication were both
 visually verified on this TV.
 
-The wrapper defaults to `192.168.50.34:8008`, using
+The wrapper defaults to `<tv-ip>:8008`, using
 `server/keys/tv_root_ed25519`. Override `TV_HOST`, `TV_PORT` or
 `TV_KNOWN_HOSTS` as necessary. No PC-side server needs starting.
 

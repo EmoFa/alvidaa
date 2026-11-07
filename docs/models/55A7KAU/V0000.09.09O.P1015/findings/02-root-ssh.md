@@ -134,7 +134,7 @@ pattern) is the documented next step if wanted — not done here.
 
 - dropbear on 0.0.0.0:8008, key-only, authorized key
   `server/keys/tv_root_ed25519.pub`; connect:
-  `ssh -p 8008 -i server/keys/tv_root_ed25519 root@192.168.50.34`
+  `ssh -p 8008 -i server/keys/tv_root_ed25519 root@<tv-ip>`
 - iptables ACCEPT for 8008 live
 - opkg package `re.installer 1.0.0` registered
 - OTA: disabled in the TV settings menu by the owner before first write

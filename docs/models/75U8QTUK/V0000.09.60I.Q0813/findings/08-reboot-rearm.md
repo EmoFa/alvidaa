@@ -23,10 +23,10 @@ restored uid-0 SSH without re-downloading anything.
 ## Evidence
 
 ```
-$ nc -z 10.0.0.173 8008          # before re-arm: closed
+$ nc -z <tv-ip> 8008          # before re-arm: closed
                                  # after re-arm:  OPEN
 
-$ ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173 \
+$ ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@<tv-ip> \
       'grep -E "^(Uid|Gid|CapEff):" /proc/self/status; cat /proc/uptime; cat /APPS/.re_sshd/dropbear.pid'
 Uid:    0   0   0   0
 Gid:    0   0   0   0
@@ -88,6 +88,6 @@ it downloads nothing.
 1. Serve `tools/u7q/web/` on the LAN (`python3 server.py 9000`).
 2. Open `http://<host-ip>:9000/rearm.html` in the TV browser.
 3. Wait for `trigger -> …` and `log=POSTINST_RAN`.
-4. `ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173`.
+4. `ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@<tv-ip>`.
 
 No reboot of the TV is needed to arm; no files are re-downloaded on re-arm.

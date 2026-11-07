@@ -405,8 +405,8 @@ one reboot, idempotent.
 
 Also discovered: the TV is **dual-homed** (WiFi `.11` + Ethernet `.25` at
 various times) — DHCP shuffles its address, which broke the bridge twice.
-Static reservations for both TV MACs (WiFi `bc:5c:17:bc:46:88`, Ethernet
-`88:b8:63:c8:3a:a5`) are required router-side.
+Static reservations for both TV MACs (WiFi `<wifi-mac>`, Ethernet
+`<eth-mac>`) are required router-side.
 
 Final architecture (all validated):
 - stock `index.html.alvidaa-bak` + head flash-kill style + one bootstrap

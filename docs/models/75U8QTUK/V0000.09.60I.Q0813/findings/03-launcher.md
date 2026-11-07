@@ -1,7 +1,7 @@
 # 03 — Launcher-lane GET + full fingerprint sweep (2026-11-06)
 
 Served `launcher/fingerprint-full.html` from the Mac mini
-(`python3 http.server`, launcher/ dir only, `10.0.0.157:8770`) and opened
+(`python3 http.server`, launcher/ dir only, `<server-ip>:8770`) and opened
 it in the TV's **"TV Browser"** app (app id 16, from findings/02). The TV
 webview loaded the page and ran the write-free sweep.
 
@@ -61,7 +61,7 @@ U09.60, api_version 3.0.1, runtime_version Chromium 111, brand Hisense,
 uuid null, region EU_A, capability_code 2026010402, feature_code
 012003039003001256000126, model_name 75U85QEVS`.
 
-`Hisense_GetNetworkInfo`: `net_type wireless, ip_address 10.0.0.173`
+`Hisense_GetNetworkInfo`: `net_type wireless, ip_address <tv-ip>`
 (LAN IP — fine per AGENTS.md).
 
 ## Browser / platform

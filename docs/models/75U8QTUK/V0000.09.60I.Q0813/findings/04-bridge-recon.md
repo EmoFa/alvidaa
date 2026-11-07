@@ -10,7 +10,7 @@
 > the false negative.
 
 Loaded `launcher/recon.html` in the TV Browser app
-(`http://10.0.0.157:8770/recon.html`). This is the first non-write-free
+(`http://<server-ip>:8770/recon.html`). This is the first non-write-free
 probe — it drives the phoenix `fetcher` to read files and to place a
 marker. **Result: the fetcher rejects every file path. The 100U7Q
 read/traversal primitive does not transplant to this build. Per the

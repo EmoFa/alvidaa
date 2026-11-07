@@ -15,8 +15,8 @@
 | DST | What |
 | --- | --- |
 | 8.8.8.8 | **DoH evasion** (dns.google over :443, see below) — also direct DNS |
-| 192.168.50.1 / 192.168.1.1 | gateways (incl. a stale 192.168.1.1 probe) |
-| 192.168.50.209 :16794 | **the neighbour TCL TV** — Netflix MDX/DIAL cast discovery crossing the LAN |
+| `<gateway>` | the LAN gateway (plus a stale probe from a previous subnet) |
+| `<lan-host>:16794` | **a third-party TV on the same LAN** — Netflix MDX/DIAL cast discovery crossing the LAN. Redacted: it is not our device and not our research subject. |
 | 20.170.76.123 | `ter-jrnl-oc` / `exc-jrnl-oc` (Fluentd journal) |
 | 4.182.131.30 | `evt-oc` telemetry + `abtest-tv` |
 | 20.113.0.141 | `rsc-ads` (monetization) |

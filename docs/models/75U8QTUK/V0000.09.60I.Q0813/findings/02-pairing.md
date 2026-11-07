@@ -23,7 +23,7 @@ $ pgrep -il sidee   →   (none)
 From `~/.sidee/session.json` — tokens redacted, never committed:
 
 ```
-host:          10.0.0.173
+host:          <tv-ip>
 auth_profile:  modern
 brand:         his
 pair_failures: 0

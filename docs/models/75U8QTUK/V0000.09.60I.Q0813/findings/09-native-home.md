@@ -29,7 +29,7 @@ vendor services are retained. Every change has a tested teardown path.
   - sha256 `380d337ecbfa08487768b18cb8342630db1c2880c6e6c14811e6f7d1c72f2c8f`
   - private copy: `firmware/75u8qtuk/operationui/apps/launcher/js/app.js`
 - Root lane armed and uptime continuous (~460 s at start); root SSH on
-  `10.0.0.173:8008` with `server/keys/vidaa_75u8qtuk_ed25519`. **No reboot
+  `<tv-ip>:8008` with `server/keys/vidaa_75u8qtuk_ed25519`. **No reboot
   was performed during this test** because root SSH has no boot persistence
   ([08](08-reboot-rearm.md)).
 
@@ -191,7 +191,7 @@ writes) show:
 One command restores stock and restarts the engine:
 
 ```
-ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173 'sh -s' <<'EOF'
+ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@<tv-ip> 'sh -s' <<'EOF'
 PATH=/basic/bin:/bin:/usr/bin:/sbin:/usr/sbin; export PATH
 D=/var/local/alvidaa
 /bin/rm -f "$D/switch.done" "$D/switch.log"

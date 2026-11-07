@@ -14,7 +14,7 @@
 | Firmware | V0000.06.21U.N1023 → **V0000.06.29X.P0813** | `Hisense_GetFirmWareVersion` |
 | transport_protocol | 3160 | SSDP descriptor |
 | Browser | odin = Chromium 88 (aarch64 UA) | UA string |
-| MACs | wifi `38:64:07:ba:37:28`, eth `dc:9a:7d:28:df:1d` | SSDP |
+| MACs | wifi `<wifi-mac>`, eth `<eth-mac>` | SSDP |
 
 ## What works on U6 (differs from U9)
 

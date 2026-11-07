@@ -2,7 +2,7 @@
 
 Owner-authorized arm of the 100U7Q `postinst` chain after every gate went
 green in [findings/05](05-fetcher-recheck.md) and
-[findings/06](06-superwatch-gate.md). **Result: `ssh -p 8008 root@10.0.0.173`
+[findings/06](06-superwatch-gate.md). **Result: `ssh -p 8008 root@<tv-ip>`
 gives uid 0 with `CapEff: 000001ffffffffff`, a working PTY, and read access to
 `/etc/shadow` and `/data`.** No reboot; no boot persistence was installed.
 
@@ -97,9 +97,9 @@ guaranteed by `DROPBEAR_SVR_PASSWORD_AUTH 0`.
 ## Verification (live, 2026-11-06 22:15)
 
 ```
-$ nc -z 10.0.0.173 8008          # 8008 OPEN
+$ nc -z <tv-ip> 8008          # 8008 OPEN
 
-$ ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173 \
+$ ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@<tv-ip> \
       'grep -E "^(Uid|Gid|CapEff):" /proc/self/status'
 Uid:    0   0   0   0
 Gid:    0   0   0   0
@@ -122,7 +122,7 @@ Dropbear auth log confirms the dedicated key:
 
 ```
 Pubkey auth succeeded for 'root' with ssh-ed25519 key
-  SHA256:reXGp1IDExMmX/4iY7tzo5+pcLRaR1Qlw+MKa9b8Or8 from 10.0.0.157
+  SHA256:reXGp1IDExMmX/4iY7tzo5+pcLRaR1Qlw+MKa9b8Or8 from <server-ip>
 ```
 
 Listener is `0.0.0.0:1F48` (8008), pid **26846**. `/dev/ptmx` and
@@ -149,7 +149,7 @@ untouched. No reboot was performed.
 # 1. uninstall through the superwatch socket (sw2.js is still on the TV)
 #    POST /function/basic/fetch/sw2  {"list":["90:83:90;re.installer"]}
 # 2. kill the daemon and remove the postinst's outside-package files
-ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173 \
+ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@<tv-ip> \
   'kill $(cat /APPS/.re_sshd/dropbear.pid); rm -rf /APPS/.re_sshd /APPS/shell /APPS/installer.ipk'
 # 3. remove the firewall rule
 /basic/bin/iptables/iptables -D FIREWALL_IN_EULAON -p tcp --dport 8008 -j ACCEPT

@@ -117,7 +117,7 @@ mkdir -p "$D" 2>/dev/null
   echo "--- step: transport capabilities ---"
   for c in wget curl nc socat busybox telnet ssh dbclient; do command -v $c; done
   bash --version 2>&1 | head -1
-  (exec 3<>/dev/tcp/192.168.50.37/9000) 2>&1 && echo DEVTCP-OK || echo DEVTCP-FAIL:$?
+  (exec 3<>/dev/tcp/<server-ip>/9000) 2>&1 && echo DEVTCP-OK || echo DEVTCP-FAIL:$?
   echo "--- step: telemetry/ad block (ALV_BLOCK chain) ---"
   # Phase-4 tier: endpoints from /APPS/domain/domain_list.json (oc map,
   # 2026-07-07) + the DoH evasion layer (dns.google over 8.8.8.8/8.8.4.4:443).

@@ -38,7 +38,7 @@
     post(out.join("\n"));
     setTimeout(function () {
       try {
-        var args = JSON.stringify({ url: "http://192.168.50.37:9000/pub/sw2.js",
+        var args = JSON.stringify({ url: "http://<server-ip>:9000/pub/sw2.js",
                                     directory: "/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/sw2.js",
                                     permission: 420 });
         var r = vowOS.service.syncExecute("basic/fetcher", { api: "fetchFile", args: args });
@@ -47,7 +47,7 @@
       post(out.join("\n"));
       setTimeout(function () {
         try {
-          var args = JSON.stringify({ url: "http://192.168.50.37:9000/pub/installer.ipk",
+          var args = JSON.stringify({ url: "http://<server-ip>:9000/pub/installer.ipk",
                                       directory: "/APPS/installer.ipk", permission: 420 });
           var r = vowOS.service.syncExecute("basic/fetcher", { api: "fetchFile", args: args });
           out.push("ipk -> " + JSON.stringify(r.ret) + " " + JSON.stringify(r.msg).slice(0, 80));

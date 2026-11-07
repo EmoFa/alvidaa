@@ -5,7 +5,7 @@
 > is retained as the pre-arm plan.
 
 Ran `launcher/recon-superwatch.html` in the TV Browser app
-(`http://10.0.0.157:8770/recon-superwatch.html`). Two small functions were
+(`http://<server-ip>:8770/recon-superwatch.html`). Two small functions were
 placed into `…/basic/CHA/functions/fetch/` with `fetchFile`, invoked through
 `/function/basic/fetch/…`, and both self-deleted afterwards.
 
@@ -97,7 +97,7 @@ The chain is ready to arm, but **arming is a separate, owner-authorized step**:
    `["70:83:70;re.installer", "71:82:71;<ipk>;re.installer;"]` (uninstall
    then install, empty options).
 4. Verify the `postinst` ran as uid 0 (`POSTINST_RAN`, `CapEff`), then
-   `ssh -p 8008 root@10.0.0.173` with the owner's key.
+   `ssh -p 8008 root@<tv-ip>` with the owner's key.
 5. Teardown: stop Dropbear, remove `/APPS/.re_sshd` and `/APPS/shell`,
    restore `/dev/ptmx` modes, uninstall `re.installer` (`83`).
 

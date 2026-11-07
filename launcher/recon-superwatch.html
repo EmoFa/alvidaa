@@ -34,7 +34,7 @@
   "use strict";
 
   var OUT = document.getElementById("out");
-  var FALLBACK_BASE = "http://10.0.0.157:8770";
+  var FALLBACK_BASE = "http://" + (location.hostname || "127.0.0.1") + ":8770";
   var BASE = /^https?:$/.test(location.protocol) ? location.origin : FALLBACK_BASE;
   var FN_DIR = "/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/functions/fetch/";
 

@@ -1,7 +1,7 @@
 # 05 — Fetcher re-check: findings/04 was a false negative — write primitive is OPEN (2026-11-06)
 
 Loaded `launcher/recon-fetcher.html` in the TV Browser app
-(`http://10.0.0.157:8770/recon-fetcher.html`; TV at `10.0.0.173`). This
+(`http://<server-ip>:8770/recon-fetcher.html`; TV at `<tv-ip>`). This
 re-ran the bridge probe with the *correct* primitive and arg shapes after
 the caveat in [findings/04](04-bridge-recon.md).
 
@@ -55,7 +55,7 @@ unregistered passive GET, not a blocker.
 
 ## Writes — `basic/fetcher` `fetchFile` (both succeeded)
 
-Source URL: `http://10.0.0.157:8770/recon-captures/marker.txt`
+Source URL: `http://<server-ip>:8770/recon-captures/marker.txt`
 (via `vowOS.service.syncExecute("basic/fetcher", {api:"fetchFile",
 args: JSON.stringify({url, directory, permission:420})})`)
 

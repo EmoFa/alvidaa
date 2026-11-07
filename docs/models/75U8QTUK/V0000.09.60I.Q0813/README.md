@@ -21,7 +21,7 @@ package tree ([findings/05](findings/05-fetcher-recheck.md)). All four
 build-dependent prerequisites were then measured ([findings/06](findings/06-superwatch-gate.md)),
 and the chain was armed on 2026-11-06
 ([findings/07](findings/07-root-armed.md)): the IPK `postinst` ran as
-**uid 0 / `CapEff 000001ffffffffff`**, and `ssh -p 8008 root@10.0.0.173`
+**uid 0 / `CapEff 000001ffffffffff`**, and `ssh -p 8008 root@<tv-ip>`
 (via `server/keys/vidaa_75u8qtuk_ed25519`) gives uid 0 with a working PTY.
 No boot persistence — re-arm with commands `83` + `82` after a reboot
 (verified: reboot closed 8008, re-arm reopened it as uid 0).
@@ -167,7 +167,7 @@ unit; root is armed but does not survive a reboot.
    (`tools/u7q/scripts/make_min_installer.py`), wrote it with `fetchFile`,
    and sent `83` then `82` through `sw2.js`. `postinst` ran as uid 0 with
    `CapEff 000001ffffffffff`; verified:
-   `ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@10.0.0.173`
+   `ssh -p 8008 -i server/keys/vidaa_75u8qtuk_ed25519 root@<tv-ip>`
    → uid 0, full caps, **PTY OK**, `/etc/shadow` and `/data` readable.
    `/` and `/application` are still `erofs ro`. No boot persistence:
    after a real reboot 8008 was closed; re-sending `83` + `82` through

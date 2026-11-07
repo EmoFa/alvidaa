@@ -51,8 +51,12 @@ var S = {
   toast: "", toastUntil: 0,
   busy: false,
   focusPicked: false, liveReceived: false, userInteracted: false,
-  autoSwitchId: null, autoSwitchName: "", autoSwitchAt: 0
+  autoSwitchId: null, autoSwitchName: "", autoSwitchAt: 0,
+  overlay: null              // [r3] { open, col } while the app list is up
 };
+// [r3] review aid: ?apps opens the app list on load, so the overlay can be
+// screenshotted without pressing Enter on the couch.
+var OPEN_APPS_ON_LOAD = /[?&]apps/.test(location.search);
 
 function loadCache() {
   try {
@@ -106,6 +110,7 @@ function detectBridge() {
 }
 
 var ROWS = ["inputs", "apps"];
+var OV_COLS_DEFAULT = 5;
 var PAGE = 5;
 
 function pickInitialFocus(fromLiveHello) {
@@ -283,15 +288,33 @@ function items(row) {
                signal: s.signal, glyph: s.glyph || "", val: s.id };
     });
   }
-  var out = (S.apps || []).map(function (a) {
-    return { label: a.name, sub: "", icon: a.icon, val: a.name };
-  });
+  // [r3] ONE door to the apps. The owner does not want every app as its own
+  // tile; the list lives behind this single entry and opens as an overlay.
+  var out = [{
+    label: "Apps",
+    glyph: "\u25A6",
+    sub: (S.apps && S.apps.length) ? (S.apps.length + " apps") : "",
+    val: "__apps__"
+  }];
   var scs = S.shortcuts || [];
   for (var i = 0; i < scs.length; i++) {
     out.push({ label: scs[i].name, glyph: scs[i].glyph || "\u2605",
                shortcut: scs[i].url, sub: "", val: null });
   }
   return out;
+}
+
+// [r3] overlay state for the app list
+function overlayOpen() { return !!(S.overlay && S.overlay.open); }
+function overlayApps() { return S.apps || []; }
+function openOverlay() {
+  S.overlay = { open: true, col: 0 };
+  draw();
+}
+if (OPEN_APPS_ON_LOAD) { setTimeout(openOverlay, 600); }
+function closeOverlay() {
+  if (S.overlay) S.overlay.open = false;
+  draw();
 }
 
 function installVisible() {
@@ -681,6 +704,80 @@ function drawRow(idx, y, title) {
 
 var lastDrawnMinute = -1;
 
+// ---------------------------------------------------------------- overlay
+// [r3] The app list, behind one door. Drawn last so it sits above the panned
+// stage, the status pill and the toasts. Navigation is a simple grid; the
+// window scrolls so the focused row is always visible.
+var OV_COLS = 5;
+function ovVisibleRows(panelH) {
+  return Math.max(1, Math.floor((panelH - 64) / 96));
+}
+function drawOverlay() {
+  var apps = overlayApps();
+  var n = apps.length;
+
+  ctx.fillStyle = "rgba(3, 5, 9, 0.86)";
+  ctx.fillRect(0, 0, W, H);
+
+  var panelX = left() - 24, panelW = W - 2 * (left() - 24);
+  var panelY = 140, panelH = H - 280;
+
+  ctx.fillStyle = "rgba(14, 18, 26, 0.97)";
+  roundRect(panelX, panelY, panelW, panelH, 24); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1;
+  roundRect(panelX, panelY, panelW, panelH, 24); ctx.stroke();
+
+  ctx.font = F.label; ctx.fillStyle = "#64748b";
+  ctx.fillText("APPS", panelX + 28, panelY + 34);
+  ctx.font = F.tiny; ctx.fillStyle = "#475569"; ctx.textAlign = "right";
+  ctx.fillText("OK to open \u00b7 BACK to close", panelX + panelW - 28, panelY + 34);
+  ctx.textAlign = "left";
+
+  if (n === 0) {
+    ctx.font = F.mid; ctx.fillStyle = "#475569";
+    ctx.fillText("no apps reported", panelX + 28, panelY + 84);
+    return;
+  }
+
+  var gx0 = panelX + 28, gy0 = panelY + 64;
+  var cw = (panelW - 56) / OV_COLS, ch = 96;
+  var visRows = ovVisibleRows(panelH);
+  var firstRow = Math.max(0, Math.floor(S.overlay.col / OV_COLS) - visRows + 1);
+  var first = firstRow * OV_COLS;
+
+  for (var i = first; i < n; i++) {
+    var r = Math.floor((i - first) / OV_COLS), c = i % OV_COLS;
+    if (r >= visRows) break;
+    var x = gx0 + c * cw, y = gy0 + r * ch;
+    var focused = (S.overlay.col === i);
+
+    ctx.fillStyle = focused ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.04)";
+    roundRect(x + 4, y + 4, cw - 8, ch - 12, 14); ctx.fill();
+    if (focused) {
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+      roundRect(x + 4, y + 4, cw - 8, ch - 12, 14); ctx.stroke();
+    }
+
+    var a = apps[i], im = a.icon && ICONS[a.icon], ih = 36;
+    if (im && im.complete && im.naturalWidth) {
+      var sc = Math.min(ih / im.naturalWidth, ih / im.naturalHeight);
+      ctx.drawImage(im, x + cw / 2 - im.naturalWidth * sc / 2, y + 26,
+                    im.naturalWidth * sc, im.naturalHeight * sc);
+    } else {
+      ctx.fillStyle = "rgba(148,163,184,0.45)";
+      roundRect(x + cw / 2 - ih / 2, y + 26, ih, ih, 8); ctx.fill();
+    }
+
+    ctx.font = F.tiny;
+    ctx.fillStyle = focused ? "#f8fafc" : "#94a3b8";
+    ctx.textAlign = "center";
+    var nm = a.name || "";
+    if (nm.length > 18) nm = nm.slice(0, 17) + "\u2026";
+    ctx.fillText(nm, x + cw / 2, y + ch - 20);
+    ctx.textAlign = "left";
+  }
+}
+
 function draw() {
   HIT = [];
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
@@ -753,15 +850,15 @@ function draw() {
 
   // [next r2] row geometry: the dock lives at the bottom edge of view 1,
   // apps + install live one view down (stage y + PAN_VIEW).
-  drawRow(0, 380, "INPUTS & SOURCES");
-  drawRow(1, 636, "APPS & CHANNELS");
+  drawRow(0, 424, "INPUTS & SOURCES");
+  drawRow(1, 636, "APPS");
 
   // [next r2] scroll affordance on view 1: apps exist below the fold
   if (!S.autoSwitchAt && Date.now() >= S.toastUntil && items(1).length) {
     ctx.font = F.tiny;
     ctx.fillStyle = "#475569";
     ctx.textAlign = "center";
-    ctx.fillText("\u25BC  APPS & CHANNELS", W / 2, 524);
+    ctx.fillText("\u25BC  APPS", W / 2, 536);
     ctx.textAlign = "left";
   }
 
@@ -877,6 +974,9 @@ function draw() {
     ctx.fillText(tmsg, W / 2, tby + 18);
     ctx.textAlign = "left";
   }
+
+  // [r3] the app list sits above everything else
+  if (overlayOpen()) drawOverlay();
 }
 
 // Idle timer: only redraw when the minute ticks over, a toast expires, or auto-switch counts down
@@ -910,6 +1010,7 @@ function activate(row, col) {
   if (row === 2) { installAsApp(); return; }
   var it = items(row)[col];
   if (!it) return;
+  if (it.val === "__apps__") { openOverlay(); return; }
   if (it.shortcut) {
     saveLastUsed(row, it.shortcut);
     location.href = it.shortcut;
@@ -920,6 +1021,27 @@ function activate(row, col) {
 
 document.addEventListener("keydown", function (e) {
   S.userInteracted = true;
+
+  // [r3] the app overlay owns the remote while it is open
+  if (overlayOpen()) {
+    var ovApps = overlayApps(), ovN = ovApps.length;
+    if (e.key === "ArrowRight") { S.overlay.col = Math.min(ovN - 1, S.overlay.col + 1); }
+    else if (e.key === "ArrowLeft") { S.overlay.col = Math.max(0, S.overlay.col - 1); }
+    else if (e.key === "ArrowDown") { S.overlay.col = Math.min(ovN - 1, S.overlay.col + OV_COLS); }
+    else if (e.key === "ArrowUp") { S.overlay.col = Math.max(0, S.overlay.col - OV_COLS); }
+    else if (e.key === "Enter") {
+      var ovA = ovApps[S.overlay.col];
+      if (ovA) { S.overlay.open = false; act("launch", ovA.name); }
+    }
+    else if (e.key === "Escape" || e.key === "Backspace" ||
+             e.key === "GoBack" || e.key === "BrowserBack" || e.key === "Back") {
+      closeOverlay();
+    }
+    draw();
+    e.preventDefault();
+    return;
+  }
+
   if (S.autoSwitchAt) {
     cancelAutoSwitch();
     e.preventDefault();

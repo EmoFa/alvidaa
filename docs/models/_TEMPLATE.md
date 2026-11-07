@@ -27,7 +27,7 @@ differs, say where.
 ## What was measured
 
 A table is usually the clearest form. Every row needs a label from
-[the publication policy](../../DISCLOSURE.md#verification-labels).
+[the publication policy](https://github.com/carteakey/alvidaa/blob/main/docs/DISCLOSURE.md#verification-labels).
 
 | Claim | Evidence | Source |
 | --- | --- | --- |
@@ -60,5 +60,5 @@ items is usually a guide that stopped looking.
 ## Cross-reference
 
 - Related guides: <links>
-- Method catalogue: [EXPLOITS.md](../../research/EXPLOITS.md)
-- Publication policy: [DISCLOSURE.md](../../DISCLOSURE.md)
+- Method catalogue: [EXPLOITS.md](https://github.com/carteakey/alvidaa/blob/main/docs/research/EXPLOITS.md)
+- Publication policy: [DISCLOSURE.md](https://github.com/carteakey/alvidaa/blob/main/docs/DISCLOSURE.md)

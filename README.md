@@ -22,6 +22,9 @@ step is designed to be undone. Built with — and designed for — AI coding
 sessions: point your agent at [AGENTS.md](AGENTS.md); the prompt ladder
 that worked is in [the prompt ladder](docs/project/HACK-YOUR-OWN.md).
 
+What this repo publishes, and what it deliberately does not:
+[docs/DISCLOSURE.md](docs/DISCLOSURE.md).
+
 **Read it as a site:** <https://carteakey.github.io/alvidaa/> — the same
 markdown, rendered with the tested-model matrix, the model guides and the
 method catalogue in one place. Generated from the repo by
@@ -35,6 +38,7 @@ method catalogue in one place. Generated from the repo by
 | **root the TV** | [docs/models/](docs/models/) — match your model *and* firmware string, then read [SECURITY.md](SECURITY.md) |
 | **see what works on which TV** | [Tested models](#tested-models) and [EXPLOITS.md](docs/research/EXPLOITS.md) |
 | **contribute a report** | [TESTED-MODELS.md](docs/research/TESTED-MODELS.md) — PR, not issue |
+| **understand what's published and why** | [DISCLOSURE.md](docs/DISCLOSURE.md) |
 
 ## The two lanes
 
@@ -210,6 +214,14 @@ does not work is the part that saves the next person time.
 No system partitions were written during this research; verified boot stayed
 locked and green. Changes were designed to be reversible, but a complete
 teardown has not been verified: it also requires restoring any edited UI files
-and removing the root hook and its associated tools and configuration. The certificates and tokens in
-`server/keys/` are device credentials — never commit them. Disclosure
-status and reasoning: [SECURITY.md](SECURITY.md).
+and removing the root hook and its associated tools and configuration. The
+certificates and tokens in `server/keys/` are device credentials — never
+commit them.
+
+### Disclosure
+
+The findings here were reported to Hisense/VIDAA Product Security on
+2026-10-29 and logged as **`VIDAA-PSIRT-2026-005`**; their response is
+recorded in [docs/DISCLOSURE.md](docs/DISCLOSURE.md), which also states what
+this repo publishes and what it withholds. The reasoning behind publishing in
+parallel rather than waiting: [SECURITY.md](SECURITY.md).

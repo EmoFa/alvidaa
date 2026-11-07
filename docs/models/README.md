@@ -31,6 +31,10 @@ in the TV's system information and compare it character by character.
 | `65U7H` (board `65A65GAVT`) | `V0000.06.29X.P0813` (VIDAA `U06.29X`, India/EM_C) | MediaTek MTK9900, aarch64 | bridge read/write verified (WebSDK file bridge, origin-gated to `vidaahub.com`, `../` traversal); MQTT pairing issues tokens but actions stay silent; **no exec door found — root not achieved (WIP)** | none — no root (WIP) | [README](65U7H/V0000.06.29X.P0813/README.md) |
 | `75U8QTUK` | `V0000.09.60I.Q0813` (VIDAA `U09.60`, UK/GBR) | MediaTek MTK9655, aarch64 kernel | fingerprint only (2026-11-06); same firmware id as the 100U7Q → 100U7Q `fetcher` + `postinst` chain expected to transplant, **UNVERIFIED on this unit** | n/a (nothing armed yet) | [README](75U8QTUK/V0000.09.60I.Q0813/README.md) · [EVIDENCE](75U8QTUK/V0000.09.60I.Q0813/EVIDENCE.md) · [MODDING](75U8QTUK/V0000.09.60I.Q0813/MODDING.md) |
 
+New guides start from [_TEMPLATE.md](_TEMPLATE.md), which carries the
+fingerprint, the evidence labels and the required *What this guide includes
+and leaves out* section.
+
 This table is hand-maintained; the [tested-model matrix](../../README.md#tested-models)
 is generated from `inventory.json` and wins if the two disagree. `scripts/check.sh`
 fails if a guide exists here without a row.

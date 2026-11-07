@@ -1,6 +1,7 @@
 server/keys/
 server/iconcache/
 server/recon-report*.json
+launcher/recon-captures/
 server/.paired
 server/.host
 server/.home_watch_off

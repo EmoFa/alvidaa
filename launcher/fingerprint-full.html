@@ -1,0 +1,201 @@
+<!doctype html>
+<!-- Comprehensive, read-only fingerprint page. Combines fingerprint.html +
+     identity.html + a passive phoenix/UPnP reachability probe into one
+     screen you can screenshot or POST to /api/recon.
+
+     WRITE-FREE on purpose: no fileWrite, no bridge write, no phoenix
+     fetcher command sent. Passive probes only — opens ws/http connections
+     to localhost and records whether they come up, nothing more. Safe to
+     run on any VIDAA TV before the launcher lane is up. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>fingerprint-full</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; color: #ccc;
+               font: 20px/1.4 Menlo, Consolas, monospace; }
+  pre { white-space: pre-wrap; word-break: break-all; padding: 10px; margin: 0; }
+  h1 { color: #6cf; padding: 10px 10px 0; font-size: 22px; margin: 0; }
+</style>
+</head>
+<body>
+<h1>fingerprint-full (read-only; no writes to the TV)</h1>
+<pre id="out">capturing…</pre>
+<script>
+(function () {
+  "use strict";
+  var out = document.getElementById("out");
+  var rep = {
+    started: new Date().toISOString(),
+    nav: {},
+    loc: {},
+    screen: {},
+    hisense: {},
+    websdk: {},
+    hisense_fn_names: [],
+    websdk_fn_names: [],
+    phoenix: {},
+    upnp: {}
+  };
+
+  function safeStr(v, cap) {
+    if (v == null) return "(no return)";
+    try {
+      if (typeof v === "object") v = JSON.stringify(v);
+    } catch (e) { v = "(unstringifiable: " + e + ")"; }
+    return String(v).slice(0, cap || 600);
+  }
+
+  function callFn(bucket, name) {
+    try {
+      var f = window[name];
+      if (typeof f !== "function") { rep[bucket][name] = "(absent)"; return; }
+      rep[bucket][name] = safeStr(f());
+    } catch (e) { rep[bucket][name] = "ERR " + e; }
+  }
+
+  function render() {
+    try { out.textContent = JSON.stringify(rep, null, 1); } catch (e) {}
+  }
+
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag || "fingerprint-full",
+                              at: new Date().toISOString(), report: rep }));
+    } catch (e) {}
+  }
+
+  // 1 — navigator / screen / location (document origin, UA, locale)
+  try {
+    var n = navigator || {};
+    rep.nav.userAgent = String(n.userAgent || "");
+    rep.nav.platform = String(n.platform || "");
+    rep.nav.language = String(n.language || "");
+    rep.nav.languages = (n.languages || []).join(",");
+    rep.nav.vendor = String(n.vendor || "");
+    rep.nav.hardwareConcurrency = String(n.hardwareConcurrency || "");
+    rep.nav.deviceMemory = String(n.deviceMemory || "");
+    rep.nav.onLine = String(n.onLine);
+  } catch (e) { rep.nav._err = String(e); }
+
+  try {
+    var s = screen || {};
+    rep.screen.width = s.width; rep.screen.height = s.height;
+    rep.screen.colorDepth = s.colorDepth; rep.screen.pixelDepth = s.pixelDepth;
+    rep.screen.orientation = (s.orientation && s.orientation.type) || "";
+    rep.screen.devicePixelRatio = window.devicePixelRatio;
+  } catch (e) { rep.screen._err = String(e); }
+
+  try {
+    var l = location || {};
+    rep.loc.href = l.href; rep.loc.origin = l.origin; rep.loc.protocol = l.protocol;
+    rep.loc.host = l.host; rep.loc.hostname = l.hostname; rep.loc.port = l.port;
+  } catch (e) { rep.loc._err = String(e); }
+  rep.secureContext = String(window.isSecureContext);
+
+  // 2 — the canonical Hisense_* identity surface
+  var HISENSE = [
+    "Hisense_GetFirmWareVersion", "Hisense_GetChipSetName", "Hisense_GetTVType",
+    "Hisense_GetModelName", "Hisense_GetFirmWare", "Hisense_GetSN",
+    "Hisense_GetDeviceID", "Hisense_GetSerialType", "Hisense_GetDeviceCode",
+    "Hisense_GetFeatureCode", "Hisense_GetCapabilityCode", "Hisense_GetUuid",
+    "Hisense_GetBrand", "Hisense_GetRegion", "Hisense_GetCountryCode",
+    "Hisense_GetOSVersion", "Hisense_GetPanelResolution", "Hisense_GetMenuScheme",
+    "Hisense_GetDeviceInfo", "Hisense_GetNetworkInfo", "Hisense_GetApiVersion",
+    "Hisense_GetMacAddress", "Hisense_GetWifiMacAddress", "Hisense_GetIpAddress",
+    "Hisense_GetSystemLanguage", "Hisense_GetTimeZone", "Hisense_GetCurrentTime"
+  ];
+  HISENSE.forEach(function (n) { callFn("hisense", n); });
+
+  // 3 — WebSDK_* surface (U9.60-era bridge layer; getters are safe)
+  var WEBSDK = [
+    "WebSDK_GetDeviceInfo", "WebSDK_GetSystemInfo", "WebSDK_GetNetworkInfo",
+    "WebSDK_GetChipSetName", "WebSDK_GetFirmWareVersion", "WebSDK_GetOSVersion",
+    "WebSDK_GetModelName", "WebSDK_GetSerialType", "WebSDK_GetCountryCode"
+  ];
+  WEBSDK.forEach(function (n) { callFn("websdk", n); });
+
+  // 4 — enumerate every Hisense_* / WebSDK_* function reachable on window
+  try {
+    var keys = Object.keys(window);
+    rep.hisense_fn_names = keys.filter(function (k) {
+      return k.indexOf("Hisense_") === 0 && typeof window[k] === "function";
+    });
+    rep.websdk_fn_names = keys.filter(function (k) {
+      return k.indexOf("WebSDK_") === 0 && typeof window[k] === "function";
+    });
+  } catch (e) { rep.hisense_fn_names = ["ERR " + e]; }
+
+  // 5 — Phoenix HTTP reachability (http://localhost:9009/) — read-only GET.
+  //     No fetcher command sent. We just want to see whether the service is
+  //     accepting connections and what the root path returns.
+  try {
+    var hx = new XMLHttpRequest();
+    hx.timeout = 3000;
+    hx.open("GET", "http://localhost:9009/", true);
+    hx.onreadystatechange = function () {
+      if (hx.readyState === 4) {
+        rep.phoenix.http_9009 = { status: hx.status,
+                                  body: safeStr(hx.responseText, 300) };
+        render();
+      }
+    };
+    hx.ontimeout = function () { rep.phoenix.http_9009 = { status: "timeout" }; render(); };
+    hx.onerror = function () { rep.phoenix.http_9009 = { status: "error" }; render(); };
+    hx.send();
+  } catch (e) { rep.phoenix.http_9009 = { status: "exception: " + e }; }
+
+  // 6 — Phoenix WebSocket reachability (wss://localhost:9888) — open-and-close.
+  //     We record whether the socket opens; we DO NOT send any message. The
+  //     fetcher-start command belongs to a separate, intentional step.
+  try {
+    var ws = new WebSocket("wss://localhost:9888");
+    var wsDone = false;
+    var wsClose = function (state) {
+      if (wsDone) return;
+      wsDone = true;
+      rep.phoenix.ws_9888 = state;
+      try { ws.close(); } catch (e) {}
+      render();
+    };
+    ws.onopen = function () { wsClose({ status: "open", protocol: ws.protocol || "" }); };
+    ws.onerror = function () { wsClose({ status: "error" }); };
+    ws.onclose = function (ev) { if (!wsDone) wsClose({ status: "closed-before-open", code: ev.code }); };
+    setTimeout(function () { wsClose({ status: "timeout-3s" }); }, 3000);
+  } catch (e) { rep.phoenix.ws_9888 = { status: "exception: " + e }; }
+
+  // 7 — UPnP descriptor probe on localhost. The vendor UPnP service usually
+  //     binds the LAN IP (not loopback), so this is low-success — recorded
+  //     for completeness; the authoritative capture is the Pi-side
+  //     tools/ssdp-descriptor.sh script.
+  var UPNP_PORTS = [1900, 2869, 5000, 8008, 49152, 49153, 49154, 49200];
+  UPNP_PORTS.forEach(function (p) {
+    try {
+      var hx = new XMLHttpRequest();
+      hx.timeout = 1500;
+      hx.open("GET", "http://localhost:" + p + "/description.xml", true);
+      hx.onreadystatechange = function () {
+        if (hx.readyState === 4 && hx.status) {
+          rep.upnp["loopback_" + p] = { status: hx.status,
+                                        body: safeStr(hx.responseText, 400) };
+          render();
+        }
+      };
+      hx.ontimeout = function () { /* omit — cuts noise */ };
+      hx.onerror = function () { /* omit */ };
+      hx.send();
+    } catch (e) { /* omit */ }
+  });
+
+  // final render + POSTs. Everything above is synchronous or has its own
+  // completion callback; these pulls wrap up what ran synchronously.
+  render(); save("fingerprint-full-start");
+  setTimeout(function () { render(); save("fingerprint-full-mid"); }, 2000);
+  setTimeout(function () { render(); save("fingerprint-full-end"); }, 5000);
+})();
+</script>
+</body>
+</html>

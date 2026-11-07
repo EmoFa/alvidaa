@@ -32,6 +32,15 @@ boot-time home. Ownership: this document and everything under `launcher/` +
   HTTP static + WebSocket + `/icon/*` proxy, config-driven allowlist/renames/
   glyphs/`autoSwitch`, event-driven + 3s poll home watcher, and guards against
   transient empty `applist`/`sourcelist` payloads during boot churn.
+- **Per-input visual identity (`bg`/`logo`, staged r5)**: `config.json`
+  `inputs` entries may carry optional `bg` (wallpaper) and `logo` (image)
+  paths — launcher-dir-relative URLs (`/assets/…` when live, `/next/assets/…`
+  while staged) so they work offline. When an input is focused the page
+  cross-fades to its background (~400ms canvas ease, no CSS) and draws the
+  logo beside the big-label machine name; empty fields keep the date
+  wallpaper and the text-only label. Placeholder sets for review:
+  `tools/make_input_assets.py` → `launcher/next/assets/` (neutral + distinct);
+  the staged page wires them with `?demoassets` and pins focus with `?col=N`.
 - TV side (`launcher/index.html`, v1.3):
   - **1080p HiDPI canvas**: renders at `1920×1080` (`SCALE = 2` over logical `960×540` layout coordinates, with `?540p` fallback for older sets).
   - **0ms cold-paint cache (`localStorage`)**: renders cached inputs, apps, and shortcuts on frame 1 before `/ws` connects, showing `cached · reconnecting…` if the server is restarting.

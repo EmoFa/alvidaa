@@ -320,6 +320,8 @@ func (b *Bridge) visibleSources() []map[string]any {
 			"id":     s["sourceid"],
 			"name":   display,
 			"glyph":  over.Glyph,
+			"bg":     over.BG,
+			"logo":   over.Logo,
 			"signal": sig,
 		})
 	}

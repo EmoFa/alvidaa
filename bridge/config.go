@@ -25,6 +25,11 @@ type Config struct {
 type Input struct {
 	Name  string `json:"name"`
 	Glyph string `json:"glyph"`
+	// Per-input visual identity (issue #34): BG is a wallpaper path and Logo
+	// an image path, both launcher-dir-relative URLs ("/next/assets/…") so
+	// they work offline. Empty means the page keeps its fallbacks.
+	BG    string `json:"bg"`
+	Logo  string `json:"logo"`
 }
 
 type Shortcut struct {

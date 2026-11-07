@@ -464,6 +464,8 @@ class TVBridge:
             out.append({"id": s.get("sourceid"),
                         "name": over.get("name") or s.get("displayname") or s.get("sourcename"),
                         "glyph": over.get("glyph", ""),
+                        "bg": over.get("bg", ""),
+                        "logo": over.get("logo", ""),
                         "signal": s.get("is_signal") == "1" or s.get("has_signal") == "1"})
         return out
 

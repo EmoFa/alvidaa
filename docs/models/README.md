@@ -4,6 +4,7 @@ This directory holds **model- and firmware-specific** root and modding guides.
 A guide is published only for the exact model *and* firmware string it was
 recorded on. Cross-model material lives in `docs/research/`.
 
+- [43A5FE / MTK9602 guide](43A5FE/V0010.09.09A.P0930/README.md)
 - [50A51HUV / MTK9602 guide](50A51HUV/09.01O.P0813/README.md)
 - [50A51HUV findings](50A51HUV/09.01O.P0813/FINDINGS.md)
 - [method inventory](../research/EXPLOITS.md)
@@ -16,6 +17,7 @@ in the TV's system information and compare it character by character.
 
 | Model | Firmware | SoC class | Result | Persistence | Guides |
 |---|---|---|---|---|---|
+| `43A5FE` | `V0010.09.09A.P0930` (VIDAA `U07.51`, SDK 6.1.2) | MediaTek MTK9602 | root via browser path traversal + `otaTest.sh` boot hook; native Node v20; native UI debloat | `rc.local` hook, observed across cold reboots | [README](43A5FE/V0010.09.09A.P0930/README.md) |
 | `50A51HUV` | `09.01O.P0813` (VIDAA `U09.01`, US/CAN) | MediaTek MTK9602 | root via browser `../` traversal + `otaTest.sh` boot hook; key-only SSH | `rc.local` hook, observed across boot | [README](50A51HUV/09.01O.P0813/README.md) · [FINDINGS](50A51HUV/09.01O.P0813/FINDINGS.md) |
 | `HE40E5600FFWTS` | `V0100.01.00A.N0410` | MediaTek MT53xx / MT5863 class, ARMv7 Cortex-A53 | root via browser + loader shadow; key-only Dropbear SSH on 22; PTY | `HamService` wrapper; owner-verified across reboots (2026-11-04) | [README](HE40E5600FFWTS/V0100.01.00A.N0410/README.md) · [EVIDENCE](HE40E5600FFWTS/V0100.01.00A.N0410/EVIDENCE.md) · [MODDING](HE40E5600FFWTS/V0100.01.00A.N0410/MODDING.md) |
 | `100U7Q` (`100U70QEVS`) | `V0000.09.60I.Q0813` (VIDAA `U09.60`, EU_A) | MediaTek MT9655, 32-bit ARM userland | root via `fetcher` write + package `postinst`; key-only root SSH on 8008; PTY | **none automatic**; re-arm with uninstall `83` + install `82` after each reboot | [README](100U7Q/V0000.09.60I.Q0813/README.md) · [EVIDENCE](100U7Q/V0000.09.60I.Q0813/EVIDENCE.md) · [MODDING](100U7Q/V0000.09.60I.Q0813/MODDING.md) |

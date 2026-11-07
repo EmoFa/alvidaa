@@ -20,6 +20,34 @@ VIDAA and Hisense Product Security (`VIDAASecurity@vidaa.com`,
 `report@connectlife.io`) on 2026-10-29, and this repository is published in
 parallel rather than waiting on a 90-day window.** If/when Hisense patches or
 responds, findings and status will be annotated here.
+
+## Vendor response
+
+**2026-11-07 — logged as `VIDAA-PSIRT-2026-005`.** VIDAA Product Security
+acknowledged the report and gave this assessment:
+
+- The **root path** (unauthenticated localhost bridge, `../` traversal,
+  `/var/local` boot hook) was **reported to them earlier** and is **already
+  fixed on most devices**. Remaining devices, including the reference
+  `50A51HUV` on `V0000.09.01O.P0813`, are to receive the fix by OTA update.
+- The **MQTT authentication issue** (client-certificate identity gate and the
+  dynamic credential derivation) is **new to them** and under investigation.
+
+They asked for this repository to be taken private and for the exploitation
+detail to be removed from the write-up until the fixes ship. **The repository
+stays public**, and the reasoning is unchanged from the section above: the
+material has been public since 2026-10-29, is forked and mirrored, and is
+discussed in public threads, so making it private now would remove the one
+maintained copy without removing the information. The write-up carries the
+vendor's position at the top of the page instead.
+
+On OTA: the guidance in this repository is stated as a **tradeoff, not a
+recommendation**. Accepting Hisense's fixes means giving up root; keeping root
+means declining future security patches. Both are defensible choices for an
+owner to make deliberately.
+
+Status will be updated here as fixes land and as other models in the matrix
+report in.
 The reasoning, stated openly so you can weigh it yourself:
 
 - The documented MQTT control path requires LAN access and pairing. Separately,

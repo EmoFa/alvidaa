@@ -321,6 +321,30 @@
         "root": "achieved + boot-persistent (2026-11-06; re_sshd serviceList autostart, offline re-arm; see 02-root-ssh.md)",
         "notes": "paired + launcher live 2026-11-06; client cert only accepted with colon-formatted TV MAC; broker validates client-cert CA at TLS layer (stricter than 50A51HUV); no rc.local hook lane; superwatch ids 53/54 not 82/83"
       }
+    },
+    {
+      "id": "V0000.09.60A.Q0707",
+      "model": "43A5LE (internal 43A60LEVS_0002)",
+      "region": "EU_A (ITA)",
+      "soc": "MTK9603",
+      "vidaa_os": "U09.60",
+      "transport_protocol": "?",
+      "browser": "Chromium 111 (armv7l; UA SurfMaster/3.0.1)",
+      "build_date": "2026-07-07",
+      "tested_by": [
+        "gh:antmagl"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "working",
+        "file_bridge_traversal": "untested",
+        "file_bridge_write": "gated",
+        "identity_gate": "working",
+        "euladpp_untar": "untested",
+        "devtools_forge": "untested",
+        "root": "untested",
+        "notes": "Launcher lane only, 2026-11-06. Pairing: 2024 VidaaAppAndroidV01 cert (res/El.p12 from com.universal.remote.multi 1.09.05.001.0) + modern credentials; colon-formatted MAC required (12-hex form returns rc 135); PIN accepted, tokenissuance issued, and two-way actions (state/gettvstate/applist/sourcelist/launchapp) answered. Launcher page + /ws + icon proxy + server-side watcher bounce verified end-to-end; /api/open must launch appId 16 'Browser' with an overridden url - a custom appId (vidaa-recon / vidaa-home) is silently ignored on this build. Native self-install closed: HiUtils fileWrite on websdk/Appinfo.json -> {ret:false, code:503, msg:'client request permission check error, please check appconfig'}; fileRead of the same path works (4314-byte registry, 4 entries). Hisense_installApp and WebSDK_createFileRequest are absent; HiUtils_createRequest present; 95 Hisense_* functions callable; screen 1920x1080 @1.5. transport_protocol not measured (SSDP multicast filtered on the test LAN). Root not attempted."
+      }
     }
   ]
 }

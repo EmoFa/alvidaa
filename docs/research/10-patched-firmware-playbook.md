@@ -22,6 +22,7 @@
 | 09.60W.Q0612 (EU_A) (43E7DS (43Q60SEVS_02, serial type 43E7SE), EU_A (DEU)) | MTK9603 | closed | gated | working (websdk self-install blocked); the FaaS fetcher write route is not gated | untested | achieved (13 postinst runs as uid 0; no Dropbear on this build — boot persistence via the vendor service manager) | [@ryjr2ddznn-lab](https://github.com/ryjr2ddznn-lab) |
 | V0000.09.61B.Q0721 (50A6Q (50A60QXVT), UAE / intl (SSDP region 4)) | NT72690 (Novatek; aarch64 kernel, armhf ELF32 userland) | closed (validator string, not errno) | gated (direct fileWrite 503; ungated fetcher fetchFile works) | working (bypassed in-process: ISC origintype=service skips the check) | blocked (root-owned archive) | achieved (boot-persistent PFM/eval chain uid=0 + key-only SSH on 2222 verified 2026-11-06; self-healing re-plant loops) | [@aadnaane](https://github.com/aadnaane) |
 | V0000.09.09O.P1015 (55A7KAU (internal 55U66GAVT), AU (AUS; GetCountryCode AUS, SSDP region 6)) | MTK9602 | working | untested | untested | untested | achieved + boot-persistent (2026-11-06; re_sshd serviceList autostart, offline re-arm; see 02-root-ssh.md) | @owner (this session) |
+| V0000.09.60A.Q0707 (43A5LE (internal 43A60LEVS_0002), EU_A (ITA)) | MTK9603 | untested | gated | working | untested | untested | [@antmagl](https://github.com/antmagl) |
 <!-- INVENTORY:END -->
 
 **Read of the table:** the July EU_A reporter observed `fileWrite` rejected

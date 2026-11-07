@@ -92,3 +92,24 @@ wiretap baseline measures against.
 - `/usr/local/etc/apm/` — app-memory-config, app_key_map (the app
   manager's per-app budget/keys).
 - `process.env.json` (hisenseUI): `REPORT: false` in the build snapshot.
+
+## 7. Audio: the ALSA capture lane is dead on this model (2026-11-06)
+
+The userspace-visible ALSA stack looks usable — card 0 `MStar-MAD`, five
+`mad_pcm` devices each `playback 1 : capture 1`, `/dev/snd/pcmC0D0{c,p}`
+present (`root:mi 660`) — but it carries no audio. The capture probe
+([tools/audio/](../../../../../tools/audio/README.md) — links against the
+TV's own `/vendor/lib/libasound.so.2`; full method and evidence there)
+measured: `hw:0,0` opens, `set_params` and `snd_pcm_start` succeed, then
+**every `snd_pcm_readi` returns EIO** (`snd_pcm_recover` −5, `frames=0`).
+The EIO is the correct answer, not a failure: during playback **all ten
+PCMs report `closed`** in `/proc/asound/card0/pcm*/sub0/status` — tested
+with audio going to an optical (S-PDIF) speaker **and** to the internal
+speakers, same result both ways, which rules out "tested the wrong
+output". Conclusion: the TV's audio never enters a userspace ALSA stream;
+the `mad_pcm` nodes are the MStar decoder's internal interface, not the
+output mix. Consequence: **snapcast and librespot are not viable through
+ALSA on this model** (issue #19) — an architecture answer, not a build
+one. One path stays untested and is labelled as such: the TV browser
+(`odin`) declares `--alsa-output-device=default;hw:0,0;…`, so audio
+played *in a web page* might open a PCM a native app does not.

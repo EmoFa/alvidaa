@@ -368,6 +368,30 @@
         "root": "untested",
         "notes": "Launcher lane only, 2026-11-06. Pairing: 2024 VidaaAppAndroidV01 cert (res/El.p12 from com.universal.remote.multi 1.09.05.001.0) + modern credentials; colon-formatted MAC required (12-hex form returns rc 135); PIN accepted, tokenissuance issued, and two-way actions (state/gettvstate/applist/sourcelist/launchapp) answered. Launcher page + /ws + icon proxy + server-side watcher bounce verified end-to-end; /api/open must launch appId 16 'Browser' with an overridden url - a custom appId (vidaa-recon / vidaa-home) is silently ignored on this build. Native self-install closed: HiUtils fileWrite on websdk/Appinfo.json -> {ret:false, code:503, msg:'client request permission check error, please check appconfig'}; fileRead of the same path works (4314-byte registry, 4 entries). Hisense_installApp and WebSDK_createFileRequest are absent; HiUtils_createRequest present; 95 Hisense_* functions callable; screen 1920x1080 @1.5. transport_protocol not measured (SSDP multicast filtered on the test LAN). Root not attempted."
       }
+    },
+    {
+      "id": "V0010.09.09A.P0930",
+      "model": "43A5FE",
+      "region": "EU",
+      "soc": "MTK9602",
+      "vidaa_os": "U07.51",
+      "transport_protocol": "3290",
+      "browser": "Chromium 111 \"odin\"",
+      "build_date": "2025-09-30",
+      "tested_by": [
+        "community"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "working",
+        "file_bridge_traversal": "open",
+        "file_bridge_write": "open",
+        "identity_gate": "closed",
+        "euladpp_untar": "untested",
+        "devtools_forge": "blocked",
+        "root": "achieved",
+        "notes": "Root via browser path traversal + otaTest.sh boot hook; native Node v20 runtime; native UI debloat mapped via hiddenApps.json"
+      }
     }
   ]
 }

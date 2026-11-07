@@ -302,6 +302,13 @@ func (b *Bridge) visibleSources() []map[string]any {
 		name, _ := s["sourcename"].(string)
 		over := inputs[strings.ToLower(name)]
 		display, _ := s["displayname"].(string)
+		// displayname2 is what the TV reports for the device actually on the
+		// port ("PlayStation 5", "Fire TV Stick") via HDMI device discovery.
+		// Prefer it over the port label, then a config override wins over both.
+		device, _ := s["displayname2"].(string)
+		if strings.TrimSpace(device) != "" {
+			display = device
+		}
 		if over.Name != "" {
 			display = over.Name
 		}

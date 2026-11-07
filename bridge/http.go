@@ -95,6 +95,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.json(w, map[string]any{"ok": true, "apps": h.b.visibleApps()})
 		return
 	case r.URL.Path == "/api/sources":
+		// ?raw=1 returns what the TV actually sends, before config renames.
+		// Useful when asking "does this build publish a device name per
+		// input" — the filtered view cannot answer that.
+		if r.URL.Query().Get("raw") == "1" {
+			h.json(w, map[string]any{"ok": true, "raw": h.b.sourcesList()})
+			return
+		}
 		h.json(w, map[string]any{"ok": true, "sources": h.b.visibleSources()})
 		return
 	case strings.HasPrefix(r.URL.Path, "/api/doom"):

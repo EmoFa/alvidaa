@@ -344,6 +344,30 @@
         "root": "ACHIEVED 2026-11-06 (owner-authorized): the 100U7Q chain was armed; the IPK postinst ran as uid 0 with CapEff 000001ffffffffff, and `ssh -p 8008 root@10.0.0.173` (dedicated ed25519 key in server/keys/, gitignored) gives uid 0 + PTY. No boot persistence: a real reboot closed 8008, and re-sending superwatch 83+82 restored uid-0 SSH without re-downloading (same host key, new daemon; findings/08). Rolling back is documented in findings/07.",
         "notes": "Model guide: docs/models/75U8QTUK/V0000.09.60I.Q0813/. Fingerprint captured 2026-11-06 (owner-verified): firmware, Extended/Minor/RC versions, SoC, kernel arch, UA, locale, LAN nmap posture — see findings/00-fingerprint.md. Same firmware id as the EU_A 100U7Q row (V0000.09.60I.Q0813); country GBR but internal region EU_A. Launcher GET-delivery works (pages served off-LAN load in the TV browser; findings/03); the self-installing tile is untested. Root is NOT a dead end: findings/04 tested hiutils.fileRead/fileWrite with bare-string paths and never started basic/fetcher. findings/05 re-probed the chain's actual primitive: basic/fetcher fetchFile returned ret:true 'download finished' for writes to /APPS and /APPS/pkgs/tv.vidaa.jsservice.basic/CHA/, and hiutils fileRead traverses ../proc/uptime when the path is a one-element array (bare strings get 'invalid path'). findings/06 placed and invoked a self-deleting FaaS function: uid 314 / gid 314 with supplemental group 616, socket /var/run/superwatch_socket stat 0660 root:616, connect OK, command 85 -> 901:0 (code 0), process.arch 'arm', and /var/local writable by uid 314. findings/07 armed the chain: fresh static ARM32 Dropbear 2022.83 (zig musl) + minimal IPK (tools/u7q/scripts/make_min_installer.py), written via fetchFile and installed with superwatch 83+82. postinst log shows POSTINST_RAN, Uid 0, CapEff 000001ffffffffff; ssh on 8008 is key-only with a dedicated ed25519 key (server/keys/, gitignored), PTY works, /etc/shadow and /data are readable as root. State left: /APPS/.re_sshd, /APPS/shell, /APPS/installer.ipk, the sw2.js FaaS helper, package re.installer, ptmx 0666, one FIREWALL_IN_EULAON ACCEPT dpt:8008. findings/08 reboot-tested the persistence claim: after `sync; /sbin/reboot` the TV came back in ~9 s with 8008 closed, and the re-arm page (tools/u7q/web/rearm.html, served by tools/u7q/web/server.py) re-sent 83+82 through the surviving sw2.js helper, restoring uid 0 (new Dropbear pid 15290, uptime 114 s, CapEff 000001ffffffffff, PTY OK) with the same host key and no re-download. Rollback/re-arm in findings/07 and findings/08. findings/09 installed and owner-verified the native DOM Home (component-only /Launcher route swap in operation-ui, apps/inputs/TV Settings/app launch all working, tested rollback path); no reboot was performed because root SSH is not boot-persistent. findings/10 added a merged apps+inputs list and a CSS-gradient wallpaper picker in Preferences (v2 bundle; rollback then install re-verified on hardware)."
       }
+    },
+    {
+      "id": "V0000.09.60A.Q0707",
+      "model": "43A5LE (internal 43A60LEVS_0002)",
+      "region": "EU_A (ITA)",
+      "soc": "MTK9603",
+      "vidaa_os": "U09.60",
+      "transport_protocol": "?",
+      "browser": "Chromium 111 (armv7l; UA SurfMaster/3.0.1)",
+      "build_date": "2026-07-07",
+      "tested_by": [
+        "gh:antmagl"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "working",
+        "file_bridge_traversal": "untested",
+        "file_bridge_write": "gated",
+        "identity_gate": "working",
+        "euladpp_untar": "untested",
+        "devtools_forge": "untested",
+        "root": "untested",
+        "notes": "Launcher lane only, 2026-11-06. Pairing: 2024 VidaaAppAndroidV01 cert (res/El.p12 from com.universal.remote.multi 1.09.05.001.0) + modern credentials; colon-formatted MAC required (12-hex form returns rc 135); PIN accepted, tokenissuance issued, and two-way actions (state/gettvstate/applist/sourcelist/launchapp) answered. Launcher page + /ws + icon proxy + server-side watcher bounce verified end-to-end; /api/open must launch appId 16 'Browser' with an overridden url - a custom appId (vidaa-recon / vidaa-home) is silently ignored on this build. Native self-install closed: HiUtils fileWrite on websdk/Appinfo.json -> {ret:false, code:503, msg:'client request permission check error, please check appconfig'}; fileRead of the same path works (4314-byte registry, 4 entries). Hisense_installApp and WebSDK_createFileRequest are absent; HiUtils_createRequest present; 95 Hisense_* functions callable; screen 1920x1080 @1.5. transport_protocol not measured (SSDP multicast filtered on the test LAN). Root not attempted."
+      }
     }
   ]
 }

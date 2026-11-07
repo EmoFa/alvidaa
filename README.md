@@ -121,6 +121,10 @@ model and firmware.
 
 ## Tested models
 
+The compact scan — model / firmware / launcher / root / who. The full table
+with every field lives in [TESTED-MODELS.md](docs/research/TESTED-MODELS.md);
+both regenerate from `docs/research/inventory.json`.
+
 <!-- INVENTORY:START -->
 | Model | Firmware | Launcher | Root | Tested by |
 | --- | --- | --- | --- | --- |

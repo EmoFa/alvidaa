@@ -80,4 +80,7 @@ Two lanes share one TV:
 3. Root lane only after 1–2 are green, and expect SoC-specific differences
    (this chain is MTK9602/armv7; HiSilicon models differ in partitions and
    tools). See findings 03–07 for the method, not just the constants.
-4. Add a row to the README tested-models matrix — by PR.
+4. Add the unit to `docs/research/inventory.json` (single source of truth)
+   and run `scripts/gen-inventory.py` — the README compact matrix and the
+   full table in `docs/research/TESTED-MODELS.md` both regenerate from it.
+   By PR.

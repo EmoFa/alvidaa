@@ -34,6 +34,7 @@ in the TV's system information and compare it character by character.
 New guides start from [_TEMPLATE.md](_TEMPLATE.md), which carries the
 fingerprint, the evidence labels and the required *What this guide includes
 and leaves out* section.
+| `32A35HUV` | `V0000.09.01O.P0814` (VIDAA `U09.01`, CAN) | MTK9602 | TODO: root method | TODO: persistence | [README](32A35HUV/V0000.09.01O.P0814/README.md) · [EVIDENCE](32A35HUV/V0000.09.01O.P0814/EVIDENCE.md) · [MODDING](32A35HUV/V0000.09.01O.P0814/MODDING.md) |
 
 This table is hand-maintained; the [tested-model matrix](../../README.md#tested-models)
 is generated from `inventory.json` and wins if the two disagree. `scripts/check.sh`

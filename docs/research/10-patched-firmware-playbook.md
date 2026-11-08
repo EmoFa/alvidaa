@@ -25,6 +25,7 @@
 | V0000.09.60I.Q0813 (UK) (75U8QTUK, UK (GBR; internal region EU_A)) | MTK9655 (aarch64 kernel; 32-bit ARM userland confirmed on-device: phoenix worker process.arch=arm, 2026-11-06) | open with array path (hiutils.fileRead path:['../proc/uptime'] -> ret:true, 2026-11-06, findings/05); bare-string paths rejected 'invalid path' | open via FaaS fetcher (basic/fetcher fetchFile ret:true 'download finished'; markers written to /APPS and /APPS/pkgs/tv.vidaa.jsservice.basic/CHA/, 2026-11-06, findings/05) | untested | untested | ACHIEVED 2026-11-06 (owner-authorized): the 100U7Q chain was armed; the IPK postinst ran as uid 0 with CapEff 000001ffffffffff, and `ssh -p 8008 root@<tv-ip>` (dedicated ed25519 key in server/keys/, gitignored) gives uid 0 + PTY. No boot persistence: a real reboot closed 8008, and re-sending superwatch 83+82 restored uid-0 SSH without re-downloading (same host key, new daemon; findings/08). Rolling back is documented in findings/07. | [@kingpandacc](https://github.com/kingpandacc) |
 | V0000.09.60A.Q0707 (43A5LE (internal 43A60LEVS_0002), EU_A (ITA)) | MTK9603 | untested | gated | working | untested | untested | [@antmagl](https://github.com/antmagl) |
 | V0010.09.09A.P0930 (43A5FE, EU) | MTK9602 | open | open | closed | untested | achieved | @community |
+| V0000.09.01O.P0814 (32A35HUV, CAN) | MTK9602 | open | open | untested | untested | achieved | [@EmoFa](https://github.com/EmoFa) |
 <!-- INVENTORY:END -->
 
 **Read of the table:** the July EU_A reporter observed `fileWrite` rejected

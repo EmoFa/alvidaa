@@ -392,6 +392,30 @@
         "root": "achieved",
         "notes": "Root via browser path traversal + otaTest.sh boot hook; native Node v20 runtime; native UI debloat mapped via hiddenApps.json"
       }
+    },
+    {
+      "id": "V0000.09.01O.P0814",
+      "model": "32A35HUV",
+      "region": "CAN",
+      "soc": "MTK9602",
+      "vidaa_os": "U09.01",
+      "transport_protocol": "3290",
+      "browser": "Chromium 111",
+      "build_date": "2025-08-14",
+      "tested_by": [
+        "gh:EmoFa"
+      ],
+      "capabilities": {
+        "pairing": "working",
+        "launcher": "working",
+        "file_bridge_traversal": "open",
+        "file_bridge_write": "open",
+        "identity_gate": "untested",
+        "euladpp_untar": "untested",
+        "devtools_forge": "working",
+        "root": "achieved",
+        "notes": "root chain replayed from the 50A51HUV reference on a second MTK9602 board family; divergences and evidence in docs/models/32A35HUV/V0000.09.01O.P0814/"
+      }
     }
   ]
 }
